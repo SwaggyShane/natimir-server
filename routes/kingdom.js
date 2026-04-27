@@ -1,0 +1,1347 @@
+const express = require('express');
+const engine  = require('../game/engine');
+const { requireAuth } = require('./middleware');
+
+const router = express.Router();
+
+module.exports = function(db) {
+
+  router.get('/me', requireAuth, async (req, res) => {
+    const k = await db.get(
+      'SELECT k.*, p.username FROM kingdoms k JOIN players p ON k.player_id = p.id WHERE k.player_id = ?',
+      [req.player.playerId]
+    );
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    try { k.research_allocation    = JSON.parse(k.research_allocation    || '{}'); } catch { k.research_allocation    = {}; }
+    try { k.mage_tower_allocation  = JSON.parse(k.mage_tower_allocation  || '{}'); } catch { k.mage_tower_allocation  = {}; }
+    try { k.shrine_allocation      = JSON.parse(k.shrine_allocation      || '{}'); } catch { k.shrine_allocation      = {}; }
+    try { k.library_allocation     = JSON.parse(k.library_allocation     || '{}'); } catch { k.library_allocation     = {}; }
+    try { k.library_progress       = JSON.parse(k.library_progress       || '{}'); } catch { k.library_progress       = {}; }
+    try { k.scrolls                = JSON.parse(k.scrolls                || '{}'); } catch { k.scrolls                = {}; }
+    try { k.active_effects         = JSON.parse(k.active_effects         || '{}'); } catch { k.active_effects         = {}; }
+    try { k.discovered_kingdoms    = JSON.parse(k.discovered_kingdoms    || '{}'); } catch { k.discovered_kingdoms    = {}; }
+    res.json(k);
+  });
+
+  // ── Save research allocation ───────────────────────────────────────────────
+  router.post('/research-allocation', requireAuth, async (req, res) => {
+    const { allocation } = req.body;
+    if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation object required' });
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    await db.run('UPDATE kingdoms SET research_allocation = ? WHERE id = ?', [JSON.stringify(allocation), k.id]);
+    res.json({ ok: true });
+  });
+
+  router.get('/rankings', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT id, discovered_kingdoms FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    
+    let discovered = {};
+    try { discovered = JSON.parse(k.discovered_kingdoms || '{}'); } catch {}
+    
+    const rows = await db.all(`
+      SELECT k.id, k.name, k.race, k.land, k.turn, k.population,
+             k.fighters, k.mages, k.level, p.username, p.is_ai
+      FROM kingdoms k JOIN players p ON k.player_id = p.id
+      ORDER BY k.land DESC LIMIT 100
+    `);
+
+    // Filter to only show self or discovered kingdoms
+    const filtered = rows.filter(r => r.id === k.id || (discovered[r.id] && discovered[r.id].found));
+    res.json(filtered.map((r, i) => ({ ...r, rank: i + 1 })));
+  });
+
+  router.get('/war-log', requireAuth, async (_req, res) => {
+    const rows = await db.all(`
+      SELECT id, action_type, attacker_id, attacker_name, defender_id, defender_name,
+             outcome, detail, obscured, created_at
+      FROM war_log
+      ORDER BY created_at DESC
+      LIMIT 100
+    `);
+    res.json({ rows });
+  });
+
+  router.get('/news/list', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const [items] = await Promise.all([
+      db.all('SELECT * FROM news WHERE kingdom_id = ? ORDER BY created_at DESC LIMIT 50', [k.id]),
+      db.run('UPDATE news SET is_read = 1 WHERE kingdom_id = ? AND is_read = 0', [k.id]),
+    ]);
+    res.json(items);
+  });
+
+  router.delete('/news/clear', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    await db.run('DELETE FROM news WHERE kingdom_id = ?', [k.id]);
+    res.json({ ok: true });
+  });
+
+  // ── Shared turn runner — used by ALL routes that consume a turn ──────────────
+  async function runTurn(db, k) {
+    const { updates, events } = engine.processTurn(k);
+    updates.turns_stored = (k.turns_stored || 0) - 1;
+
+    // Apply kingdom updates in a transaction
+    // Dedup racial bonus news — only insert if we haven't already sent this message
+    const racialMsgSnippets = ['reached mastery','Dwarven war machines','High Elf scrolls','Orcish war culture','Dark Elf assassinations','Dire Wolf expeditions','Human healing aura'];
+    const filteredEvents = [];
+    for (const ev of events) {
+      const isRacialMsg = racialMsgSnippets.some(s => ev.message && ev.message.includes(s));
+      if (isRacialMsg) {
+        const existing = await db.get(
+          'SELECT id FROM news WHERE kingdom_id = ? AND message = ? LIMIT 1',
+          [k.id, ev.message]
+        );
+        if (existing) continue; // already sent — skip
+      }
+      filteredEvents.push(ev);
+    }
+
+    await db.run('BEGIN');
+    try {
+      await applyUpdates(db, k.id, updates);
+      const turnNum = updates.turn || k.turn || 0;
+      if (filteredEvents.length > 0) {
+        await bulkInsertNews(db, filteredEvents.map(ev => ({
+          kingdom_id: k.id, type: ev.type || 'system',
+          message: ev.message, turn_num: turnNum,
+        })));
+        if (Math.random() < 0.05) await pruneNews(db, k.id, 200);
+      }
+      await db.run('COMMIT');
+    } catch (err) {
+      await db.run('ROLLBACK');
+      throw err;
+    }
+
+    // Resolve expeditions OUTSIDE the kingdom transaction so ticks are never rolled back
+    let expeditionEvents = [];
+    try {
+      expeditionEvents = await engine.resolveExpeditions(db, { ...k, ...updates }, engine);
+      if (expeditionEvents.length > 0) {
+        const turnNum = updates.turn || k.turn || 0;
+        await bulkInsertNews(db, expeditionEvents.map(ev => ({
+          kingdom_id: k.id, type: ev.type || 'system',
+          message: ev.message, turn_num: turnNum,
+        })));
+      }
+    } catch (err) {
+      console.error('[runTurn] expedition resolve error:', err.message);
+    }
+
+    const allEvents = [...events, ...expeditionEvents];
+
+    // Refresh fields that resolveExpeditions may have updated via SQL
+    const refreshed = await db.get(
+      'SELECT rangers, fighters, gold, mana, land, scrolls, maps, blueprints_stored, troop_levels, library_progress, racial_bonuses_unlocked FROM kingdoms WHERE id = ?',
+      [k.id]
+    );
+    if (refreshed) Object.assign(updates, refreshed);
+    return { updates, events: allEvents };
+  }
+
+  // ── Take turn (advance game state) ───────────────────────────────────────────
+  router.post('/turn', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if (k.turns_stored < 1) return res.status(429).json({ error: 'No turns available — next +7 turns in 25 minutes' });
+    try {
+      const { updates, events } = await runTurn(db, k);
+      res.json({ ok: true, updates, events, turns_stored: updates.turns_stored });
+    } catch (err) {
+      console.error('[turn] failed:', err.message);
+      res.status(500).json({ error: 'Turn processing failed — please try again' });
+    }
+  });
+
+  // ── Hire units ────────────────────────────────────────────────────────────────
+  router.post('/hire', requireAuth, async (req, res) => {
+    const { unit, amount } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+
+    // Apply hire updates immediately without consuming a turn
+    const hireResult = engine.hireUnits(k, unit, Number(amount));
+    if (hireResult.error) return res.status(400).json({ error: hireResult.error });
+
+    try {
+      const hireUpdates = hireResult.updates;
+      await applyUpdates(db, k.id, hireUpdates);
+      res.json({ ok: true, updates: hireUpdates, events: [], turns_stored: k.turns_stored });
+    } catch (err) {
+      console.error('[hire] failed:', err.message);
+      res.status(500).json({ error: 'Hire failed — please try again' });
+    }
+  });
+
+  // ── Research ──────────────────────────────────────────────────────────────────
+  router.post('/research', requireAuth, async (req, res) => {
+    const { discipline, researchers } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if (k.turns_stored < 1) return res.status(429).json({ error: 'No turns available' });
+
+    // Run full turn first
+    const { updates: turnUpdates, events } = engine.processTurn(k);
+    turnUpdates.turns_stored = k.turns_stored - 1;
+
+    // Apply research on top of turn state
+    const kAfterTurn = { ...k, ...turnUpdates };
+    const resResult = engine.studyDiscipline(kAfterTurn, discipline, Number(researchers));
+    if (resResult.error) return res.status(400).json({ error: resResult.error });
+
+    const finalUpdates = { ...turnUpdates, ...resResult.updates };
+    await applyUpdates(db, k.id, finalUpdates);
+
+    const resCol = Object.keys(resResult.updates).find(k => k.startsWith('res_'));
+    const newVal = resCol ? finalUpdates[resCol] : '?';
+    events.push({ type: 'system', message: `📚 Studied ${discipline} with ${Number(researchers).toLocaleString()} researchers · +${resResult.increment} → now ${newVal}${discipline !== 'spellbook' ? '%' : ''}.` });
+    await bulkInsertNews(db, events.map(ev => ({ kingdom_id: k.id, type: ev.type || 'system', message: ev.message, turn_num: turnUpdates.turn || k.turn || 0 })));
+    res.json({ ok: true, increment: resResult.increment, updates: finalUpdates, events, turns_stored: finalUpdates.turns_stored });
+  });
+
+  // ── Queue buildings — charges gold, no turn cost ──────────────────────────────
+  router.post('/build-queue', requireAuth, async (req, res) => {
+    const { orders } = req.body;
+    if (!orders || typeof orders !== 'object') return res.status(400).json({ error: 'orders required' });
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    try { k.build_queue = JSON.parse(k.build_queue || '{}'); } catch { k.build_queue = {}; }
+    const result = engine.queueBuildings(k, orders);
+    if (result.error) return res.status(400).json({ error: result.error });
+    await applyUpdates(db, k.id, result.updates);
+    res.json({ ok: true, queue: JSON.parse(result.updates.build_queue), gold: result.updates.gold, totalCost: result.totalCost });
+  });
+
+  // ── Save training allocation ───────────────────────────────────────────────
+  router.post('/training-allocation', requireAuth, async (req, res) => {
+    const { allocation } = req.body;
+    if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    await db.run('UPDATE kingdoms SET training_allocation = ? WHERE id = ?', [JSON.stringify(allocation), k.id]);
+    res.json({ ok: true });
+  });
+  router.post('/build-allocation', requireAuth, async (req, res) => {
+    const { allocation } = req.body;
+    if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
+    const k = await db.get('SELECT id, engineers FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const total = Object.values(allocation).reduce((s, v) => s + (Number(v)||0), 0);
+    if (total > k.engineers) return res.status(400).json({ error: `Allocated ${total.toLocaleString()} but only have ${k.engineers.toLocaleString()} engineers` });
+    await db.run('UPDATE kingdoms SET build_allocation = ? WHERE id = ?', [JSON.stringify(allocation), k.id]);
+    res.json({ ok: true });
+  });
+
+  // ── Forge tools — costs 1 turn + gold for scaffolding ───────────────────────
+  router.post('/forge-tools', requireAuth, async (req, res) => {
+    const { toolType, quantity } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if (k.turns_stored < 1) return res.status(429).json({ error: 'No turns available' });
+    const smithies = k.bld_smithies || 0;
+    if (smithies === 0) return res.status(400).json({ error: 'Need at least 1 smithy' });
+    // Validate caps and cost before running turn
+    if (toolType === 'hammers') {
+      const cap = smithies * 25;
+      if ((k.tools_hammers || 0) >= cap) return res.status(400).json({ error: `Hammer storage full (${cap}/${cap})` });
+    } else if (toolType === 'scaffolding') {
+      const cap = smithies * 10;
+      if ((k.tools_scaffolding || 0) >= cap) return res.status(400).json({ error: `Scaffolding storage full (${cap}/${cap})` });
+      if ((k.gold || 0) < 2500) return res.status(400).json({ error: 'Need 2,500 gold to make scaffolding' });
+    }
+    try {
+      const { updates, events } = await runTurn(db, k);
+      const kAfterTurn = { ...k, ...updates };
+      const toolResult = engine.forgeTools(kAfterTurn, toolType, Number(quantity) || 1);
+      if (toolResult.error) return res.status(400).json({ error: toolResult.error });
+      await applyUpdates(db, k.id, toolResult.updates);
+      const finalUpdates = { ...updates, ...toolResult.updates };
+      res.json({ ok: true, updates: finalUpdates, events, turns_stored: finalUpdates.turns_stored });
+    } catch (err) {
+      console.error('[forge-tools] failed:', err.message);
+      res.status(500).json({ error: 'Forging failed — please try again' });
+    }
+  });
+
+  // ── Smithy — buy hammers for gold ─────────────────────────────────────────────
+  router.post('/smithy/buy-hammers', requireAuth, async (req, res) => {
+    const amount = Math.max(1, parseInt(req.body.amount)||1);
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id=?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error:'Kingdom not found' });
+    if (!(k.bld_smithies > 0)) return res.status(400).json({ error:'Need at least 1 smithy' });
+    const cost = amount * 25;
+    if ((k.gold||0) < cost) return res.status(400).json({ error:`Need ${cost.toLocaleString()} gold` });
+    const cap = (k.bld_smithies||0) * 25;
+    const newHammers = Math.min(cap, (k.hammers_stored||0) + amount);
+    const bought = newHammers - (k.hammers_stored||0);
+    if (bought <= 0) return res.status(400).json({ error:'Hammer storage full' });
+    const actualCost = bought * 25;
+    await db.run('UPDATE kingdoms SET gold=gold-?, hammers_stored=? WHERE id=?', [actualCost, newHammers, k.id]);
+    res.json({ ok:true, bought, cost:actualCost, hammers_stored:newHammers, gold:(k.gold||0)-actualCost });
+  });
+
+  // ── Smithy — buy scaffolding for gold ────────────────────────────────────────
+  router.post('/smithy/buy-scaffolding', requireAuth, async (req, res) => {
+    const amount = Math.max(1, parseInt(req.body.amount)||1);
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id=?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error:'Kingdom not found' });
+    if (!(k.bld_smithies > 0)) return res.status(400).json({ error:'Need at least 1 smithy' });
+    const cost = amount * 2500;
+    if ((k.gold||0) < cost) return res.status(400).json({ error:`Need ${cost.toLocaleString()} gold` });
+    const cap = (k.bld_smithies||0) * 10;
+    const newScaff = Math.min(cap, (k.scaffolding_stored||0) + amount);
+    const bought = newScaff - (k.scaffolding_stored||0);
+    if (bought <= 0) return res.status(400).json({ error:'Scaffolding storage full' });
+    const actualCost = bought * 2500;
+    await db.run('UPDATE kingdoms SET gold=gold-?, scaffolding_stored=? WHERE id=?', [actualCost, newScaff, k.id]);
+    res.json({ ok:true, bought, cost:actualCost, scaffolding_stored:newScaff, gold:(k.gold||0)-actualCost });
+  });
+
+  router.post('/smithy-allocation', requireAuth, async (req, res) => {
+  });
+  router.post('/search', requireAuth, async (req, res) => {
+    const { type, rangers } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if (k.turns_stored < 1) return res.status(429).json({ error: 'No turns available' });
+
+    const r = Number(rangers) || 0;
+    if (r <= 0) return res.status(400).json({ error: 'Send at least some rangers' });
+    if (r > k.rangers) return res.status(400).json({ error: 'Not enough rangers' });
+
+    try {
+      const { updates, events } = await runTurn(db, k);
+      const kAfterTurn = { ...k, ...updates };
+      const tacticsMult = 1 + ((kAfterTurn.res_military || 0) / 1000);
+      let searchResult = {};
+      let searchMessage = '';
+
+      if (type === 'land') {
+        // Diminishing returns — larger kingdoms find less land per ranger
+        const currentLand = kAfterTurn.land || 0;
+        const diminish    = Math.max(0.05, 1 / Math.log10(Math.max(10, currentLand)));
+        const found       = Math.max(1, Math.floor(r * 0.04 * tacticsMult * diminish));
+        updates.land      = (kAfterTurn.land || 0) + found;
+        searchResult      = { found, unit: 'acres' };
+        searchMessage     = `🗺️ Rangers discovered +${found.toLocaleString()} acres${found < Math.floor(r * 0.04 * tacticsMult) ? ' <i>(land getting scarce)</i>' : ''}.`;
+      } else if (type === 'gold') {
+        const found = Math.floor(r * 12 * tacticsMult);
+        updates.gold = (updates.gold || kAfterTurn.gold || 0) + found;
+        searchResult = { found, unit: 'GC' };
+        searchMessage = `💰 Rangers returned with ${found.toLocaleString()} gold from foraging.`;
+      } else if (type === 'food') {
+        const found = Math.floor(r * 0.5 * tacticsMult);
+        updates.food = (kAfterTurn.food || 0) + found;
+        searchResult = { found, unit: 'food' };
+        searchMessage = `🌾 Rangers foraged ${found.toLocaleString()} food from the wilderness.`;
+      } else if (type === 'targets') {
+        const scouts = Math.max(1, r);
+        const baseFound = Math.floor(scouts * 0.005) + 1; // scaled down slightly
+        const searchRange = 5 + Math.floor(Math.log10(scouts) * 2);
+        
+        // Find random kingdoms I haven't discovered yet
+        let disc = {};
+        try { disc = JSON.parse(kAfterTurn.discovered_kingdoms || '{}'); } catch {}
+        
+        const currentIds = Object.keys(disc).map(id => parseInt(id)).filter(id => !isNaN(id));
+        currentIds.push(k.id); // exclude self
+        
+        const placeholders = currentIds.map(() => '?').join(',');
+        const query = `SELECT id, name FROM kingdoms WHERE id NOT IN (${placeholders}) ORDER BY RANDOM() LIMIT ?`;
+        const others = await db.all(query, [...currentIds, baseFound]);
+        
+        let foundCount = 0;
+        others.forEach(o => {
+          disc[o.id] = { found: true };
+          foundCount++;
+        });
+        
+        if (foundCount > 0) {
+          updates.discovered_kingdoms = JSON.stringify(disc);
+        }
+        
+        searchResult = { found: foundCount, unit: 'kingdoms' };
+        searchMessage = foundCount > 0 
+          ? `👁️ Rangers scouted ${foundCount} new target kingdoms.`
+          : `🔍 Rangers searched the area but found no new settlements.`;
+      } else {
+        return res.status(400).json({ error: 'Invalid search type' });
+      }
+
+      await applyUpdates(db, k.id, { 
+        land: updates.land, 
+        gold: updates.gold, 
+        food: updates.food, 
+        discovered_kingdoms: updates.discovered_kingdoms 
+      });
+
+      const turnNum = updates.turn || k.turn || 0;
+      // Removed bulkInsertNews for search results as per user request (only in log)
+      
+      const xpResult = engine.awardXp(kAfterTurn, 'exploration', type === 'land' ? searchResult.found : (type === 'gold' ? Math.floor(searchResult.found / 1000) : 5));
+      updates.xp = xpResult.xp; updates.level = xpResult.level;
+
+      // Award Troop XP to Rangers for exploration
+      const rTroopXp = engine.awardTroopXp({ ...kAfterTurn, xp: updates.xp, level: updates.level }, 'rangers', 8);
+      updates.troop_levels = rTroopXp.troop_levels;
+      if (rTroopXp.levelUps && rTroopXp.levelUps.length > 0) {
+        events.push(...rTroopXp.levelUps.map(msg => ({ type: 'system', message: `🎖️ ${msg}` })));
+      }
+
+      if (xpResult.levelled) {
+        await bulkInsertNews(db, xpResult.events.map(ev => ({ kingdom_id: k.id, type: 'system', message: ev.message, turn_num: turnNum })));
+        events.push(...xpResult.events);
+      }
+      await applyUpdates(db, k.id, { xp: updates.xp, level: updates.level, troop_levels: updates.troop_levels });
+
+      res.json({ ok: true, type, result: searchResult, message: searchMessage, updates, events: [...events, { type: 'system', message: searchMessage }], turns_stored: updates.turns_stored });
+    } catch (err) {
+      console.error('[search] failed:', err.message);
+      res.status(500).json({ error: 'Search failed — please try again' });
+    }
+  });
+
+  // ── Mage tower allocation ────────────────────────────────────────────────────
+  router.post('/mage-tower-allocation', requireAuth, async (req, res) => {
+    const { allocation } = req.body;
+    if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
+    const k = await db.get('SELECT id, bld_cathedrals, mages FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if ((k.bld_cathedrals || 0) === 0) return res.status(400).json({ error: 'You need at least 1 Mage Tower first' });
+    const magesAlloc = Math.min(Number(allocation.mages) || 0, k.mages || 0);
+    const researchMages = Math.min(Number(allocation.research_mages) || 0, k.mages || 0);
+    const save = {
+      mages:                Math.min(magesAlloc + researchMages, k.mages || 0),
+      research_mages:       researchMages,
+      research_discipline:  allocation.research_discipline || null,
+    };
+    await db.run('UPDATE kingdoms SET mage_tower_allocation = ? WHERE id = ?', [JSON.stringify(save), k.id]);
+    res.json({ ok: true, allocation: save });
+  });
+
+  // ── Shrine allocation ─────────────────────────────────────────────────────────
+  router.post('/shrine-allocation', requireAuth, async (req, res) => {
+    const { allocation } = req.body;
+    if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
+    const k = await db.get('SELECT id, bld_shrines, clerics FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if ((k.bld_shrines || 0) === 0) return res.status(400).json({ error: 'You need at least 1 Shrine first' });
+    const clericsAlloc = Math.min(Number(allocation.clerics) || 0, k.clerics || 0);
+    await db.run('UPDATE kingdoms SET shrine_allocation = ? WHERE id = ?', [JSON.stringify({ clerics: clericsAlloc }), k.id]);
+    res.json({ ok: true, allocation: { clerics: clericsAlloc } });
+  });
+
+  // ── Military attack ───────────────────────────────────────────────────────────
+  router.post('/attack', requireAuth, async (req, res) => {
+    const { targetId, fighters, rangers, mages, warMachines, ninjas, thieves } = req.body;
+    const sentUnits = {
+      fighters:    Math.max(0, parseInt(fighters)    || 0),
+      rangers:     Math.max(0, parseInt(rangers)     || 0),
+      mages:       Math.max(0, parseInt(mages)       || 0),
+      warMachines: Math.max(0, parseInt(warMachines) || 0),
+      ninjas:      Math.max(0, parseInt(ninjas)      || 0),
+      thieves:     Math.max(0, parseInt(thieves)     || 0),
+    };
+
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if (k.turns_stored < 1) return res.status(429).json({ error: 'No turns available' });
+    if (sentUnits.fighters <= 0 && sentUnits.rangers <= 0 && sentUnits.mages <= 0)
+      return res.status(400).json({ error: 'Send at least some troops' });
+
+    const target = await db.get('SELECT * FROM kingdoms WHERE id = ?', [targetId]);
+    if (!target) return res.status(404).json({ error: 'Target kingdom not found' });
+    if (target.id === k.id) return res.status(400).json({ error: 'Cannot attack yourself' });
+    if ((target.turn || 0) < 200) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 200` });
+
+    // Location system — must have mapped this kingdom (warn but don't block during transition)
+    let attackerDisc = {};
+    try { attackerDisc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
+    // Defender auto-stores attacker's location on being attacked
+    let defDisc = {};
+    try { defDisc = JSON.parse(target.discovered_kingdoms||'{}'); } catch {}
+    if (!defDisc[k.id]?.mapped) {
+      defDisc[k.id] = { found: true, mapped: true };
+      await db.run('UPDATE kingdoms SET discovered_kingdoms=? WHERE id=?', [JSON.stringify(defDisc), target.id]);
+    }
+
+    const result = engine.resolveMilitaryAttack(k, target, sentUnits);
+    if (result.error) return res.status(400).json({ error: result.error });
+
+    const VALID = new Set([
+      'gold','mana','land','population','morale','food','fighters','rangers','clerics',
+      'mages','thieves','ninjas','researchers','engineers','war_machines',
+      'weapons_stockpile','armor_stockpile','xp','level','troop_levels',
+      'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
+      'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
+      'discovered_kingdoms', 'maps', 'active_effects', 'scrolls'
+    ]);
+
+    async function applyBattle(kingdom, updates) {
+      const safe = Object.fromEntries(Object.entries(updates).filter(([c,v]) =>
+        VALID.has(c) && v !== undefined && v !== null && !isNaN(Number(v))
+      ));
+      if (Object.keys(safe).length > 0) {
+        const cols = Object.keys(safe).map(c => `${c} = ?`).join(', ');
+        await db.run(`UPDATE kingdoms SET ${cols} WHERE id = ?`, [...Object.values(safe), kingdom.id]);
+      }
+    }
+
+    await applyBattle(k, result.attackerUpdates);
+    await applyBattle(target, result.defenderUpdates);
+    await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+      [k.id, 'attack', result.atkEvent, k.turn]);
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+      [target.id, 'attack', result.defEvent, target.turn]);
+
+    // Public shame event — broadcast to ALL kingdoms when bully ratio >= 8
+    if (result.shameEvent) {
+      const allKingdoms = await db.all('SELECT id FROM kingdoms');
+      for (const ak of allKingdoms) {
+        await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+          [ak.id, 'system', result.shameEvent, k.turn]);
+      }
+      // Also broadcast to global chat
+      // (io is attached to engine but we need it here — emit via a global reference)
+      if (global._narmir_io) global._narmir_io.emit('chat:system', { message: result.shameEvent, ts: Date.now() });
+    }
+
+    // War log
+    const detail = JSON.stringify({
+      sent: result.report.sent,
+      landTaken: result.report.landTransferred,
+      atkLost: result.report.atkFightersLost,
+      defLost: result.report.defFightersLost,
+      ninjaKills: result.report.ninjaKills || 0,
+      rangerKills: result.report.rangerKills || 0,
+    });
+    await db.run(`INSERT INTO war_log (action_type, attacker_id, attacker_name, defender_id, defender_name, outcome, detail, obscured) VALUES (?,?,?,?,?,?,?,0)`,
+      ['attack', k.id, k.name, target.id, target.name, result.win ? 'victory' : 'repelled', detail]);
+
+    // Signal tower — warn defender (and alliance) of attack
+    let defTowerUpgrades = {};
+    try { defTowerUpgrades = JSON.parse(target.tower_def_upgrades||'{}'); } catch {}
+    if (defTowerUpgrades.watchtower || defTowerUpgrades.signal_tower) {
+      await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+        [target.id, 'system', `⚠️ Watchtower scouts have detected ${k.name} massing troops at the border.`, target.turn]);
+      if (defTowerUpgrades.signal_tower) {
+        // Warn all alliance members
+        const allianceMembers = await db.all(`
+          SELECT am.kingdom_id FROM alliance_members am
+          JOIN alliance_members am2 ON am.alliance_id = am2.alliance_id
+          WHERE am2.kingdom_id = ? AND am.kingdom_id != ?`, [target.id, target.id]);
+        for (const mem of allianceMembers) {
+          await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+            [mem.kingdom_id, 'system', `📡 Signal Tower: Your ally ${target.name} is under attack by ${k.name}!`, k.turn]);
+        }
+      }
+    }
+
+    // Siege damage report
+    if (result.win) {
+      if (result.report.wallsDestroyed > 0) {
+        await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+          [target.id, 'attack', `🧱 ${result.report.wallsDestroyed} walls were destroyed in the siege.`, target.turn]);
+      } else if (result.report.buildingDamaged) {
+        await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+          [target.id, 'attack', `🔥 Attackers burned ${result.report.buildingDamaged} with no walls to stop them.`, target.turn]);
+      }
+    }
+
+    res.json({ ok: true, report: result.report, updates: result.attackerUpdates, event: result.atkEvent });
+  });
+
+  // ── Cast spell ───────────────────────────────────────────────────────────────
+  router.post('/spell', requireAuth, async (req, res) => {
+    const { spellId, targetId, obscure } = req.body;
+    if (!spellId) return res.status(400).json({ error: 'spellId required' });
+
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if ((k.turns_stored || 0) < 1) return res.status(429).json({ error: 'No turns available' });
+
+    const def = engine.SPELL_DEFS[spellId];
+    if (!def) return res.status(400).json({ error: 'Unknown spell' });
+
+    // Friendly spells target yourself; offensive spells require a target + map
+    const isFriendly = def.effect === 'friendly';
+    let target;
+
+    if (isFriendly) {
+      target = k; // cast on self
+    } else {
+      if (!targetId) return res.status(400).json({ error: 'targetId required for offensive spells' });
+      if ((k.maps || 0) < 1) return res.status(400).json({ error: 'You need a map to cast on other kingdoms — craft one in your Library' });
+      target = await db.get('SELECT * FROM kingdoms WHERE id = ?', [targetId]);
+      if (!target) return res.status(404).json({ error: 'Target kingdom not found' });
+      if (target.player_id === k.player_id) return res.status(400).json({ error: 'Cannot cast offensive spells on yourself' });
+      if ((target.turn || 0) < 200) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 200 (currently Turn ${target.turn})` });
+    }
+
+    const result = engine.castSpell(k, target, spellId, !!obscure);
+    if (result.error) return res.status(400).json({ error: result.error });
+
+    const VALID = new Set([
+      'gold','mana','land','population','morale','food','fighters','rangers','clerics',
+      'mages','thieves','ninjas','researchers','engineers','war_machines','scrolls',
+      'bld_farms','bld_barracks','bld_guard_towers','bld_markets','bld_castles',
+      'active_effects','res_economy','res_attack_magic','res_defense_magic','res_spellbook',
+      'discovered_kingdoms'
+    ]);
+
+    async function applySpell(kingdom, updates) {
+      const safe = Object.fromEntries(
+        Object.entries(updates).filter(([c, v]) => VALID.has(c) && v !== undefined && v !== null)
+      );
+      if (Object.keys(safe).length > 0) {
+        const cols = Object.keys(safe).map(c => `${c} = ?`).join(', ');
+        await db.run(`UPDATE kingdoms SET ${cols} WHERE id = ?`, [...Object.values(safe), kingdom.id]);
+      }
+    }
+
+    await applySpell(k, result.casterUpdates);
+    if (!isFriendly) await applySpell(target, result.targetUpdates);
+    await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+
+    // News
+    if (result.casterEvent) {
+      await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+        [k.id, 'system', result.casterEvent, k.turn]);
+    }
+    if (!isFriendly && result.targetEvent) {
+      await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+        [target.id, 'attack', result.targetEvent, target.turn]);
+    }
+
+    // War log for offensive spells
+    if (!isFriendly) {
+      await db.run(`INSERT INTO war_log (action_type, attacker_id, attacker_name, defender_id, defender_name, outcome, detail, obscured)
+        VALUES (?,?,?,?,?,?,?,?)`, [
+        'spell', k.id, k.name, target.id, target.name,
+        'cast',
+        `${spellId.replace(/_/g,' ')} — ${result.report.damageDesc || ''}`,
+        obscure ? 1 : 0,
+      ]);
+    }
+
+    // Consume map on cast (map is used up like a compass — one per interaction)
+    if (!isFriendly) {
+      await db.run('UPDATE kingdoms SET maps = MAX(0, maps - 1) WHERE id = ?', [k.id]);
+    }
+
+    const freshK = await db.get('SELECT mana, scrolls, maps, active_effects FROM kingdoms WHERE id = ?', [k.id]);
+    res.json({
+      ok: true,
+      report: result.report,
+      updates: {
+        mana:           freshK.mana,
+        scrolls:        JSON.parse(freshK.scrolls || '{}'),
+        maps:           freshK.maps,
+        active_effects: JSON.parse(freshK.active_effects || '{}'),
+        ...result.casterUpdates,
+      },
+    });
+  });
+
+  // ── Covert operations ────────────────────────────────────────────────────────
+  router.post('/covert', requireAuth, async (req, res) => {
+    const { op, targetId, units, lootType, unitType, bldType } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if (k.turns_stored < 1) return res.status(429).json({ error: 'No turns available' });
+
+    const target = await db.get('SELECT * FROM kingdoms WHERE id = ?', [targetId]);
+    if (!target) return res.status(404).json({ error: 'Target kingdom not found' });
+    if (target.id === k.id) return res.status(400).json({ error: 'Cannot target your own kingdom' });
+
+    // Check map requirement
+    if ((k.maps || 0) < 1) return res.status(400).json({ error: 'You need a map to interact with other kingdoms — craft one in your Library' });
+
+    // Newbie protection
+    if ((target.turn || 0) < 200) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 200 (currently Turn ${target.turn})` });
+
+    let result;
+    const VALID_COLS = new Set([
+      'gold','mana','land','population','morale','food','fighters','rangers','clerics',
+      'mages','thieves','ninjas','researchers','engineers','war_machines',
+      'weapons_stockpile','armor_stockpile',
+      'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
+      'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
+      'bld_farms','bld_barracks','bld_schools','bld_armories','bld_vaults','bld_smithies',
+      'bld_markets','bld_cathedrals','bld_colosseums','bld_castles','bld_libraries','bld_shrines',
+    ]);
+
+    async function applyCovert(kingdom, updates) {
+      const safe = Object.fromEntries(Object.entries(updates).filter(([c,v]) => VALID_COLS.has(c) && v !== undefined && !isNaN(v)));
+      if (Object.keys(safe).length > 0) {
+        const cols = Object.keys(safe).map(c => `${c} = ?`).join(', ');
+        await db.run(`UPDATE kingdoms SET ${cols} WHERE id = ?`, [...Object.values(safe), kingdom.id]);
+      }
+    }
+
+    if (op === 'spy') {
+      const unitsSent = Math.max(1, parseInt(units) || 0);
+      if (unitsSent > (k.thieves + k.ninjas)) return res.status(400).json({ error: 'Not enough thieves/ninjas' });
+      result = engine.covertSpy(k, target, unitsSent);
+      await applyCovert(k, result.spyUpdates || {});
+      await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+      if (result.spyEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [k.id, 'covert', result.spyEvent, k.turn]);
+      if (!result.success && result.targetEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [target.id, 'covert', result.targetEvent, target.turn]);
+      // War log: reveal attacker only on failure
+      await db.run(`INSERT INTO war_log (action_type, attacker_id, attacker_name, defender_id, defender_name, outcome, detail, obscured) VALUES (?,?,?,?,?,?,?,?)`, [
+        'spy', k.id, k.name, target.id, target.name,
+        result.success ? 'success' : 'caught',
+        'Intelligence gathering',
+        result.success ? 1 : 0,
+      ]);
+      return res.json({ ok: true, success: result.success, report: result.report || null, event: result.spyEvent });
+
+    } else if (op === 'loot') {
+      const thievesSent = Math.max(1, parseInt(units) || 0);
+      if (thievesSent > k.thieves) return res.status(400).json({ error: 'Not enough thieves' });
+      const loot = lootType === 'wm' ? 'war_machines' : lootType;
+      result = engine.covertLoot(k, target, loot, thievesSent);
+      if (result.error) return res.status(400).json({ error: result.error });
+      await applyCovert(k, result.thiefUpdates || {});
+      await applyCovert(target, result.targetUpdates || {});
+      await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+      if (result.thiefEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [k.id, 'covert', result.thiefEvent, k.turn]);
+      if (result.targetEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [target.id, 'covert', result.targetEvent, target.turn]);
+      await db.run(`INSERT INTO war_log (action_type, attacker_id, attacker_name, defender_id, defender_name, outcome, detail, obscured) VALUES (?,?,?,?,?,?,?,?)`, [
+        'loot', k.id, k.name, target.id, target.name,
+        result.success ? 'success' : 'caught',
+        result.success ? `Stole ${loot.replace('_',' ')}` : 'Thieves captured',
+        result.success ? 1 : 0,
+      ]);
+      return res.json({ ok: true, success: result.success, stolen: result.stolen, lootType: result.lootType, event: result.thiefEvent });
+
+    } else if (op === 'assassinate') {
+      const ninjasSent = Math.max(1, parseInt(units) || 0);
+      if (ninjasSent > k.ninjas) return res.status(400).json({ error: 'Not enough ninjas' });
+      const validTargets = ['fighters','rangers','clerics','mages','thieves','ninjas','researchers','engineers','scribes'];
+      if (!validTargets.includes(unitType)) return res.status(400).json({ error: 'Invalid target unit type' });
+      result = engine.covertAssassinate(k, target, ninjasSent, unitType);
+      if (result.error) return res.status(400).json({ error: result.error });
+      await applyCovert(k, result.assassinUpdates || {});
+      await applyCovert(target, result.targetUpdates || {});
+      await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+      if (result.assassinEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [k.id, 'covert', result.assassinEvent, k.turn]);
+      if (result.targetEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [target.id, 'covert', result.targetEvent, target.turn]);
+      await db.run(`INSERT INTO war_log (action_type, attacker_id, attacker_name, defender_id, defender_name, outcome, detail, obscured) VALUES (?,?,?,?,?,?,?,?)`, [
+        'assassinate', k.id, k.name, target.id, target.name,
+        result.success ? 'success' : 'caught',
+        result.success ? `${(result.killed||0).toLocaleString()} ${unitType} eliminated` : 'Ninjas compromised',
+        result.success ? 1 : 0,
+      ]);
+      return res.json({ ok: true, success: result.success, killed: result.killed, event: result.assassinEvent });
+
+    } else if (op === 'sabotage') {
+      const ninjasSent = Math.max(1, parseInt(units) || 0);
+      if (ninjasSent > k.ninjas) return res.status(400).json({ error: 'Not enough ninjas' });
+      const BLD_MAP = { farms:'bld_farms', smithies:'bld_smithies', cathedrals:'bld_cathedrals', barracks:'bld_barracks', libraries:'bld_libraries' };
+      const col = BLD_MAP[bldType];
+      if (!col) return res.status(400).json({ error: 'Invalid building type' });
+      const stealthMulti = (engine.RACE_BONUSES[k.race]?.stealth || 1.0);
+      const success = k.ninjas * stealthMulti * 1.2 > (target.fighters||0) * 0.01 + (target.bld_guard_towers||0) * 2;
+      const ninjasLost = success ? 0 : Math.floor(ninjasSent * 0.2);
+      const destroyed = success ? Math.floor(ninjasSent * (3 + Math.random() * 4)) : 0;
+      const newBldVal = Math.max(0, (target[col] || 0) - destroyed);
+      await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+      if (ninjasLost > 0) await db.run('UPDATE kingdoms SET ninjas = MAX(0, ninjas - ?) WHERE id = ?', [ninjasLost, k.id]);
+      if (success && destroyed > 0) await db.run(`UPDATE kingdoms SET ${col} = ? WHERE id = ?`, [newBldVal, target.id]);
+      const sabMsg = success
+        ? `Sabotaged ${destroyed} ${bldType.replace(/_/g,' ')} in ${target.name}.`
+        : `Sabotage of ${bldType} in ${target.name} failed — ${ninjasLost} ninjas lost.`;
+      await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [k.id, 'covert', sabMsg, k.turn]);
+      if (success) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [target.id, 'covert', `Enemy ninjas sabotaged ${destroyed} of your ${bldType.replace(/_/g,' ')}.`, target.turn]);
+      await db.run(`INSERT INTO war_log (action_type, attacker_id, attacker_name, defender_id, defender_name, outcome, detail, obscured) VALUES (?,?,?,?,?,?,?,?)`, [
+        'sabotage', k.id, k.name, target.id, target.name,
+        success ? 'success' : 'caught',
+        success ? `${destroyed} ${bldType.replace(/_/g,' ')} destroyed` : 'Ninjas caught',
+        success ? 1 : 0,
+      ]);
+      return res.json({ ok: true, success, destroyed, ninjasLost, event: sabMsg });
+
+    } else {
+      return res.status(400).json({ error: 'Unknown covert operation' });
+    }
+  });
+
+  // ── Library allocation ────────────────────────────────────────────────────────
+  router.post('/library-allocation', requireAuth, async (req, res) => {
+    const { allocation } = req.body;
+    if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
+    const k = await db.get('SELECT id, bld_libraries, mages, scribes FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if ((k.bld_libraries || 0) === 0) return res.status(400).json({ error: 'You need at least 1 library first' });
+    const magesAlloc   = Math.min(Number(allocation.mages)   || 0, k.mages   || 0);
+    const scribesAlloc = Math.min(Number(allocation.scribes) || 0, k.scribes || 0);
+    const save = {
+      mages:        magesAlloc,
+      scribes:      scribesAlloc,
+      scroll_craft: allocation.scroll_craft || null,
+      scribe_craft: allocation.scribe_craft || null,
+    };
+    await db.run('UPDATE kingdoms SET library_allocation = ? WHERE id = ?', [JSON.stringify(save), k.id]);
+    res.json({ ok: true, allocation: save });
+  });
+
+  // ── Fire units ────────────────────────────────────────────────────────────────
+  router.post('/fire', requireAuth, async (req, res) => {
+    const { unit, amount } = req.body;
+    const validUnits = ['fighters','rangers','clerics','mages','thieves','ninjas','researchers','engineers','scribes'];
+    if (!validUnits.includes(unit)) return res.status(400).json({ error: 'Invalid unit type' });
+    const n = Math.max(0, parseInt(amount) || 0);
+    if (n <= 0) return res.status(400).json({ error: 'Amount must be positive' });
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if (n > (k[unit] || 0)) return res.status(400).json({ error: `Only have ${(k[unit]||0).toLocaleString()} ${unit}` });
+    const updates = {
+      [unit]: (k[unit] || 0) - n,
+      population: (k.population || 0) + n,
+    };
+    await applyUpdates(db, k.id, updates);
+    res.json({ ok: true, updates });
+  });
+  const EXP_TURNS = { scout: 10, deep: 25, dungeon: 50 };
+
+  router.post('/expedition/start', requireAuth, async (req, res) => {
+    const { type, rangers, fighters } = req.body;
+    if (!EXP_TURNS[type]) return res.status(400).json({ error: 'Invalid expedition type' });
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if (k.turns_stored < 1) return res.status(429).json({ error: 'No turns available' });
+    const r = Math.max(0, parseInt(rangers) || 0);
+    const f = Math.max(0, parseInt(fighters) || 0);
+    if (r < 1) return res.status(400).json({ error: 'Send at least 1 ranger' });
+    if (type === 'dungeon' && f < 1) return res.status(400).json({ error: 'Dungeon raids require fighters' });
+    if (r > k.rangers) return res.status(400).json({ error: 'Not enough rangers' });
+    if (f > k.fighters) return res.status(400).json({ error: 'Not enough fighters' });
+    const existing = await db.get('SELECT id FROM expeditions WHERE kingdom_id = ? AND type = ?', [k.id, type]);
+    if (existing) return res.status(400).json({ error: `A ${type} expedition is already underway` });
+
+    try {
+      const { updates, events } = await runTurn(db, k);
+      // Deduct troops from resolved state
+      updates.rangers  = Math.max(0, (updates.rangers  !== undefined ? updates.rangers  : k.rangers)  - r);
+      updates.fighters = Math.max(0, (updates.fighters !== undefined ? updates.fighters : k.fighters) - f);
+      await applyUpdates(db, k.id, { rangers: updates.rangers, fighters: updates.fighters });
+
+      await db.run('INSERT INTO expeditions (kingdom_id, type, turns_left, rangers, fighters) VALUES (?, ?, ?, ?, ?)',
+        [k.id, type, EXP_TURNS[type], r, f]);
+
+      const label  = { scout: 'Scout', deep: 'Deep', dungeon: 'Dungeon' }[type];
+      const troops = `${r.toLocaleString()} rangers${f > 0 ? ', ' + f.toLocaleString() + ' fighters' : ''}`;
+
+      res.json({
+        ok: true, turns_left: EXP_TURNS[type],
+        turns_stored: updates.turns_stored,
+        updates, events,
+        message: `🧭 ${label} expedition launched — ${troops} deployed for ${EXP_TURNS[type]} turns.`,
+      });
+    } catch (err) {
+      console.error('[expedition/start] failed:', err.message);
+      res.status(500).json({ error: 'Expedition failed — please try again' });
+    }
+  });
+
+  router.get('/expedition/list', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    // Clean up old acknowledged rows
+    await db.run('DELETE FROM expeditions WHERE kingdom_id = ? AND turns_left = 0 AND seen = 1', [k.id]);
+    // Return completed (turns_left=0, has rewards, not yet acknowledged)
+    const completed = await db.all(
+      'SELECT * FROM expeditions WHERE kingdom_id = ? AND turns_left = 0 AND rewards IS NOT NULL AND (seen IS NULL OR seen = 0)',
+      [k.id]
+    );
+    const active = await db.all(
+      'SELECT * FROM expeditions WHERE kingdom_id = ? AND turns_left > 0 ORDER BY created_at DESC',
+      [k.id]
+    );
+    res.json({ active, completed });
+  });
+
+  // Frontend calls this to acknowledge a completed expedition so it's removed from the queue
+  // Acknowledge a completed expedition (mark seen and clean up)
+  router.post('/expedition/acknowledge', requireAuth, async (req, res) => {
+    const { id } = req.body;
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    await db.run('DELETE FROM expeditions WHERE id = ? AND kingdom_id = ? AND turns_left <= 0', [id, k.id]);
+    res.json({ ok: true });
+  });
+
+  router.post('/expedition/cancel', requireAuth, async (req, res) => {
+    const { id } = req.body;
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const exp = await db.get('SELECT * FROM expeditions WHERE id = ? AND kingdom_id = ?', [id, k.id]);
+    if (!exp) return res.status(404).json({ error: 'Expedition not found' });
+    // Return troops
+    await db.run('UPDATE kingdoms SET rangers = rangers + ?, fighters = fighters + ? WHERE id = ?', [exp.rangers, exp.fighters, k.id]);
+    await db.run('DELETE FROM expeditions WHERE id = ?', [id]);
+    res.json({ ok: true });
+  });
+
+  // Admin: clear ALL expeditions for a kingdom (debug tool)
+  router.delete('/expedition/clear-all', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const exps = await db.all('SELECT * FROM expeditions WHERE kingdom_id = ?', [k.id]);
+    let rangers = 0, fighters = 0;
+    exps.forEach(e => { rangers += e.rangers; fighters += e.fighters; });
+    await db.run('UPDATE kingdoms SET rangers = rangers + ?, fighters = fighters + ? WHERE id = ?', [rangers, fighters, k.id]);
+    await db.run('DELETE FROM expeditions WHERE kingdom_id = ?', [k.id]);
+    res.json({ ok: true, cleared: exps.length });
+  });
+
+  // ── Options ───────────────────────────────────────────────────────────────────
+  router.post('/options', requireAuth, async (req, res) => {
+    const { tax, name } = req.body;
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const updates = { updated_at: Math.floor(Date.now() / 1000) };
+    if (tax !== undefined) {
+      const t = Number(tax);
+      if (t < 0 || t > 100) return res.status(400).json({ error: 'Tax must be 0–100' });
+      updates.tax = t;
+    }
+    if (name !== undefined) {
+      if (!name.trim()) return res.status(400).json({ error: 'Name cannot be empty' });
+      updates.name = name.trim();
+    }
+    await applyUpdates(db, k.id, updates);
+    res.json({ ok: true, updates });
+  });
+
+  // ── Defence overview ──────────────────────────────────────────────────────────
+  router.get('/defence/overview', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    res.json({
+      bld_walls:         k.bld_walls          || 0,
+      bld_guard_towers:  k.bld_guard_towers   || 0,
+      bld_outposts:      k.bld_outposts       || 0,
+      bld_castles:       k.bld_castles        || 0,
+      war_machines:      k.war_machines       || 0,
+      wall_upgrades:     JSON.parse(k.wall_upgrades     ||'{}'),
+      tower_def_upgrades:JSON.parse(k.tower_def_upgrades||'{}'),
+      outpost_upgrades:  JSON.parse(k.outpost_upgrades  ||'{}'),
+      defence_upgrades:  JSON.parse(k.defence_upgrades  ||'{}'),
+      defence_rating:    engine.defenceRating(k),
+      wall_power:        engine.wallDefencePower(k),
+      tower_power:       engine.towerDetectionPower(k),
+      outpost_power:     engine.outpostRangerPower(k),
+      citadel_req:       engine.CITADEL_REQ,
+      thieves_on_watch:  Math.min(k.thieves||0, (k.bld_guard_towers||0)*10),
+      rangers_on_patrol: Math.min(k.rangers||0, (k.bld_outposts||0)*20),
+      wm_on_walls:       Math.min(k.war_machines||0, k.bld_walls||0),
+    });
+  });
+  // ── Season info ───────────────────────────────────────────────────────────────
+  router.get('/season', requireAuth, async (_req, res) => {
+    const sRow = await db.get("SELECT value FROM server_state WHERE key='current_season'");
+    const tRow = await db.get("SELECT value FROM server_state WHERE key='season_started_at'");
+    const season = sRow?.value || 'spring';
+    const startedAt = parseInt(tRow?.value) || Math.floor(Date.now()/1000);
+    const SEASON_DUR = { spring:3, summer:5, fall:2, winter:3 };
+    const SEASON_ICONS = { spring:'🌸', summer:'☀️', fall:'🍂', winter:'❄️' };
+    const daysLeft = Math.max(0, SEASON_DUR[season] - (Date.now()/1000-startedAt)/86400);
+    res.json({ season, daysLeft: daysLeft.toFixed(1), icon: SEASON_ICONS[season]||'🌸' });
+  });
+
+  // ── Location — get my discovered kingdoms ─────────────────────────────────────
+  router.get('/locations', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT discovered_kingdoms, location_maps_wip FROM kingdoms WHERE player_id=?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error:'Kingdom not found' });
+    let disc={}, wip=[];
+    try { disc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
+    try { wip  = JSON.parse(k.location_maps_wip||'[]');   } catch {}
+    res.json({ discovered: disc, wip });
+  });
+
+  // ── Location — start mapping a discovered kingdom ─────────────────────────────
+  router.post('/locations/start-map', requireAuth, async (req, res) => {
+    const { targetId } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id=?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error:'Kingdom not found' });
+    let disc={};
+    try { disc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
+    if (!disc[targetId]?.found) return res.status(400).json({ error:'Location not yet discovered' });
+    if (disc[targetId]?.mapped) return res.status(400).json({ error:'Already mapped' });
+    const target = await db.get('SELECT id, name FROM kingdoms WHERE id=?', [targetId]);
+    if (!target) return res.status(404).json({ error:'Kingdom not found' });
+    let wip=[];
+    try { wip = JSON.parse(k.location_maps_wip||'[]'); } catch {}
+    const scribesInUse = wip.length * 10;
+    if ((k.scribes||0) - scribesInUse < 10) return res.status(400).json({ error:'Need 10 free scribes (not already mapping another kingdom)' });
+    if ((k.maps||0) < 1) return res.status(400).json({ error:'Need at least 1 blank map in your library' });
+    wip.push({ target_id: target.id, target_name: target.name, turns_remaining: 5 });
+    await db.run('UPDATE kingdoms SET location_maps_wip=?, maps=maps-1 WHERE id=?', [JSON.stringify(wip), k.id]);
+    res.json({ ok:true, message:`Scribes have begun mapping ${target.name}. Completes in 5 turns.` });
+  });
+
+  // ── Location — steal map (covert action) ──────────────────────────────────────
+  router.post('/locations/steal-map', requireAuth, async (req, res) => {
+    const { targetId } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id=?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error:'Kingdom not found' });
+    const target = await db.get('SELECT * FROM kingdoms WHERE id=?', [targetId]);
+    if (!target) return res.status(404).json({ error:'Target not found' });
+    const successChance = 0.20 + Math.min(0.30, (k.thieves||0)/1000*0.10);
+    const success = Math.random() < successChance;
+    if (success) {
+      let targetDisc={};
+      try { targetDisc = JSON.parse(target.discovered_kingdoms||'{}'); } catch {}
+      const mappedIds = Object.keys(targetDisc).filter(id=>targetDisc[id]?.mapped);
+      if (!mappedIds.length) return res.json({ ok:true, success:false, message:'Target has no location maps to steal.' });
+      const stolenId = mappedIds[Math.floor(Math.random()*mappedIds.length)];
+      const stolenKingdom = await db.get('SELECT name FROM kingdoms WHERE id=?', [stolenId]);
+      delete targetDisc[stolenId];
+      await db.run('UPDATE kingdoms SET discovered_kingdoms=? WHERE id=?', [JSON.stringify(targetDisc), target.id]);
+      let myDisc={};
+      try { myDisc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
+      myDisc[stolenId] = { found:true, mapped:true };
+      await db.run('UPDATE kingdoms SET discovered_kingdoms=? WHERE id=?', [JSON.stringify(myDisc), k.id]);
+      await db.run('INSERT INTO news (kingdom_id,type,message,turn_num) VALUES (?,?,?,?)',
+        [target.id,'covert',`🗺️ A thief stole your location map for ${stolenKingdom?.name||'a kingdom'}.`,target.turn]);
+      await db.run('INSERT INTO war_log (action_type,attacker_id,attacker_name,defender_id,defender_name,outcome,detail,obscured) VALUES (?,?,?,?,?,?,?,?)',
+        ['steal_map',k.id,k.name,target.id,target.name,'success',JSON.stringify({stolen:stolenKingdom?.name}),1]);
+      res.json({ ok:true, success:true, message:`Thieves stole a location map for ${stolenKingdom?.name||'a kingdom'} from ${target.name}.` });
+    } else {
+      res.json({ ok:true, success:false, message:'Thieves failed to steal a location map.' });
+    }
+  });
+
+  // ── Research focus ────────────────────────────────────────────────────────────
+  router.post('/research-focus', requireAuth, async (req, res) => {
+    const { focus } = req.body; // array of 1-2 discipline keys
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    let schoolUpgrades = {};
+    try { schoolUpgrades = JSON.parse(k.school_upgrades||'{}'); } catch {}
+    const maxSlots = schoolUpgrades.repository ? 2 : 1;
+    const validKeys = ['economy','weapons','armor','military','attack_magic','defense_magic','entertainment','construction','war_machines','spellbook'];
+    const cleaned = (Array.isArray(focus) ? focus : [focus]).filter(f => validKeys.includes(f)).slice(0, maxSlots);
+    if (!cleaned.length) return res.status(400).json({ error: 'Invalid discipline' });
+    await db.run('UPDATE kingdoms SET research_focus = ? WHERE id = ?', [JSON.stringify(cleaned), k.id]);
+    res.json({ ok: true, research_focus: cleaned });
+  });
+
+  // ── Studies overview ──────────────────────────────────────────────────────────
+  router.get('/studies/overview', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    let focus = [];
+    try { focus = JSON.parse(k.research_focus||'[]'); } catch {}
+    if (!focus.length) {
+      const disciplines = [
+        { key:'economy', col:'res_economy' },{ key:'weapons', col:'res_weapons' },{ key:'armor', col:'res_armor' },
+        { key:'military', col:'res_military' },{ key:'attack_magic', col:'res_attack_magic' },
+        { key:'defense_magic', col:'res_defense_magic' },{ key:'entertainment', col:'res_entertainment' },
+        { key:'construction', col:'res_construction' },{ key:'war_machines', col:'res_war_machines' },
+        { key:'spellbook', col:'res_spellbook' },
+      ];
+      focus = [disciplines.reduce((b,d)=>(k[d.col]||0)>=(k[b.col]||0)?d:b, disciplines[0]).key];
+    }
+    res.json({
+      tower_upgrades:   JSON.parse(k.tower_upgrades||'{}'),
+      school_upgrades:  JSON.parse(k.school_upgrades||'{}'),
+      shrine_upgrades:  JSON.parse(k.shrine_upgrades||'{}'),
+      library_upgrades: JSON.parse(k.library_upgrades||'{}'),
+      research_focus:   focus,
+      divine_sanctuary_used: k.divine_sanctuary_used || 0,
+      mana_per_turn:    engine.manaPerTurn(k),
+      scribes:          k.scribes || 0,
+      researchers:      k.researchers || 0,
+      bld_libraries:    k.bld_libraries || 0,
+      bld_shrines:      k.bld_shrines || 0,
+      bld_cathedrals:   k.bld_cathedrals || 0,
+      bld_schools:      k.bld_schools || 0,
+      bld_taverns:      k.bld_taverns  || 0,
+    });
+  });
+  router.post('/economy/upgrade', requireAuth, async (req, res) => {
+    const { category, upgradeKey } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const result = engine.purchaseUpgrade(k, category, upgradeKey);
+    if (result.error) return res.status(400).json({ error: result.error });
+    await applyUpdates(db, k.id, result.updates);
+    const def = (engine.FARM_UPGRADES[upgradeKey] || engine.MARKET_UPGRADES[upgradeKey] || engine.TAVERN_UPGRADES[upgradeKey]);
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+      [k.id, 'system', `✅ ${def?.name || upgradeKey} purchased.`, k.turn]);
+    res.json({ ok: true, updates: result.updates });
+  });
+
+  // ── Hire mercenaries ──────────────────────────────────────────────────────────
+  router.post('/economy/hire-mercs', requireAuth, async (req, res) => {
+    const { unitType, tier, count } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const result = engine.hireMercenaries(k, unitType, tier, parseInt(count)||1);
+    if (result.error) return res.status(400).json({ error: result.error });
+    await applyUpdates(db, k.id, result.updates);
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+      [k.id, 'system', `⚔️ Hired ${result.hired.count} ${result.hired.tier} ${result.hired.unitType} (Lv ${result.hired.level}) for ${result.hired.cost.toLocaleString()} gold. Contract: ${result.hired.duration} turns.`, k.turn]);
+    res.json({ ok: true, hired: result.hired, updates: result.updates });
+  });
+
+  // ── Dismiss mercenaries ───────────────────────────────────────────────────────
+  router.post('/economy/dismiss-mercs', requireAuth, async (req, res) => {
+    const { mercIndex } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    let mercs = [];
+    try { mercs = JSON.parse(k.mercenaries || '[]'); } catch {}
+    const idx = parseInt(mercIndex);
+    if (idx < 0 || idx >= mercs.length) return res.status(400).json({ error: 'Invalid mercenary index' });
+    const m = mercs[idx];
+    mercs.splice(idx, 1);
+    const newCount = Math.max(0, (k[m.unit_type]||0) - m.count);
+    await db.run(`UPDATE kingdoms SET mercenaries = ?, ${m.unit_type} = ? WHERE id = ?`,
+      [JSON.stringify(mercs), newCount, k.id]);
+    res.json({ ok: true, dismissed: m });
+  });
+
+  // ── Send trade offer ──────────────────────────────────────────────────────────
+  router.post('/economy/trade/send', requireAuth, async (req, res) => {
+    const { targetId, offer, request } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    // Check trading post
+    let mktUpgrades = {};
+    try { mktUpgrades = JSON.parse(k.market_upgrades||'{}'); } catch {}
+    if (!mktUpgrades.trading_post) return res.status(400).json({ error: 'Build a Trading Post to trade with other kingdoms' });
+    if (!targetId || !offer || !request) return res.status(400).json({ error: 'Missing trade parameters' });
+    const target = await db.get('SELECT id, name FROM kingdoms WHERE id = ?', [targetId]);
+    if (!target) return res.status(404).json({ error: 'Target kingdom not found' });
+    // Validate sender has the offered goods
+    const offerObj  = typeof offer   === 'string' ? JSON.parse(offer)   : offer;
+    const requestObj = typeof request === 'string' ? JSON.parse(request) : request;
+    for (const [item, qty] of Object.entries(offerObj)) {
+      const col = item === 'food' ? 'food' : item === 'gold' ? 'gold' : item === 'mana' ? 'mana' : item === 'maps' ? 'maps' : item === 'blueprints' ? 'blueprints_stored' : null;
+      if (col && (k[col]||0) < qty) return res.status(400).json({ error: `Not enough ${item}` });
+    }
+    await db.run(
+      `INSERT INTO trade_offers (sender_id, sender_name, receiver_id, receiver_name, offer, request, expires_at) VALUES (?,?,?,?,?,?,?)`,
+      [k.id, k.name, target.id, target.name, JSON.stringify(offerObj), JSON.stringify(requestObj), Math.floor(Date.now()/1000)+3600]
+    );
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+      [target.id, 'system', `📦 Trade offer from ${k.name} — check your Economy panel to accept or decline.`, k.turn]);
+    res.json({ ok: true });
+  });
+
+  // ── Get trade offers ──────────────────────────────────────────────────────────
+  router.get('/economy/trade/list', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const now = Math.floor(Date.now()/1000);
+    await db.run('UPDATE trade_offers SET status = ? WHERE expires_at < ? AND status = ?', ['expired', now, 'pending']);
+    const sent     = await db.all('SELECT * FROM trade_offers WHERE sender_id   = ? ORDER BY created_at DESC LIMIT 20', [k.id]);
+    const received = await db.all('SELECT * FROM trade_offers WHERE receiver_id = ? AND status = ? ORDER BY created_at DESC LIMIT 20', [k.id, 'pending']);
+    res.json({ sent, received });
+  });
+
+  // ── Accept trade offer ────────────────────────────────────────────────────────
+  router.post('/economy/trade/accept', requireAuth, async (req, res) => {
+    const { offerId } = req.body;
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const offer = await db.get('SELECT * FROM trade_offers WHERE id = ? AND receiver_id = ? AND status = ?', [offerId, k.id, 'pending']);
+    if (!offer) return res.status(404).json({ error: 'Offer not found or already resolved' });
+    const sender  = await db.get('SELECT * FROM kingdoms WHERE id = ?', [offer.sender_id]);
+    if (!sender) return res.status(404).json({ error: 'Sender not found' });
+
+    const offerItems   = JSON.parse(offer.offer);    // what sender gives
+    const requestItems = JSON.parse(offer.request);  // what receiver gives
+
+    const ITEM_COL = { gold:'gold', food:'food', mana:'mana', maps:'maps', blueprints:'blueprints_stored', weapons:'weapons_stockpile', armor:'armor_stockpile' };
+
+    // Validate both sides still have the goods
+    for (const [item, qty] of Object.entries(requestItems)) {
+      const col = ITEM_COL[item];
+      if (col && (k[col]||0) < qty) return res.status(400).json({ error: `You don't have enough ${item}` });
+    }
+    for (const [item, qty] of Object.entries(offerItems)) {
+      const col = ITEM_COL[item];
+      if (col && (sender[col]||0) < qty) return res.status(400).json({ error: `Sender no longer has enough ${item}` });
+    }
+
+    // Apply exchange
+    const kUpdates = {}, sUpdates = {};
+    for (const [item, qty] of Object.entries(offerItems))   { const c=ITEM_COL[item]; if(c){ kUpdates[c]=(kUpdates[c]!==undefined?kUpdates[c]:(k[c]||0))+qty;      sUpdates[c]=(sUpdates[c]!==undefined?sUpdates[c]:(sender[c]||0))-qty; } }
+    for (const [item, qty] of Object.entries(requestItems)) { const c=ITEM_COL[item]; if(c){ kUpdates[c]=(kUpdates[c]!==undefined?kUpdates[c]:(k[c]||0))-qty; sUpdates[c]=(sUpdates[c]!==undefined?sUpdates[c]:(sender[c]||0))+qty; } }
+
+    await applyUpdates(db, k.id,      kUpdates);
+    await applyUpdates(db, sender.id, sUpdates);
+    await db.run('UPDATE trade_offers SET status = ? WHERE id = ?', ['accepted', offer.id]);
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+      [sender.id, 'system', `✅ ${k.name} accepted your trade offer.`, sender.turn]);
+    res.json({ ok: true, kUpdates, sUpdates });
+  });
+
+  // ── Decline trade offer ───────────────────────────────────────────────────────
+  router.post('/economy/trade/decline', requireAuth, async (req, res) => {
+    const { offerId } = req.body;
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    const offer = await db.get('SELECT * FROM trade_offers WHERE id = ? AND receiver_id = ?', [offerId, k.id]);
+    if (!offer) return res.status(404).json({ error: 'Offer not found' });
+    await db.run('UPDATE trade_offers SET status = ? WHERE id = ?', ['declined', offer.id]);
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+      [offer.sender_id, 'system', `❌ ${k.name} declined your trade offer.`, 0]);
+    res.json({ ok: true });
+  });
+
+  // ── Economy overview ──────────────────────────────────────────────────────────
+  router.get('/economy/overview', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    res.json({
+      farmProduction:  engine.farmProduction(k),
+      foodConsumption: engine.foodConsumption(k),
+      foodBalance:     engine.farmProduction(k) - engine.foodConsumption(k),
+      marketIncome:    engine.marketIncomeFull(k),
+      tavernBonus:     engine.tavernEntertainmentBonus(k),
+      workedFarms:     Math.min(k.bld_farms||0, Math.floor(Math.max(0,(k.population||0)-((k.fighters||0)+(k.rangers||0)+(k.clerics||0)+(k.mages||0)+(k.thieves||0)+(k.ninjas||0)+(k.researchers||0)+(k.engineers||0)+(k.scribes||0))) / (engine.FARM_WORKERS_PER?.[k.race]||10))),
+      farm_upgrades:   JSON.parse(k.farm_upgrades||'{}'),
+      market_upgrades: JSON.parse(k.market_upgrades||'{}'),
+      tavern_upgrades: JSON.parse(k.tavern_upgrades||'{}'),
+      mercenaries:     JSON.parse(k.mercenaries||'[]'),
+      food_shortage_turns: k.food_shortage_turns || 0,
+      food_surplus_turns:  k.food_surplus_turns  || 0,
+    });
+  });
+  router.get('/profile/:name', async (req, res) => {
+    try {
+      const k = await db.get(`
+        SELECT k.id, k.name, k.race, k.region, k.level, k.xp, k.land, k.population,
+               k.fighters, k.mages, k.rangers, k.morale, k.turn,
+               k.res_military, k.res_economy, k.res_construction, k.res_spellbook,
+               k.res_attack_magic, k.res_entertainment,
+               p.username, p.is_ai
+        FROM kingdoms k JOIN players p ON k.player_id = p.id
+        WHERE LOWER(k.name) = LOWER(?)`, [req.params.name]);
+      if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+      const alliance = await db.get(`
+        SELECT a.name FROM alliances a JOIN alliance_members am ON a.id = am.alliance_id
+        WHERE am.kingdom_id = ?`, [k.id]);
+      const news = await db.all(`
+        SELECT type, message, turn_num FROM news
+        WHERE kingdom_id = ? AND type = 'attack'
+        ORDER BY created_at DESC LIMIT 8`, [k.id]);
+      const rankRow = await db.get(
+        'SELECT COUNT(*)+1 as rank FROM kingdoms WHERE land > ? AND id != ?', [k.land, k.id]);
+      res.json({ ...k, alliance: alliance?.name || null, news, rank: rankRow?.rank || 1 });
+    } catch (err) {
+      console.error('[profile]', err.message);
+      res.status(500).json({ error: 'Failed to load profile' });
+    }
+  });
+
+  // ── World map data ────────────────────────────────────────────────────────────
+  router.get('/world-map', requireAuth, async (req, res) => {
+    try {
+      const k = await db.get('SELECT id, discovered_kingdoms FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+      if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+      
+      let discovered = {};
+      try { discovered = JSON.parse(k.discovered_kingdoms || '{}'); } catch {}
+
+      const kingdoms = await db.all(`
+        SELECT k.id, k.name, k.race, k.region, k.land, k.level, k.turn, p.is_ai
+        FROM kingdoms k JOIN players p ON k.player_id = p.id
+        ORDER BY k.land DESC`);
+      
+      const filtered = kingdoms.filter(r => r.id === k.id || (discovered[r.id] && discovered[r.id].found));
+      res.json(filtered);
+    } catch (err) {
+      // region column may not exist yet — fallback query
+      try {
+        const k = await db.get('SELECT id, discovered_kingdoms FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+        let discovered = {};
+        if (k) try { discovered = JSON.parse(k.discovered_kingdoms || '{}'); } catch {}
+
+        const kingdoms = await db.all(`
+          SELECT k.id, k.name, k.race, '' as region, k.land, k.level, k.turn, p.is_ai
+          FROM kingdoms k JOIN players p ON k.player_id = p.id
+          ORDER BY k.land DESC`);
+        
+        const filtered = kingdoms.filter(r => k && (r.id === k.id || (discovered[r.id] && discovered[r.id].found)));
+        res.json(filtered);
+      } catch (err2) {
+        console.error('[world-map]', err2.message);
+        res.status(500).json({ error: 'Failed to load map data' });
+      }
+    }
+  });
+
+  return router;
+};
+
+async function applyUpdates(db, kingdomId, updates) {
+  if (!updates || Object.keys(updates).length === 0) return;
+  // Whitelist — only valid kingdom columns reach the DB
+  const VALID_COLS = new Set([
+    'gold','mana','land','population','morale','food','turn','turns_stored',
+    'fighters','rangers','clerics','mages','thieves','ninjas',
+    'researchers','engineers','scribes',
+    'war_machines','weapons_stockpile','armor_stockpile',
+    'res_economy','res_weapons','res_armor','res_military','res_spellbook',
+    'res_attack_magic','res_defense_magic','res_entertainment',
+    'res_construction','res_war_machines',
+    'bld_farms','bld_barracks','bld_markets','bld_cathedrals','bld_training',
+    'bld_colosseums','bld_castles','bld_vaults','bld_smithies','bld_armories',
+    'bld_guard_towers','bld_outposts','bld_schools','bld_libraries',
+    'bld_mage_towers','bld_shrines','bld_housing','bld_taverns',
+    'tools_hammers','tools_scaffolding','tools_blueprints','blueprints_stored',
+    'hammer_turns_used','smithy_allocation','racial_bonuses_unlocked',
+    'last_event_at','active_event','discovered_kingdoms','location_maps_wip',
+    'bld_walls','wall_upgrades','tower_def_upgrades','outpost_upgrades','defence_upgrades',
+    'tower_upgrades','school_upgrades','shrine_upgrades','library_upgrades',
+    'research_focus','divine_sanctuary_used',
+    'farm_upgrades','market_upgrades','tavern_upgrades',
+    'food_shortage_turns','food_surplus_turns','mercenaries',
+    'maps','scrolls','active_effects',
+    'xp','level','troop_levels',
+    'tax','tax_rate',
+    'build_queue','build_progress','build_allocation',
+    'research_allocation','training_allocation',
+    'library_allocation','library_progress',
+    'mage_tower_allocation','shrine_allocation',
+    'updated_at',
+  ]);
+  const safe = Object.fromEntries(
+    Object.entries(updates).filter(([col, val]) => VALID_COLS.has(col) && val !== undefined)
+  );
+  if (Object.keys(safe).length === 0) return;
+  const cols = Object.keys(safe).map(k => `${k} = ?`).join(', ');
+  const vals = [...Object.values(safe), kingdomId];
+  await db.run(`UPDATE kingdoms SET ${cols} WHERE id = ?`, vals);
+}
+
+// Insert multiple news rows in a single query — much faster than N sequential inserts
+async function bulkInsertNews(db, rows) {
+  if (!rows || rows.length === 0) return;
+  const placeholders = rows.map(() => '(?,?,?,?)').join(',');
+  const values = rows.flatMap(r => [r.kingdom_id, r.type || 'system', r.message, r.turn_num || 0]);
+  await db.run(`INSERT INTO news (kingdom_id, type, message, turn_num) VALUES ${placeholders}`, values);
+}
+
+// Prune old news — keep only the most recent N rows per kingdom
+async function pruneNews(db, kingdomId, keep = 200) {
+  await db.run(`
+    DELETE FROM news WHERE kingdom_id = ? AND id NOT IN (
+      SELECT id FROM news WHERE kingdom_id = ? ORDER BY created_at DESC LIMIT ?
+    )
+  `, [kingdomId, kingdomId, keep]);
+}

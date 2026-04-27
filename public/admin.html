@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Narmir Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0e14;--bg2:#13141d;--bg3:#1a1c27;--bg4:#212432;
+  --border:#2a2d3e;--border2:#363a52;
+  --text:#e8e9f0;--text2:#9a9bb5;--text3:#5e6080;
+  --gold:#e8b84b;--purple:#7c6af5;--green:#4caf7d;
+  --red:#e05c5c;--blue:#5b9cf5;--amber:#f0a832;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;padding:24px}
+h1{font-size:22px;font-weight:700;color:var(--gold);margin-bottom:4px}
+h2{font-size:15px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin:24px 0 12px}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.badge-red{background:rgba(224,92,92,.15);color:var(--red)}
+.badge-green{background:rgba(76,175,125,.15);color:var(--green)}
+.badge-gold{background:rgba(232,184,75,.15);color:var(--gold)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+.stat .lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat .val{font-size:24px;font-weight:700;color:var(--gold)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.btn{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--bg4);border-color:var(--purple)}
+.btn:active{transform:scale(.97)}
+.btn-red{border-color:var(--red);color:var(--red)}
+.btn-red:hover{background:rgba(224,92,92,.1)}
+.btn-green{border-color:var(--green);color:var(--green)}
+.btn-green:hover{background:rgba(76,175,125,.1)}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:#0d0e14;font-weight:700}
+.btn-gold:hover{opacity:.9}
+input[type=text],input[type=number],input[type=password],textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-size:13px;outline:none;transition:border-color .15s}
+input:focus,textarea:focus{border-color:var(--purple)}
+textarea{width:100%;resize:vertical;min-height:60px}
+.announce-row{display:flex;gap:8px;align-items:flex-start}
+.announce-row textarea{flex:1}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);color:var(--text);font-size:13px;padding:10px 18px;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:none;z-index:999}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{border-color:var(--green);color:var(--green)}
+.toast.error{border-color:var(--red);color:var(--red)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:24px 28px;width:100%;max-width:420px}
+.modal.wide{max-width:720px}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px}
+.modal-btns{display:flex;gap:8px;margin-top:18px;justify-content:flex-end}
+.sec-label{grid-column:1/-1;font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.6px;padding:10px 0 2px;border-bottom:1px solid var(--border);margin-bottom:2px}
+#auth-screen{max-width:360px;margin:80px auto}
+.admin-tab { background:none; border:none; border-bottom:3px solid transparent; color:var(--text3); cursor:pointer; font-size:13px; font-weight:600; padding:8px 14px; margin-bottom:-2px; transition:all .2s; white-space:nowrap; }
+.admin-tab:hover { color:var(--text); }
+.admin-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+.atab { display:block; }
+.cl-section { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); margin:14px 0 6px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+.cl-item { font-size:12px; color:var(--text2); padding:3px 0 3px 4px; line-height:1.6; }
+.cl-item.wish { color:var(--text3); }
+.stats-grid .stat { padding:10px 14px; }
+.stats-grid .val { font-size:22px; }
+.mod-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media(max-width:600px) { .mod-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div id="auth-screen" class="card" style="display:none">
+  <h1 style="margin-bottom:4px">NARMIR</h1>
+  <div style="color:var(--text2);font-size:13px;margin-bottom:20px">Admin panel</div>
+  <div id="auth-err" style="color:var(--red);font-size:13px;margin-bottom:10px;min-height:16px"></div>
+  <input type="text" id="a-user" placeholder="Username" style="width:100%;margin-bottom:10px">
+  <input type="password" id="a-pass" placeholder="Password" style="width:100%;margin-bottom:14px">
+  <button class="btn btn-gold" style="width:100%;padding:9px" onclick="adminLogin()">Login</button>
+</div>
+
+<div id="main-screen" style="display:none">
+  <div class="topbar">
+    <div>
+      <h1>Narmir Admin</h1>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px">Logged in as <span id="admin-user" style="color:var(--text2)"></span></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn" onclick="loadData()">Refresh</button>
+      <button class="btn btn-red" onclick="adminLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat"><div class="lbl">Players</div><div class="val" id="st-players">—</div></div>
+    <div class="stat"><div class="lbl">Kingdoms</div><div class="val" id="st-kingdoms">—</div></div>
+    <div class="stat"><div class="lbl">Banned</div><div class="val" id="st-banned" style="color:var(--red)">—</div></div>
+    <div class="stat"><div class="lbl">Combats</div><div class="val" id="st-combats">—</div></div>
+    <div class="stat"><div class="lbl">Messages</div><div class="val" id="st-messages">—</div></div>
+    <div class="stat"><div class="lbl">Last regen</div><div class="val" style="font-size:14px" id="st-regen">—</div></div>
+  </div>
+
+  <!-- Tab navigation -->
+  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border2);padding-bottom:0">
+    <button class="admin-tab active" onclick="showAdminTab('manage',this)">⚙️ Manage</button>
+    <button class="admin-tab" onclick="showAdminTab('kingdoms',this)">🏰 Kingdoms</button>
+    <button class="admin-tab" onclick="showAdminTab('events',this)">📅 Events</button>
+    <button class="admin-tab" onclick="showAdminTab('changelog',this)">📋 Changelog</button>
+  </div>
+
+  <!-- TAB: Manage -->
+  <div id="atab-manage" class="atab">
+
+  <div class="card">
+    <h2 style="margin-top:0">Global announcement</h2>
+    <div class="announce-row">
+      <textarea id="announce-msg" placeholder="Message to broadcast to all players..."></textarea>
+      <button class="btn btn-gold" onclick="sendAnnouncement()" style="padding:9px 16px">Send</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Chat moderation</h2>
+    <div class="mod-grid">
+
+      <div>
+        <h3 style="font-size:13px;color:var(--text3);margin:0 0 8px">Promote chat moderator</h3>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input type="text" id="mod-username" placeholder="Username..." style="flex:1">
+          <button class="btn btn-purple" onclick="promotemod()">Make mod</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="demod-username" placeholder="Username..." style="flex:1">
+          <button class="btn btn-red" onclick="demotemod()">Remove mod</button>
+        </div>
+        <div id="mod-result" style="font-size:12px;margin-top:6px"></div>
+
+        <h3 style="font-size:13px;color:var(--text3);margin:14px 0 8px">Current moderators</h3>
+        <div id="mod-list" style="font-size:13px;color:var(--text3)">Loading...</div>
+      </div>
+
+      <div>
+        <h3 style="font-size:13px;color:var(--text3);margin:0 0 8px">Chat banned users</h3>
+        <div id="chat-ban-list" style="font-size:13px;color:var(--text3);max-height:200px;overflow-y:auto">Loading...</div>
+        <button class="btn" style="margin-top:8px;width:100%" onclick="loadChatBans()">↻ Refresh</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Promote to admin</h2>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="promote-username" placeholder="Username..." style="flex:1">
+      <button class="btn btn-purple" onclick="promotePlayer()" style="padding:9px 16px">Promote</button>
+    </div>
+    <div id="promote-result" style="margin-top:8px;font-size:13px"></div>
+  </div>
+
+  </div><!-- end atab-manage -->
+
+  <!-- TAB: Kingdoms -->
+  <div id="atab-kingdoms" class="atab" style="display:none">
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+    <h2 style="margin:0;flex:1">Kingdoms</h2>
+    <input type="text" id="search-input" placeholder="Search by name or username..." style="width:220px" oninput="filterTable(this.value)">
+    <button class="btn btn-green" onclick="resetAllTurns()">Reset all turns to 400</button>
+    <button class="btn btn-red" onclick="resetAllKingdoms()" style="margin-left:4px">⚠️ Reset all kingdoms to start</button>
+    <button class="btn" onclick="seedAi()" style="margin-left:4px">🤖 Seed AI kingdoms</button>
+    <button class="btn btn-red" onclick="flushLocations()" style="margin-left:4px" title="Clears all discovered_kingdoms and location_maps_wip for all players">🗺️ Flush all locations</button>
+    <button class="btn btn-amber" onclick="resetAi()" style="margin-left:4px">🔄 Reset AI kingdoms</button>
+  </div>
+
+  <!-- AI Synopsis -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="margin:0;font-size:15px">🤖 AI Kingdom Synopsis</h2>
+      <button class="btn" onclick="loadAiSynopsis()" style="font-size:11px;padding:5px 10px">Refresh</button>
+    </div>
+    <div id="ai-synopsis" style="overflow-x:auto">
+      <div style="color:var(--text3);font-size:12px">Click Refresh to load AI status.</div>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Kingdom</th><th>Username</th><th>Race</th>
+          <th>Land</th><th>Gold</th><th>Turns</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="kingdom-table"></tbody>
+    </table>
+  </div>
+</div><!-- end atab-kingdoms -->
+
+<!-- TAB: Changelog & Wishlist -->
+<div id="atab-events" class="atab" style="display:none">
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start">
+
+    <!-- Event log -->
+    <div>
+      <div class="section-title" style="margin-bottom:12px">📜 Recent event log</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <input type="text" id="ev-log-search" placeholder="Search kingdom or event..." style="flex:1;min-width:160px" oninput="filterEventLog()">
+        <select id="ev-log-season" onchange="filterEventLog()" style="width:120px">
+          <option value="">All seasons</option>
+          <option value="spring">🌸 Spring</option>
+          <option value="summer">☀️ Summer</option>
+          <option value="fall">🍂 Fall</option>
+          <option value="winter">❄️ Winter</option>
+        </select>
+        <button class="btn" onclick="loadEventLog()">↻ Refresh</button>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:140px 1fr 80px 80px;gap:0;padding:8px 12px;font-size:11px;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)">
+          <span>Kingdom</span><span>Event</span><span>Season</span><span>When</span>
+        </div>
+        <div id="ev-log-list" style="max-height:480px;overflow-y:auto">
+          <div style="padding:24px;text-align:center;color:var(--text3)">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event editor -->
+    <div>
+      <div class="section-title" style="margin-bottom:12px">✏️ Event editor</div>
+      <div style="background:var(--bg2);border-radius:8px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px" id="ev-edit-title">New event</div>
+        <input type="hidden" id="ev-id">
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Key (unique, no spaces)</label>
+          <input type="text" id="ev-key" placeholder="e.g. summer_drought" style="width:100%">
+        </div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Name</label>
+          <input type="text" id="ev-name" placeholder="Drought" style="width:100%">
+        </div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Description</label>
+          <input type="text" id="ev-desc" placeholder="A dry spell withers crops." style="width:100%">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Season</label>
+            <select id="ev-season" style="width:100%">
+              <option value="all">All seasons</option>
+              <option value="spring">🌸 Spring</option>
+              <option value="summer">☀️ Summer</option>
+              <option value="fall">🍂 Fall</option>
+              <option value="winter">❄️ Winter</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Effect type</label>
+            <select id="ev-effect-type" style="width:100%">
+              <option value="morale">Morale (flat ±)</option>
+              <option value="gold">Gold (% of current)</option>
+              <option value="food">Food (% if <1, flat if ≥1)</option>
+              <option value="population">Population (% if <1, flat if ≥1)</option>
+              <option value="farm_yield">Farm yield (% mult, N turns)</option>
+              <option value="military">Military power (% mult, N turns)</option>
+              <option value="mana">Mana production (% mult, N turns)</option>
+              <option value="market">Market income (% mult, N turns)</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Effect value (negative = bad)</label>
+            <input type="number" id="ev-effect-value" step="0.01" value="5" style="width:100%">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Duration (turns)</label>
+            <input type="number" id="ev-effect-duration" min="1" value="1" style="width:100%">
+          </div>
+        </div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Race only (leave blank for all)</label>
+          <select id="ev-race-only" style="width:100%">
+            <option value="">All races</option>
+            <option value="human">Human</option>
+            <option value="dwarf">Dwarf</option>
+            <option value="high_elf">High Elf</option>
+            <option value="dark_elf">Dark Elf</option>
+            <option value="orc">Orc</option>
+            <option value="dire_wolf">Dire Wolf</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="ev-active" checked> Active
+          </label>
+          <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="ev-positive" checked> Positive event
+          </label>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-green" style="flex:1" onclick="saveEvent()">💾 Save event</button>
+          <button class="btn" onclick="clearEventForm()">✕ Clear</button>
+        </div>
+      </div>
+
+      <!-- Event list -->
+      <div class="section-title" style="margin-bottom:8px">All events</div>
+      <div id="ev-list" style="max-height:400px;overflow-y:auto;background:var(--bg2);border-radius:8px">
+        <div style="padding:24px;text-align:center;color:var(--text3)">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="atab-changelog" class="atab" style="display:none">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+
+    <!-- Changelog -->
+    <div class="card">
+      <h2 style="margin-top:0;color:var(--green)">✅ Completed Features</h2>
+
+      <div class="cl-section">Core Systems</div>
+      <div class="cl-item">✅ Registration, login, JWT auth with httpOnly cookie</div>
+      <div class="cl-item">✅ Turn system — +7 every 25 min, max 400, crash-safe boot catch-up</div>
+      <div class="cl-item">✅ 6 playable races with unique bonuses and penalties</div>
+      <div class="cl-item">✅ Kingdom status panel with resource tiles, XP bar, protection badge</div>
+      <div class="cl-item">✅ Three-column desktop status layout (military, research, buildings)</div>
+
+      <div class="cl-section">Economy</div>
+      <div class="cl-item">✅ Race-adjusted gold production — Dwarf 457, Orc 418, High Elf/Human 399, Dark Elf 342, Dire Wolf 266 GC/turn base (404 land, 42% tax)</div>
+      <div class="cl-item">✅ Tax slider with lock — persists server-side, loads correctly on login</div>
+      <div class="cl-item">✅ Markets and castles add flat gold bonuses per building</div>
+
+      <div class="cl-section">Buildings</div>
+      <div class="cl-item">✅ 14 building types — continuous build from engineer allocation</div>
+      <div class="cl-item">✅ Build queue shows turn estimate per building type</div>
+      <div class="cl-item">✅ Blueprints — crafted by scribes in library, stored in smithy (25/smithy cap), required for 100t+ buildings, consumed on completion, drop from dungeons (20%)</div>
+      <div class="cl-item">✅ Hammers — produced in smithy (1 turn each, 25/smithy cap), +5% build speed each, degrade over 20 turns of active use with durability display</div>
+      <div class="cl-item">✅ Scaffolding — produced in smithy (1 turn + 2,500 GC each, 10/smithy cap), required for 100t+ buildings, speed bonus for under 100t buildings (scales inversely), single use consumed on completion</div>
+      <div class="cl-item">✅ Smithy panel — shows stored hammers (with durability %), scaffolding, blueprints, all caps, production allocation sliders</div>
+      <div class="cl-item">✅ Build panel notices — 📐 Blueprint needed / 🪜 Scaffolding needed badges beside buildings missing required tools</div>
+      <div class="cl-item">✅ Building caps scale with kingdom level</div>
+      <div class="cl-item">✅ Libraries — house scribes and mages</div>
+
+      <div class="cl-section">Units &amp; Upkeep</div>
+      <div class="cl-item">✅ 9 hirable unit types including scribes and engineers</div>
+      <div class="cl-item">✅ Housing capacity by race — Dire Wolf 700, Dwarf 650, Orc 600, Human 500, Dark Elf 450, High Elf 350 per house. Dire Wolf overcrowding penalty ×0.5, High Elf ×2.0</div>
+      <div class="cl-item">✅ Support unit housing — researchers in schools (100/school), engineers in smithies (50/smithy), scribes in libraries (20/library) — all with racial capacity multipliers</div>
+      <div class="cl-item">✅ Housed support units pay no upkeep — overflow units do. Combat troops always pay upkeep.</div>
+      <div class="cl-item">✅ Upkeep race multipliers — Dwarf ×0.85, Human/High Elf ×1.0, Dark Elf ×1.1, Orc ×1.15, Dire Wolf ×1.2</div>
+      <div class="cl-item">✅ Barracks discount on military upkeep (up to 50%)</div>
+      <div class="cl-item">✅ Hire panel shows school/smithy/library capacity with overflow highlighted red</div>
+
+            <div class="cl-section">Research</div>
+      <div class="cl-item">✅ 10 research disciplines with allocation panel</div>
+      <div class="cl-item">✅ Distribute evenly and Release all buttons</div>
+      <div class="cl-item">✅ Research bars only — no percentage numbers</div>
+      <div class="cl-item">✅ Silence debuff suppresses research for 3 turns</div>
+
+      <div class="cl-section">Exploration</div>
+      <div class="cl-item">✅ Scout (10t), Deep (25t), Dungeon (50t) expeditions</div>
+      <div class="cl-item">✅ Gold = forage rate (rangers × 12 × tacBonus × raceBonus × rangerLevel) × turns × rand(1.05–1.30)</div>
+      <div class="cl-item">✅ Race exploration bonuses (Dire Wolf ×1.4, Dark Elf ×1.25, Human ×1.1, Orc ×1.05, High Elf ×0.95, Dwarf ×0.9)</div>
+      <div class="cl-item">✅ Ranger level scales expedition rewards — higher level rangers find more</div>
+      <div class="cl-item">✅ Ranger attrition — Dire Wolf and Dark Elf lose fewer rangers</div>
+      <div class="cl-item">✅ Map drops — Scout 5%, Deep 15%, Dungeon 25%</div>
+      <div class="cl-item">✅ Blueprint drops — Dungeon 20% on success</div>
+      <div class="cl-item">✅ 6 ultra-rare prizes (0.5% deep, 1% dungeon)</div>
+      <div class="cl-item">✅ 👑 The Throne of Nazdreg Grishnak — unique, one per server, forever. Broadcasts to all kingdoms and global chat on discovery.</div>
+      <div class="cl-item">✅ Cancel expedition button on active expeditions</div>
+
+      <div class="cl-section">Magic & Library</div>
+      <div class="cl-item">✅ 16 spells across 4 tiers — scroll-based casting</div>
+      <div class="cl-item">✅ Mages craft scrolls in library, scribes craft maps and blueprints</div>
+      <div class="cl-item">✅ Map required to interact with other kingdoms</div>
+      <div class="cl-item">✅ Mage tower mana production</div>
+      <div class="cl-item">✅ Shrine morale and healing</div>
+      <div class="cl-item">✅ Active effects — fog, blight, silence, plague, shield displayed as badges</div>
+
+      <div class="cl-section">Combat &amp; Covert</div>
+      <div class="cl-item">✅ Full 8-step combat sequence: thief sabotage → ninja pre-strike → ranger volley → power comparison → cleric healing → casualties → morale change → XP</div>
+      <div class="cl-item">✅ Every unit engages — fighters (front line), rangers (always ranged), mages (back line), clerics (heal casualties), engineers (crew war machines), ninjas (optional pre-strike), thieves (optional WM sabotage)</div>
+      <div class="cl-item">✅ Rangers always attack and defend ranged — opening volley kills 2–5% of front line before power comparison; defend from walls via outposts and guard towers</div>
+      <div class="cl-item">✅ War machines crewed by engineers — crew required scales by race: Dwarf 2 (→1 at Eng Lv5), Human 3, High Elf 4, Dark Elf 4, Orc 5, Dire Wolf 6</div>
+      <div class="cl-item">✅ War machines can be destroyed in combat — attacker loses 2–8% on defeat, defender 3–10% on loss</div>
+      <div class="cl-item">✅ Anti-bully penalty — ×2 size: −20% power · ×4: −40% + morale penalty · ×8+: −60% + public shame broadcast to ALL kingdoms and global chat</div>
+      <div class="cl-item">✅ Morale affects combat — below 50%: ×0.80 power; above 100%: up to ×1.10. Win: +5–15 morale. Loss: −5–20 morale. Floor of 20 prevents death spiral</div>
+      <div class="cl-item">✅ Attack panel — army composition sliders for all troop types, live power preview (attack, estimated defence, win %, land on win, bully warnings)</div>
+      <div class="cl-item">✅ Defence power shown as estimated — exact power only discernible from a 100% effective spy report</div>
+      <div class="cl-item">✅ Ninja pre-battle strike — defender's ninjas intercept at 50% effectiveness</div>
+      <div class="cl-item">✅ Cleric healing — reduces own-side losses up to 35% (High Elf clerics strongest)</div>
+      <div class="cl-item">✅ Covert ops — spy, loot, assassinate (all with thief/ninja level scaling)</div>
+      <div class="cl-item">✅ Newbie protection — no attacks on kingdoms under Turn 200</div>
+      <div class="cl-item">✅ War log — all combat written including AI actions (was missing AI war_log inserts — fixed)</div>
+      <div class="cl-item">✅ War log quiet day message — "It's been a quiet day. BREAK SOME $#@&!"</div>
+      <div class="cl-item">✅ AI anti-spam — per-target 8-minute cooldown, 35% win threshold before attacking, targets weakest available kingdom</div>
+
+      <div class="cl-section">Unit XP &amp; Levelling</div>
+      <div class="cl-item">✅ All units gain XP from activity — engineers +10/building, researchers +5/advance, mages +2/turn mana +20/scroll, scribes +15/item, rangers +3/turn exploring +8/20/40 expedition type, fighters +30/10 combat, rangers +20/8 combat, thieves +12/20 spy/loot, ninjas +30 assassination</div>
+      <div class="cl-item">✅ Level cap: 100. Race bonus extends effective level beyond 100 in combat (Dire Wolf fighters act as Lv 180 at cap)</div>
+      <div class="cl-item">✅ Level scaling — +0.5% effectiveness per level, max +50% (build speed, research, mana, scrolls, expedition rewards, loot, kills, attack/defence power)</div>
+      <div class="cl-item">✅ Hire dilution — new recruits lower average XP: new_avg = old_pool × old_count / new_count</div>
+      <div class="cl-item">✅ Training fields award passive XP with equipment bonuses</div>
+      <div class="cl-item">✅ Racial gift unlock — one-time news event when signature unit hits Lv5, then permanent ✨ badge on training panel row. Never fires again.</div>
+      <div class="cl-item">✅ 🔨 Dwarf engineers Lv5+ — war machines need only 1 engineer to crew (base: 2)</div>
+      <div class="cl-item">✅ ✨ High Elf mages Lv5+ — scrolls produce 2 per craft instead of 1</div>
+      <div class="cl-item">✅ ⚔️ Orc fighters Lv5+ — passively trains 1 free fighter per 10 each turn</div>
+      <div class="cl-item">✅ 🕵️ Dark Elf ninjas Lv5+ — silent assassination, target receives no news event</div>
+      <div class="cl-item">✅ 🐺 Dire Wolf rangers Lv5+ — expeditions tick down 2 turns per turn, return early</div>
+      <div class="cl-item">✅ 💚 Human clerics Lv5+ — +1 morale aura per turn across kingdom</div>
+
+      <div class="cl-section">World &amp; Profiles</div>
+      <div class="cl-item">✅ World map — dark fantasy SVG with 6 named racial regions, kingdom dots, compass rose, click-to-inspect any kingdom</div>
+      <div class="cl-item">✅ Named regions — The Iron Holds (Dwarf), The Silverwood (High Elf), The Bloodplains (Orc), The Underspire (Dark Elf), The Heartlands (Human), The Ashfang Wilds (Dire Wolf)</div>
+      <div class="cl-item">✅ Region passive bonuses — +5% to race signature stat stacking on top of race bonuses (construction, magic, military, stealth, economy)</div>
+      <div class="cl-item">✅ Region assigned on registration, backfilled for existing kingdoms on deploy</div>
+      <div class="cl-item">✅ Race lore modal — click race badge on status screen. Full lore paragraph, strengths/weaknesses, racial unique bonus, playstyle tip</div>
+      <div class="cl-item">✅ Kingdom profiles — public, no login required. Rank, level, land, population, morale, alliance, top 3 research, recent combat news</div>
+      <div class="cl-item">✅ Rankings — 👤 profile button added to every row</div>
+      <div class="cl-item">✅ World map region legend — colour swatches, bonus text, kingdom count, click to highlight</div>
+
+      <div class="cl-section">Bug Fixes</div>
+      <div class="cl-item">✅ Turn processing crash — applyUpdates now has a 40+ column whitelist; internal keys no longer reach the SQL</div>
+      <div class="cl-item">✅ _dwarf_wm_noted temp flag leak — was crashing processTurn every turn for Dwarves</div>
+      <div class="cl-item">✅ AI war_log inserts missing — AI attacks now write to war_log (attack, loot, assassination)</div>
+      <div class="cl-item">✅ AI spam fixed — per-target cooldown + power ratio check + targets weakest available</div>
+      <div class="cl-item">✅ Rankings not rendering — panel was gated on visibility; now always renders on data load</div>
+      <div class="cl-item">✅ Rank display in header showing "—" — now updates from rankings data on load</div>
+      <div class="cl-item">✅ Duplicate expedition/acknowledge route — merged into single clean DELETE route</div>
+      <div class="cl-item">✅ World map 500 error — defensive fallback query if region column not yet migrated</div>
+      <div class="cl-item">✅ Duplicate Chat nav item removed</div>
+      <div class="cl-item">✅ "Clear stuck" debug button removed from expedition log</div>
+      <div class="cl-item">✅ /me chat messages render as centred italic emotes (not raw /me text in a bubble)</div>
+      <div class="cl-item">✅ Tax slider loads saved value on login and stays in sync after each turn</div>
+      <div class="cl-item">✅ Land search diminishing returns — large kingdoms find less free land per ranger</div>
+      <div class="cl-item">✅ Food search added to instant search panel</div>
+
+      <div class="cl-section">Social</div>
+      <div class="cl-item">✅ Global chat with Socket.io — real-time, username-based</div>
+      <div class="cl-item">✅ Online users sidebar with race icons and MOD badges</div>
+      <div class="cl-item">✅ IRC commands — /me, /msg (whisper), /kick, /ban, /unban, /delete</div>
+      <div class="cl-item">✅ Alliance system — create, invite, dismiss, pledge, chat board</div>
+      <div class="cl-item">✅ Rankings panel with win probability, direct action buttons, 👤 profile button, 🛡️ protection badges</div>
+      <div class="cl-item">✅ News panel with type filters (All / Combat / Spells / Covert / System) and icons</div>
+
+      <div class="cl-section">Defence System</div>
+      <div class="cl-item">✅ New 🛡️ Defence panel — three tabs: 🧱 Walls · 🗼 Guard Towers · ⛺ Outposts</div>
+      <div class="cl-item">✅ Walls — new building type. War machines mount on walls for +25% defensive power. No walls = buildings can be damaged on successful attack.</div>
+      <div class="cl-item">✅ Wall racial modifiers — Dwarf ×1.35, High Elf ×1.10, Human ×1.00, Dark Elf ×0.90, Orc ×0.85, Dire Wolf ×0.80</div>
+      <div class="cl-item">✅ Wall upgrades — Reinforced Walls +25% strength −10% land lost (10,000 GC), Battlements towers +20% (30,000 GC), Fortress Walls WM +50% damage (100,000 GC)</div>
+      <div class="cl-item">✅ Siege damage — successful attacker destroys walls (Fortress Walls: −3%, Reinforced: −6%, base: −10%). No walls = random building takes 5% damage per successful attack</div>
+      <div class="cl-item">✅ Guard towers — thieves on watch (10/tower cap). Detection racial modifiers: Dark Elf ×1.40, High Elf ×1.10, Human ×1.00, Orc ×0.80, Dire Wolf ×0.70</div>
+      <div class="cl-item">✅ Guard tower upgrades — Arrow Slits +20% ranged defence (5,000 GC), Watchtower detects attacks 1 turn early (20,000 GC), Signal Tower warns alliance members (50,000 GC)</div>
+      <div class="cl-item">✅ Signal Tower — fires attack warning in defender's news AND alliance chat board</div>
+      <div class="cl-item">✅ Outposts — rangers on patrol (20/outpost cap). Patrol racial modifiers: Dire Wolf ×1.40, Dark Elf ×1.30, Human ×1.00, High Elf ×0.95, Orc ×0.90, Dwarf ×0.80</div>
+      <div class="cl-item">✅ Outpost upgrades — Ranger Station +25% patrol (5,000 GC), Forward Camp detects incoming expeditions (20,000 GC), Field HQ +10% expedition gold (60,000 GC)</div>
+      <div class="cl-item">✅ Castle Citadel — unlocked at 50 walls + 20 guard towers + 20 outposts + 1 castle. +15% permanent defence bonus, war machines deal ×2 damage on walls. News event fires once.</div>
+      <div class="cl-item">✅ Citadel progress tracker — four tiles showing progress toward each threshold with colour coding</div>
+      <div class="cl-item">✅ Defence rating on status panel — 🔴 Undefended / 🟠 Lightly Defended / 🟡 Defended / 🟢 Fortified / 🏰 Citadel</div>
+      <div class="cl-item">✅ Wall and outpost power integrated into resolveMilitaryAttack defence calculation</div>
+      <div class="cl-item">✅ Citadel ×1.15 defence multiplier applied in combat</div>
+      <div class="cl-item">✅ Walls added to build panel with engineer allocation and Max button</div>
+
+      <div class="cl-section">Economy System</div>
+      <div class="cl-item">✅ New 💰 Economy panel — three tabs: 🌾 Farms · 🏪 Markets · 🍺 Tavern</div>
+      <div class="cl-item">✅ Farms — population automatically works farms (race-specific workers per farm: Human 10, Dwarf 8, High Elf 12, Orc 15, Dark Elf 10, Dire Wolf 12). Unworked farms produce nothing.</div>
+      <div class="cl-item">✅ Farm yield race modifiers — High Elf ×1.15, Human ×1.00, Dark Elf ×0.95, Dwarf ×0.90, Orc ×0.85, Dire Wolf ×0.80</div>
+      <div class="cl-item">✅ Food consumption race modifiers — High Elf ×0.80 (lightest), Dwarf ×0.85, Dark Elf ×0.95, Human ×1.00, Orc ×1.35, Dire Wolf ×1.40 (heaviest)</div>
+      <div class="cl-item">✅ Farm upgrades (instant gold) — Irrigated Farm +30% yield (500 GC), Granary buffers up to 15 turns surplus (2,000 GC), Plantation +60% yield requires Irrigated (10,000 GC)</div>
+      <div class="cl-item">✅ Food shortage consequences — 2 turns grace → morale −5/turn → population −500/turn → fighter desertion −2%/turn</div>
+      <div class="cl-item">✅ Food surplus streak — 5+ turns surplus gives +2 morale/turn bonus</div>
+      <div class="cl-item">✅ Markets — 5 free population per market to operate. Trade routes: 1 per map held (up to market count), each adds passive gold income</div>
+      <div class="cl-item">✅ Market income race modifiers — Dwarf ×1.25, High Elf ×1.10, Dark Elf ×1.05, Human ×1.00, Orc ×0.85, Dire Wolf ×0.75</div>
+      <div class="cl-item">✅ Market upgrades — Trading Post unlocks player trading (5,000 GC), Bazaar +50% income (50,000 GC), Black Market −10% all prices Dark Elf only (15,000 GC)</div>
+      <div class="cl-item">✅ goldPerTurn now includes market income from new system (trade routes + worked markets × race modifier)</div>
+      <div class="cl-item">✅ Commodity market — base prices with race discount display (Dwarf −15% weapons/armor, High Elf −20% scrolls, Dark Elf −10% all, Orc +20% food, Dire Wolf −20% maps)</div>
+      <div class="cl-item">✅ Player-to-player trading — send offers specifying item+qty, receiver accepts/declines from economy panel. Both sides validated before exchange. Requires Trading Post.</div>
+      <div class="cl-item">✅ Trade offers table — persists in DB, expires after 1 hour, sent/received lists in panel</div>
+      <div class="cl-item">✅ Taverns — passive entertainment research bonus each turn. Inn and Guild Hall upgrades.</div>
+      <div class="cl-item">✅ Mercenary board — four tiers: Rabble Lv 5–10 (50 GC/10 turns), Sellsword Lv 15–25 (150 GC/20 turns), Veteran Lv 30–45 (400 GC/30 turns), Elite Lv 50–65 (1,000 GC/40 turns)</div>
+      <div class="cl-item">✅ Mercenaries — fixed level, never advance, don't use weapon/armor stockpile, count toward anti-bully ratios, leave on contract expiry or non-payment</div>
+      <div class="cl-item">✅ Mercenary upkeep collected automatically each turn — non-payment causes immediate departure</div>
+      <div class="cl-item">✅ New DB tables: trade_offers, mercenaries</div>
+      <div class="cl-item">✅ New DB columns: farm_upgrades, market_upgrades, tavern_upgrades, food_shortage_turns, food_surplus_turns, mercenaries</div>
+
+      <div class="cl-section">Seasons & Daily Events</div>
+      <div class="cl-item">✅ Season system — 13-day real-time cycle: Spring (3d) → Summer (5d) → Fall (2d) → Winter (3d). Stored in server_state, advances automatically on regen tick.</div>
+      <div class="cl-item">✅ Season badge on status panel — shows icon + name + days remaining (e.g. 🌸 Spring · 2.3d left)</div>
+      <div class="cl-item">✅ Season farm yield multipliers — Spring ×1.10, Summer ×1.20, Fall ×0.90, Winter ×0.70</div>
+      <div class="cl-item">✅ Daily random events — one event per kingdom per real day, fired during regen. Season-appropriate events selected, race-specific events mixed in at 10% chance.</div>
+      <div class="cl-item">✅ 21 default events seeded — spring bloom, heat wave, blizzard, harvest festival, travelling merchants, winter plague, and more. Race-specific: ice trade (dwarf), great hunt (dire wolf), elven bloom (high elf), shadow markets (dark elf), orc rampage.</div>
+      <div class="cl-item">✅ Active event effects tick down each turn (farm_yield, military, mana, market multipliers persist N turns then expire).</div>
+      <div class="cl-item">✅ Admin events panel — event log with kingdom/season filter, full event editor (create/edit/delete/toggle active). Effect type dropdown: morale, gold, food, population, farm_yield, military, mana, market.</div>
+
+      <div class="cl-section">Location System</div>
+      <div class="cl-item">✅ Kingdom locations must be discovered before interaction. Rankings shows all kingdoms — unfound show 🔍 badge, all attack/spy/cast buttons disabled until mapped.</div>
+      <div class="cl-item">✅ Discovery — ranger scout expeditions have 10–15% base chance of finding a kingdom. Race modifier: Dire Wolf ×1.40, Dark Elf ×1.30, Human ×1.00, Dwarf ×0.80. Ranger count adds up to +5%.</div>
+      <div class="cl-item">✅ Mapping — 10 scribes work for 5 turns to create a permanent location map (consumes 1 blank map). Multiple kingdoms can be mapped simultaneously if scribes available.</div>
+      <div class="cl-item">✅ Auto-store — attacking a kingdom or being caught on covert ops instantly stores their location as mapped.</div>
+      <div class="cl-item">✅ Map theft — new covert action: steal a location map from another kingdom. Success ~20–50% based on thieves. Target receives news event. Stolen kingdom becomes un-interactable until re-found.</div>
+      <div class="cl-item">✅ New DB columns: discovered_kingdoms (JSON per kingdom), location_maps_wip (JSON array of in-progress mappings)</div>
+
+      <div class="cl-section">Smithy Overhaul</div>
+      <div class="cl-item">✅ Hammers and scaffolding now purchased for gold — no more engineer allocation sliders. Hammers: 25 GC each. Scaffolding: 2,500 GC each.</div>
+      <div class="cl-item">✅ Input box defaults to max affordable quantity. Max button fills to max. Requires at least 1 smithy.</div>
+      <div class="cl-item">✅ Degradation mechanic preserved — hammers and scaffolding still wear out each turn.</div>
+
+      <div class="cl-section">UI & Bug Fixes</div>
+      <div class="cl-item">✅ Spells — when spellbook below 100: "🔮 Your mages need direction. STUDY!" instead of "undefined". Spell labels/descriptions guarded against undefined entries.</div>
+      <div class="cl-item">✅ Upgrade purchase — after buying an upgrade the button shows ✅ Purchased and disables. Next upgrade's Buy button only appears after manual Refresh click.</div>
+      <div class="cl-item">✅ Tavern count — bld_taverns added to bldMap in syncUI. Was always showing 0.</div>
+      <div class="cl-item">✅ Defence panel — kd-top (kingdom header + resource strip) now hidden on Defence panel, matching the other panels.</div>
+      <div class="cl-item">✅ Alliance panel — mobile layout fixed. Single column on mobile, two columns on desktop.</div>
+      <div class="cl-item">✅ Turns — increased to 400/day in 25-minute increments (+7 turns per regen cycle).</div>
+
+      <div class="cl-section">Admin</div>
+      <div class="cl-item">✅ Three-tab layout — ⚙️ Manage · 🏰 Kingdoms · 📋 Changelog</div>
+      <div class="cl-item">✅ Full kingdom edit modal — live data from server</div>
+      <div class="cl-item">✅ Promote/demote chat moderators with live moderator list</div>
+      <div class="cl-item">✅ Chat ban list with unban button and ban reason display</div>
+      <div class="cl-item">✅ AI kingdoms with race-aware economic and military behaviour</div>
+      <div class="cl-item">✅ Global announcement broadcast to all players</div>
+      <div class="cl-item">✅ Promote to admin</div>
+      <div class="cl-item">✅ Admin notes textarea — saves to localStorage</div>
+      <div class="cl-item">✅ Changelog and wishlist panel (this panel)</div>
+    </div>
+
+    <!-- Wishlist -->
+    <div>
+      <div class="card">
+        <h2 style="margin-top:0;color:var(--amber)">🔮 Wishlist — Future Additions</h2>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Ideas and planned features — edit this list to add your own.</div>
+
+        <div class="cl-section">Gameplay</div>
+        <div class="cl-item wish">⬜ Spell casting target history — remember last target per spell</div>
+        <div class="cl-item wish">⬜ Kingdom descriptions — players can write a lore bio</div>
+        <div class="cl-item wish">⬜ Bounty board — players place gold bounties on other kingdoms</div>
+        <div class="cl-item wish">⬜ Diplomacy — non-aggression pacts, trade agreements between kingdoms</div>
+        <div class="cl-item wish">⬜ Seasons — periodic world events that affect all kingdoms (drought, plague, magic surge)</div>
+        <div class="cl-item wish">⬜ Prestige / reset system — kingdoms that reach max level can prestige for a permanent bonus</div>
+        <div class="cl-item wish">⬜ Named hero units — single high-level units with unique abilities</div>
+
+        <div class="cl-section">Combat</div>
+        <div class="cl-item wish">⬜ Alliance war — alliances can declare war on each other</div>
+        <div class="cl-item wish">⬜ Siege mechanics — castle walls reduce land capture percentage</div>
+        <div class="cl-item wish">⬜ Battle replay — animated step-by-step battle report</div>
+
+        <div class="cl-section">Economy</div>
+        <div class="cl-item wish">⬜ Variable commodity prices — server-wide supply and demand shifts prices ±30% hourly</div>
+        <div class="cl-item wish">⬜ Trade route raiding — Orc kingdoms can raid other kingdoms' trade routes for gold</div>
+        <div class="cl-item wish">⬜ Diplomacy — non-aggression pacts, formal trade agreements, tribute</div>
+        <div class="cl-item wish">⬜ Prestige economy — prestige kingdoms get permanent market bonuses</div>
+
+        <div class="cl-section">Social</div>
+        <div class="cl-item wish">⬜ Alliance rankings — leaderboard for combined alliance land</div>
+        <div class="cl-item wish">⬜ Kingdom descriptions — players can write a lore bio shown on profile</div>
+        <div class="cl-item wish">⬜ Bounty board — players place gold bounties on other kingdoms</div>
+        <div class="cl-item wish">⬜ Direct messaging — kingdom-to-kingdom private messages</div>
+
+        <div class="cl-section">World</div>
+        <div class="cl-item wish">⬜ Named regions — map territories that kingdoms can contest and capture</div>
+        <div class="cl-item wish">⬜ More races — Gnome (inventor), Vampire (undead mage), Troll (regenerating fighter)</div>
+        <div class="cl-item wish">⬜ Race lore expansion — in-game events referencing regional history</div>
+
+        <div class="cl-section">Polish</div>
+        <div class="cl-item wish">⬜ iOS layout testing and fixes</div>
+        <div class="cl-item wish">⬜ Sound effects — combat, level up, expedition return</div>
+        <div class="cl-item wish">⬜ Dark/light theme toggle</div>
+        <div class="cl-item wish">⬜ Email notifications — optional alerts for attacks, expedition return</div>
+        <div class="cl-item wish">⬜ Tutorial / new player guide</div>
+        <div class="cl-item wish">⬜ Achievements system</div>
+      </div>
+
+      <!-- Notes -->
+      <div class="card" style="margin-top:16px">
+        <h2 style="margin-top:0;color:var(--text2)">📝 Admin Notes</h2>
+        <textarea id="admin-notes" style="width:100%;min-height:160px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:10px;font-size:13px;resize:vertical" placeholder="Private notes visible only to admins..."></textarea>
+        <button class="btn btn-gold" style="width:100%;margin-top:10px" onclick="saveAdminNotes()">Save notes</button>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end atab-changelog -->
+
+<!-- Ban modal -->
+<div class="modal-overlay" id="ban-modal">
+  <div class="modal">
+    <h3>Ban player</h3>
+    <input type="text" id="ban-reason" placeholder="Ban reason (optional)" style="width:100%;margin-bottom:10px">
+    <div style="font-size:12px;color:var(--text3)">Player: <span id="ban-name" style="color:var(--text)"></span></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeBanModal()">Cancel</button>
+      <button class="btn btn-red" onclick="confirmBan()">Ban player</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit kingdom modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal wide">
+    <h3>Edit Kingdom — <span id="edit-kname" style="color:var(--gold)"></span></h3>
+    <div id="edit-fields" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px;max-height:60vh;overflow-y:auto;padding-right:6px"></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="confirmEdit()">Save all changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var allKingdoms = [];
+var banTarget   = null;
+var editTarget  = null;
+
+var EDIT_SECTIONS = [
+  { label:'Resources', fields:[
+    {key:'gold',label:'Gold'},{key:'mana',label:'Mana'},{key:'land',label:'Land'},
+    {key:'population',label:'Population'},{key:'food',label:'Food'},{key:'morale',label:'Morale'},
+    {key:'turn',label:'Turn #'},{key:'turns_stored',label:'Turns stored'},
+    {key:'xp',label:'XP'},{key:'level',label:'Level'},
+  ]},
+  { label:'Units', fields:[
+    {key:'fighters',label:'Fighters'},{key:'rangers',label:'Rangers'},{key:'clerics',label:'Clerics'},
+    {key:'mages',label:'Mages'},{key:'thieves',label:'Thieves'},{key:'ninjas',label:'Ninjas'},
+    {key:'researchers',label:'Researchers'},{key:'engineers',label:'Engineers'},{key:'scribes',label:'Scribes'},
+    {key:'war_machines',label:'War machines'},{key:'weapons_stockpile',label:'Weapons stockpile'},
+    {key:'armor_stockpile',label:'Armor stockpile'},
+  ]},
+  { label:'Buildings', fields:[
+    {key:'bld_farms',label:'Farms'},{key:'bld_barracks',label:'Barracks'},{key:'bld_outposts',label:'Outposts'},
+    {key:'bld_guard_towers',label:'Guard towers'},{key:'bld_schools',label:'Schools'},
+    {key:'bld_armories',label:'Armories'},{key:'bld_vaults',label:'Vaults'},
+    {key:'bld_smithies',label:'Smithies'},{key:'bld_markets',label:'Markets'},
+    {key:'bld_cathedrals',label:'Mage Towers'},{key:'bld_training',label:'Training fields'},
+    {key:'bld_colosseums',label:'Taverns'},{key:'bld_shrines',label:'Shrines'},
+    {key:'bld_castles',label:'Castles'},{key:'bld_libraries',label:'Libraries'},
+    {key:'maps',label:'Maps'},{key:'blueprints_stored',label:'Blueprints'},
+  ]},
+  { label:'Research', fields:[
+    {key:'res_economy',label:'Economy'},{key:'res_weapons',label:'Weapons'},
+    {key:'res_armor',label:'Armor'},{key:'res_military',label:'Military'},
+    {key:'res_attack_magic',label:'Attack magic'},{key:'res_defense_magic',label:'Defense magic'},
+    {key:'res_entertainment',label:'Entertainment'},{key:'res_construction',label:'Construction'},
+    {key:'res_war_machines',label:'War machines'},{key:'res_spellbook',label:'Spellbook'},
+  ]},
+];
+
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast '+(type||''); el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 2800);
+}
+
+async function api(method, path, body) {
+  try {
+    var res = await fetch(path, {
+      method: method, headers: {'Content-Type':'application/json'}, credentials: 'include',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    var text = await res.text();
+    try { return JSON.parse(text); } catch { return {error: text.slice(0,200)}; }
+  } catch(e) { return {error: e.message}; }
+}
+
+async function adminLogin() {
+  var u = document.getElementById('a-user').value.trim();
+  var p = document.getElementById('a-pass').value;
+  var err = document.getElementById('auth-err');
+  if (!u||!p) { err.textContent='Username and password required'; return; }
+  var r = await api('POST','/api/auth/login',{username:u,password:p});
+  if (r.error) { err.textContent=r.error; return; }
+  if (!r.isAdmin) { err.textContent='Not an admin account'; return; }
+  document.getElementById('admin-user').textContent = u;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'block';
+  loadData();
+}
+
+function adminLogout() {
+  api('POST','/api/auth/logout');
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'block';
+}
+
+async function loadData() {
+  var stats = await api('GET','/api/admin/stats');
+  if (stats.error) { toast('Stats error: '+stats.error,'error'); return; }
+  document.getElementById('st-players').textContent  = stats.players;
+  document.getElementById('st-kingdoms').textContent = stats.kingdoms;
+  document.getElementById('st-banned').textContent   = stats.banned;
+  document.getElementById('st-combats').textContent  = stats.combats;
+  document.getElementById('st-messages').textContent = stats.messages;
+  document.getElementById('st-regen').textContent = stats.lastRegen
+    ? new Date(stats.lastRegen*1000).toLocaleTimeString() : '—';
+  var kingdoms = await api('GET','/api/admin/kingdoms');
+  if (kingdoms.error) { toast('Kingdoms error: '+kingdoms.error,'error'); return; }
+  allKingdoms = kingdoms;
+  renderTable(kingdoms);
+  loadAiSynopsis();
+  loadMods();
+  loadChatBans();
+  loadAdminNotes();
+}
+
+function renderTable(rows) {
+  var tbody = document.getElementById('kingdom-table');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:20px">No kingdoms found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(function(k) {
+    var banned = k.is_banned
+      ? '<span class="badge badge-red">Banned</span>'
+      : '<span class="badge badge-green">Active</span>';
+    var admin = k.is_admin ? ' <span class="badge badge-gold">Admin</span>' : '';
+    var kData = encodeURIComponent(JSON.stringify(k));
+    return '<tr>'
+      +'<td style="color:var(--text);font-weight:500">'+k.name+'</td>'
+      +'<td>'+k.username+admin+'</td>'
+      +'<td style="color:var(--text3)">'+k.race.replace(/_/g,' ')+'</td>'
+      +'<td>'+(k.land||0).toLocaleString()+'</td>'
+      +'<td style="color:var(--gold)">'+(k.gold||0).toLocaleString()+'</td>'
+      +'<td>'+(k.turns_stored||0)+'/400</td>'
+      +'<td>'+banned+'</td>'
+      +'<td style="display:flex;gap:5px;flex-wrap:wrap">'
+      +'<button class="btn btn-gold" onclick="openEditModal('+k.id+',\''+escQ(k.name)+'\')">Edit</button>'
+      +'<button class="btn" onclick="resetTurns('+k.id+',\''+escQ(k.name)+'\')">+Turns</button>'
+      +(k.is_banned
+        ? '<button class="btn btn-green" onclick="unban('+k.player_id+',\''+escQ(k.username)+'\')">Unban</button>'
+        : '<button class="btn btn-red" onclick="openBanModal('+k.player_id+',\''+escQ(k.username)+'\')">Ban</button>')
+      +'</td></tr>';
+  }).join('');
+}
+
+function escQ(s) { return String(s).replace(/'/g,"&#39;"); }
+
+function filterTable(q) {
+  renderTable(allKingdoms.filter(function(k){
+    return k.name.toLowerCase().includes(q.toLowerCase())
+        || k.username.toLowerCase().includes(q.toLowerCase());
+  }));
+}
+
+async function openEditModal(kingdomId, kingdomName) {
+  editTarget = null;
+  document.getElementById('edit-kname').textContent = kingdomName || 'Loading...';
+  document.getElementById('edit-fields').innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;grid-column:1/-1">⏳ Fetching live data...</div>';
+  document.getElementById('edit-modal').classList.add('open');
+
+  var k = await api('GET', '/api/admin/kingdom-detail/' + kingdomId);
+  if (!k || k.error) {
+    document.getElementById('edit-fields').innerHTML = '<div style="color:var(--red);padding:20px;grid-column:1/-1">Error: ' + (k && k.error ? k.error : 'No response from server') + '</div>';
+    return;
+  }
+  if (!k.id) {
+    document.getElementById('edit-fields').innerHTML = '<div style="color:var(--red);padding:20px;grid-column:1/-1">Kingdom not found (id=' + kingdomId + ')</div>';
+    return;
+  }
+
+  editTarget = k.id;
+  document.getElementById('edit-kname').textContent = k.name + ' (' + (k.username||'?') + ') — Race: ' + (k.race||'?') + ' · Land: ' + (k.land||0).toLocaleString();
+
+  var html = '';
+  EDIT_SECTIONS.forEach(function(sec) {
+    html += '<div class="sec-label" style="grid-column:1/-1">' + sec.label + '</div>';
+    sec.fields.forEach(function(f) {
+      var raw = k[f.key];
+      var val = (raw !== undefined && raw !== null && raw !== '') ? raw : 0;
+      // Only use numeric value — skip JSON columns
+      var numVal = parseFloat(val);
+      if (isNaN(numVal)) numVal = 0;
+      html += '<div style="display:flex;flex-direction:column;gap:3px">'
+        + '<label style="font-size:11px;color:var(--text3)">' + f.label + '</label>'
+        + '<input type="number" id="ef-' + f.key + '" value="' + numVal + '" style="width:100%">'
+        + '</div>';
+    });
+  });
+  document.getElementById('edit-fields').innerHTML = html;
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editTarget = null;
+}
+
+async function confirmEdit() {
+  var fields = {};
+  EDIT_SECTIONS.forEach(function(sec) {
+    sec.fields.forEach(function(f) {
+      var el = document.getElementById('ef-'+f.key);
+      if (el && el.value !== '') fields[f.key] = el.value;
+    });
+  });
+  var r = await api('POST','/api/admin/set-kingdom',{kingdomId:editTarget, fields:fields});
+  if (r.error) return toast(r.error,'error');
+  toast('Saved: '+r.updated.join(', '),'success');
+  closeEditModal(); loadData();
+}
+
+async function resetTurns(kingdomId, name) {
+  var r = await api('POST','/api/admin/reset-turns',{kingdomId:kingdomId});
+  if (r.error) return toast(r.error,'error');
+  toast('Turns reset for '+name,'success'); loadData();
+}
+
+async function loadAiSynopsis() {
+  var el = document.getElementById('ai-synopsis');
+  if (el) el.innerHTML = '<div style="color:var(--text3);font-size:12px">Loading...</div>';
+  var rows = await api('GET', '/api/admin/ai-synopsis');
+  if (!Array.isArray(rows) || rows.length === 0) {
+    if (el) el.innerHTML = '<div style="color:var(--text3);font-size:12px">No AI kingdoms found. Seed them first.</div>';
+    return;
+  }
+
+  var RACE_ICONS = { high_elf:'🧝', dwarf:'⛏️', dire_wolf:'🐺', dark_elf:'🗡️', human:'👑', orc:'💀' };
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="color:var(--text3);border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase">'
+    + '<th style="padding:6px 8px;text-align:left">Kingdom</th>'
+    + '<th style="padding:6px 8px;text-align:right">Land</th>'
+    + '<th style="padding:6px 8px;text-align:right">Pop</th>'
+    + '<th style="padding:6px 8px;text-align:right">Gold</th>'
+    + '<th style="padding:6px 8px;text-align:right">Morale</th>'
+    + '<th style="padding:6px 8px;text-align:right">Food</th>'
+    + '<th style="padding:6px 8px;text-align:right">Military</th>'
+    + '<th style="padding:6px 8px;text-align:right">⚔️ W/L</th>'
+    + '<th style="padding:6px 8px;text-align:right">🕵️ Ops</th>'
+    + '<th style="padding:6px 8px;text-align:right">🛡️ Hit</th>'
+    + '<th style="padding:6px 8px;text-align:right">Turns</th>'
+    + '<th style="padding:6px 8px;text-align:left;min-width:140px">Top Build</th>'
+    + '<th style="padding:6px 8px;text-align:left;min-width:140px">Top Research</th>'
+    + '</tr></thead><tbody>';
+
+  rows.forEach(function(r) {
+    var icon = RACE_ICONS[r.race] || '?';
+    var moraleColor = r.morale < 50 ? 'var(--red)' : r.morale < 80 ? 'var(--amber)' : 'var(--green)';
+    var foodColor   = r.food < 0   ? 'var(--red)' : 'var(--text2)';
+    var wlColor     = r.wins > r.losses ? 'var(--green)' : r.losses > r.wins ? 'var(--red)' : 'var(--text2)';
+
+    html += '<tr style="border-bottom:1px solid var(--border)">'
+      + '<td style="padding:8px 8px;white-space:nowrap"><span style="font-size:14px">' + icon + '</span> <strong style="color:var(--text)">' + r.name + '</strong><br><span style="color:var(--text3);font-size:10px">Lv ' + r.level + ' · ' + r.race.replace(/_/g,' ') + '</span></td>'
+      + '<td style="padding:8px;text-align:right;color:var(--gold)">' + (r.land||0).toLocaleString() + '</td>'
+      + '<td style="padding:8px;text-align:right;color:var(--text2)">' + fmt(r.population||0) + '</td>'
+      + '<td style="padding:8px;text-align:right;color:var(--text2)">' + fmt(r.gold||0) + '</td>'
+      + '<td style="padding:8px;text-align:right;color:' + moraleColor + '">' + (r.morale||0) + '</td>'
+      + '<td style="padding:8px;text-align:right;color:' + foodColor + '">' + (r.food||0).toLocaleString() + '</td>'
+      + '<td style="padding:8px;text-align:right;color:var(--text2)">' + (r.fighters||0).toLocaleString() + 'f / ' + (r.ninjas||0) + 'n</td>'
+      + '<td style="padding:8px;text-align:right;color:' + wlColor + '">' + r.wins + '/' + r.losses + '</td>'
+      + '<td style="padding:8px;text-align:right;color:var(--text2)">' + r.covert_ops + '</td>'
+      + '<td style="padding:8px;text-align:right;color:var(--text2)">' + r.times_hit + '</td>'
+      + '<td style="padding:8px;text-align:right;color:' + (r.turns_stored > 0 ? 'var(--red)' : 'var(--green)') + '">' + r.turns_stored + '</td>'
+      + '<td style="padding:8px;color:var(--text3);font-size:11px">' + (r.top_build||'—') + '</td>'
+      + '<td style="padding:8px;color:var(--text3);font-size:11px">' + (r.top_research||'—') + '</td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table>';
+  if (el) el.innerHTML = html;
+}
+
+function fmt(n) { if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e3) return (n/1e3).toFixed(1)+'k'; return String(n||0); }
+
+async function flushLocations() {
+  if (!confirm('This will clear ALL location maps and discovered kingdoms for every player. Are you sure?')) return;
+  var r = await api('POST', '/api/admin/flush-locations');
+  if (r.error) return toast(r.error, 'error');
+  toast(r.message || 'Location data flushed', 'success');
+}
+
+async function seedAi() {
+  var r = await api('POST', '/api/admin/seed-ai');
+  if (r.error) return toast(r.error, 'error');
+  toast(r.message, 'success');
+  loadData();
+}
+
+async function resetAi() {
+  if (!confirm('Reset all AI kingdoms back to starting stats?')) return;
+  var r = await api('POST', '/api/admin/reset-ai');
+  if (r.error) return toast(r.error, 'error');
+  toast('Reset ' + r.reset + ' AI kingdoms', 'success');
+  loadData();
+}
+
+async function resetAllKingdoms() {
+  if (!confirm('⚠️ WARNING: This will wipe ALL kingdoms back to starting stats.\n\nAll gold, troops, buildings, research, and news will be lost.\n\nThis cannot be undone. Are you sure?')) return;
+  if (!confirm('FINAL WARNING: Reset every kingdom to zero progress right now?')) return;
+  var r = await api('POST', '/api/admin/reset-all-kingdoms');
+  if (r.error) return toast(r.error, 'error');
+  toast('All kingdoms reset to starting stats', 'success');
+  loadData();
+}
+
+async function resetAllTurns() {
+  if (!confirm('Reset ALL kingdoms to 400 turns?')) return;
+  var r = await api('POST','/api/admin/reset-turns-all');
+  if (r.error) return toast(r.error,'error');
+  toast('All turns reset to 400','success'); loadData();
+}
+
+function openBanModal(playerId, username) {
+  banTarget = playerId;
+  document.getElementById('ban-name').textContent = username;
+  document.getElementById('ban-reason').value = '';
+  document.getElementById('ban-modal').classList.add('open');
+}
+function closeBanModal() { document.getElementById('ban-modal').classList.remove('open'); banTarget=null; }
+
+async function confirmBan() {
+  var reason = document.getElementById('ban-reason').value.trim();
+  var r = await api('POST','/api/admin/ban',{playerId:banTarget,reason:reason});
+  if (r.error) return toast(r.error,'error');
+  toast('Player banned','success'); closeBanModal(); loadData();
+}
+
+async function unban(playerId, username) {
+  var r = await api('POST','/api/admin/unban',{playerId:playerId});
+  if (r.error) return toast(r.error,'error');
+  toast(username+' unbanned','success'); loadData();
+}
+
+function showAdminTab(id, btn) {
+  document.querySelectorAll('.atab').forEach(function(t){ t.style.display='none'; });
+  document.querySelectorAll('.admin-tab').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('atab-'+id).style.display='block';
+  if (btn) btn.classList.add('active');
+  if (id === 'events') { loadEventLog(); loadEventList(); }
+}
+
+// ── Admin Events ──────────────────────────────────────────────────────────────
+
+var allEventLogs = [];
+var allEventDefs = [];
+
+async function loadEventLog() {
+  var result = await api('GET', '/api/admin/events/log');
+  allEventLogs = Array.isArray(result) ? result : [];
+  renderEventLog(allEventLogs);
+}
+
+async function loadEventList() {
+  var result = await api('GET', '/api/admin/events/list');
+  allEventDefs = Array.isArray(result) ? result : [];
+  renderEventList(allEventDefs);
+}
+
+function filterEventLog() {
+  var q      = (document.getElementById('ev-log-search')?.value||'').toLowerCase();
+  var season = document.getElementById('ev-log-season')?.value || '';
+  var filtered = allEventLogs.filter(function(e) {
+    var matchQ = !q || e.kingdom_name.toLowerCase().includes(q) || e.event_name.toLowerCase().includes(q);
+    var matchS = !season || e.season === season;
+    return matchQ && matchS;
+  });
+  renderEventLog(filtered);
+}
+
+function renderEventLog(rows) {
+  var el = document.getElementById('ev-log-list');
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">No events found.</div>'; return; }
+  var SICONS = { spring:'🌸', summer:'☀️', fall:'🍂', winter:'❄️' };
+  el.innerHTML = rows.map(function(r) {
+    var ago = Math.floor((Date.now()/1000 - r.fired_at)/3600);
+    var agoStr = ago < 1 ? 'Just now' : ago < 24 ? ago+'h ago' : Math.floor(ago/24)+'d ago';
+    return '<div style="display:grid;grid-template-columns:140px 1fr 80px 80px;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;align-items:center">'
+      + '<span style="color:var(--text);font-weight:600">' + escHtml(r.kingdom_name) + '</span>'
+      + '<span style="color:var(--text2)">' + escHtml(r.event_name) + '</span>'
+      + '<span style="color:var(--text3)">' + (SICONS[r.season]||'') + ' ' + r.season + '</span>'
+      + '<span style="color:var(--text3)">' + agoStr + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+function renderEventList(events) {
+  var el = document.getElementById('ev-list');
+  if (!el) return;
+  if (!events.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">No events.</div>'; return; }
+  var SICONS = { spring:'🌸', summer:'☀️', fall:'🍂', winter:'❄️', all:'🌍' };
+  el.innerHTML = events.map(function(e) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px">'
+      + '<div style="flex:1">'
+      + '<div style="font-weight:600;color:' + (e.is_positive?'var(--green)':'var(--red)') + '">' + (SICONS[e.season]||'') + ' ' + escHtml(e.name) + '</div>'
+      + '<div style="color:var(--text3);font-size:11px">' + escHtml(e.key) + ' · ' + e.effect_type + ' ' + e.effect_value + (e.race_only?' · '+e.race_only:'') + '</div>'
+      + '</div>'
+      + '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:' + (e.is_active?'rgba(76,175,130,.15)':'rgba(224,92,92,.15)') + ';color:' + (e.is_active?'var(--green)':'var(--red)') + '">' + (e.is_active?'Active':'Off') + '</span>'
+      + '<button class="btn" style="font-size:10px;padding:3px 8px" onclick="editEvent(' + JSON.stringify(e).replace(/"/g,"'") + ')">Edit</button>'
+      + '<button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="deleteEvent(' + e.id + ',\'' + escHtml(e.name) + '\')">Del</button>'
+      + '</div>';
+  }).join('');
+}
+
+function editEvent(e) {
+  document.getElementById('ev-id').value    = e.id || '';
+  document.getElementById('ev-key').value   = e.key || '';
+  document.getElementById('ev-name').value  = e.name || '';
+  document.getElementById('ev-desc').value  = e.description || '';
+  document.getElementById('ev-season').value = e.season || 'all';
+  document.getElementById('ev-effect-type').value     = e.effect_type || 'morale';
+  document.getElementById('ev-effect-value').value    = e.effect_value ?? 5;
+  document.getElementById('ev-effect-duration').value = e.effect_duration ?? 1;
+  document.getElementById('ev-race-only').value = e.race_only || '';
+  document.getElementById('ev-active').checked   = !!e.is_active;
+  document.getElementById('ev-positive').checked = !!e.is_positive;
+  document.getElementById('ev-edit-title').textContent = 'Editing: ' + e.name;
+}
+
+function clearEventForm() {
+  ['ev-id','ev-key','ev-name','ev-desc'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('ev-season').value='all';
+  document.getElementById('ev-effect-type').value='morale';
+  document.getElementById('ev-effect-value').value='5';
+  document.getElementById('ev-effect-duration').value='1';
+  document.getElementById('ev-race-only').value='';
+  document.getElementById('ev-active').checked=true;
+  document.getElementById('ev-positive').checked=true;
+  document.getElementById('ev-edit-title').textContent='New event';
+}
+
+async function saveEvent() {
+  var id       = document.getElementById('ev-id').value;
+  var payload  = {
+    key:              document.getElementById('ev-key').value.trim().replace(/\s+/g,'_'),
+    name:             document.getElementById('ev-name').value.trim(),
+    description:      document.getElementById('ev-desc').value.trim(),
+    season:           document.getElementById('ev-season').value,
+    effect_type:      document.getElementById('ev-effect-type').value,
+    effect_value:     parseFloat(document.getElementById('ev-effect-value').value)||0,
+    effect_duration:  parseInt(document.getElementById('ev-effect-duration').value)||1,
+    race_only:        document.getElementById('ev-race-only').value || null,
+    is_active:        document.getElementById('ev-active').checked ? 1 : 0,
+    is_positive:      document.getElementById('ev-positive').checked ? 1 : 0,
+  };
+  if (!payload.key || !payload.name) return toast('Key and name are required','error');
+  var endpoint = id ? '/api/admin/events/update' : '/api/admin/events/create';
+  if (id) payload.id = id;
+  var result = await api('POST', endpoint, payload);
+  if (result.error) return toast(result.error,'error');
+  toast(id ? 'Event updated' : 'Event created','success');
+  clearEventForm();
+  loadEventList();
+}
+
+async function deleteEvent(id, name) {
+  if (!confirm('Delete event "'+name+'"?')) return;
+  var result = await api('POST','/api/admin/events/delete',{id});
+  if (result.error) return toast(result.error,'error');
+  toast('Event deleted','success');
+  loadEventList();
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saveAdminNotes() {
+  localStorage.setItem('narmir_admin_notes', notes);
+  toast('Notes saved', 'success');
+}
+
+function loadAdminNotes() {
+  var notes = localStorage.getItem('narmir_admin_notes') || '';
+  var el = document.getElementById('admin-notes');
+  if (el) el.value = notes;
+}
+
+async function promotemod() {
+  var u = document.getElementById('mod-username').value.trim();
+  var r = document.getElementById('mod-result');
+  if (!u) return;
+  var res = await api('POST', '/api/admin/chat-mod', { username: u, action: 'promote' });
+  r.style.color = res.error ? 'var(--red)' : 'var(--green)';
+  r.textContent = res.error ? '✗ ' + res.error : '✓ ' + u + ' is now a chat mod';
+  if (!res.error) loadMods();
+}
+
+async function demotemod() {
+  var u = document.getElementById('demod-username').value.trim();
+  var r = document.getElementById('mod-result');
+  if (!u) return;
+  var res = await api('POST', '/api/admin/chat-mod', { username: u, action: 'demote' });
+  r.style.color = res.error ? 'var(--red)' : 'var(--amber)';
+  r.textContent = res.error ? '✗ ' + res.error : '✓ ' + u + ' removed from mods';
+  if (!res.error) loadMods();
+}
+
+async function loadMods() {
+  var el = document.getElementById('mod-list');
+  var mods = await api('GET', '/api/admin/chat-mods');
+  if (!Array.isArray(mods) || mods.length === 0) { el.textContent = 'No chat moderators.'; return; }
+  el.innerHTML = mods.map(function(m) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)">'
+      + '<span style="color:var(--purple)">🛡️ ' + m.username + '</span>'
+      + '<button class="btn btn-red" style="font-size:11px;padding:2px 8px" onclick="quickDemod(\'' + m.username + '\')">Remove</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function quickDemod(u) {
+  await api('POST', '/api/admin/chat-mod', { username: u, action: 'demote' });
+  loadMods();
+}
+
+async function loadChatBans() {
+  var el = document.getElementById('chat-ban-list');
+  var bans = await api('GET', '/api/admin/chat-bans');
+  if (!Array.isArray(bans) || bans.length === 0) { el.innerHTML = '<div style="color:var(--text3)">No chat bans.</div>'; return; }
+  el.innerHTML = bans.map(function(b) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'
+      + '<div><div style="color:var(--red)">' + b.username + '</div>'
+      + '<div style="font-size:11px;color:var(--text3)">' + (b.chat_ban_reason || 'No reason') + '</div></div>'
+      + '<button class="btn btn-green" style="font-size:11px;padding:2px 8px" onclick="chatUnban(\'' + b.username + '\')">Unban</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function chatUnban(username) {
+  var res = await api('POST', '/api/admin/chat-unban', { username });
+  if (res.error) return toast(res.error, 'error');
+  toast(username + ' unbanned from chat', 'success');
+  loadChatBans();
+}
+
+async function promotePlayer() {
+  const username = document.getElementById('promote-username').value.trim();
+  const result   = document.getElementById('promote-result');
+  if (!username) { result.textContent = 'Enter a username.'; result.style.color = 'var(--red)'; return; }
+  const res = await api('POST', '/api/admin/promote', { username });
+  if (res.error) { result.textContent = '✗ ' + res.error; result.style.color = 'var(--red)'; }
+  else { result.textContent = '✓ ' + username + ' is now an admin.'; result.style.color = 'var(--green)'; }
+}
+
+async function sendAnnouncement() {
+  var msg = document.getElementById('announce-msg').value.trim();
+  if (!msg) return toast('Enter a message','error');
+  var r = await api('POST','/api/admin/announce',{message:msg});
+  if (r.error) return toast(r.error,'error');
+  toast('Announcement sent','success');
+  document.getElementById('announce-msg').value = '';
+}
+
+api('GET','/api/auth/me').then(function(me) {
+  if (me.error || !me.isAdmin) {
+    document.getElementById('auth-screen').style.display = 'block';
+  } else {
+    document.getElementById('admin-user').textContent = me.username;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'block';
+    loadData();
+  }
+});
+</script>
+</body>
+</html>
