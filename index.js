@@ -582,6 +582,85 @@ async function start() {
     }
   });
 
+  app.get('/api/world/bounties', requireAuth, async (req, res) => {
+    try {
+      const rows = await db.all(`
+        SELECT b.*, k.name as target_name, p.username as placer_name
+        FROM bounties b
+        JOIN kingdoms k ON b.target_id = k.id
+        JOIN players p ON b.placer_id = p.id
+        WHERE b.status = 'active'
+        ORDER BY b.amount DESC
+      `);
+      res.json(rows);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/world/bounties', requireAuth, async (req, res) => {
+    try {
+      const { target_id, amount } = req.body;
+      if (!target_id || !amount || amount <= 0) return res.status(400).json({ error: 'Invalid target or amount' });
+
+      // Check if player has enough gold
+      const k = await db.get('SELECT id, gold FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+      if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+      if (k.gold < amount) return res.status(400).json({ error: 'Not enough gold' });
+      if (k.id === target_id) return res.status(400).json({ error: 'Cannot place bounty on yourself' });
+
+      await db.run('UPDATE kingdoms SET gold = gold - ? WHERE id = ?', [amount, k.id]);
+      await db.run(
+        'INSERT INTO bounties (placer_id, target_id, amount) VALUES (?, ?, ?)',
+        [req.player.playerId, target_id, amount]
+      );
+
+      res.json({ ok: true, message: 'Bounty placed!' });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/messages', requireAuth, async (req, res) => {
+    try {
+      // Get unique conversations
+      const rows = await db.all(`
+        SELECT 
+          m.*, 
+          p1.username as sender_name, 
+          p2.username as recipient_name,
+          CASE WHEN m.sender_id = ? THEN m.recipient_id ELSE m.sender_id END as other_id,
+          CASE WHEN m.sender_id = ? THEN p2.username ELSE p1.username END as other_name
+        FROM messages m
+        JOIN players p1 ON m.sender_id = p1.id
+        JOIN players p2 ON m.recipient_id = p2.id
+        WHERE m.sender_id = ? OR m.recipient_id = ?
+        ORDER BY m.created_at DESC
+      `, [req.player.playerId, req.player.playerId, req.player.playerId, req.player.playerId]);
+      
+      res.json(rows);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/messages', requireAuth, async (req, res) => {
+    try {
+      const { recipient_id, content } = req.body;
+      if (!recipient_id || !content) return res.status(400).json({ error: 'Missing recipient or content' });
+      if (req.player.playerId === recipient_id) return res.status(400).json({ error: 'Cannot message yourself' });
+
+      await db.run(
+        'INSERT INTO messages (sender_id, recipient_id, content) VALUES (?, ?, ?)',
+        [req.player.playerId, recipient_id, content]
+      );
+
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/alliance/:id', requireAuth, async (req, res) => {
     const alliance = await db.get('SELECT * FROM alliances WHERE id = ?', [req.params.id]);
     if (!alliance) return res.status(404).json({ error: 'Not found' });

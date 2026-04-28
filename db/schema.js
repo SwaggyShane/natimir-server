@@ -212,10 +212,33 @@ async function initDb() {
   if (!cols.includes('xp'))                  await addColumn('kingdoms', 'xp',                  'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('level'))               await addColumn('kingdoms', 'level',               'INTEGER NOT NULL DEFAULT 1');
   if (!cols.includes('troop_levels'))        await addColumn('kingdoms', 'troop_levels',        "TEXT NOT NULL DEFAULT '{}'");
-  if (!cols.includes('training_allocation')) await addColumn('kingdoms', 'training_allocation', "TEXT NOT NULL DEFAULT '{}'"  );;
+  if (!cols.includes('training_allocation')) await addColumn('kingdoms', 'training_allocation', "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('weapons_stockpile'))   await addColumn('kingdoms', 'weapons_stockpile',   'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('armor_stockpile'))     await addColumn('kingdoms', 'armor_stockpile',     'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('description'))         await addColumn('kingdoms', 'description',         'TEXT');
+
+  await _db.run(`
+    CREATE TABLE IF NOT EXISTS bounties (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      placer_id         INTEGER NOT NULL REFERENCES players(id),
+      target_id         INTEGER NOT NULL REFERENCES kingdoms(id),
+      amount            INTEGER NOT NULL,
+      status            TEXT NOT NULL DEFAULT 'active',
+      claimed_by_id     INTEGER REFERENCES kingdoms(id),
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
+
+  await _db.run(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id         INTEGER NOT NULL REFERENCES players(id),
+      recipient_id      INTEGER NOT NULL REFERENCES players(id),
+      content           TEXT NOT NULL,
+      is_read           INTEGER NOT NULL DEFAULT 0,
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
 
   await _db.run(`
     CREATE TABLE IF NOT EXISTS regions (

@@ -4,8 +4,11 @@
 ---
 
 ### Latest Updates (April 2026)
+- **RACE LORE EXPANSION** — New in-game events referencing regional history have been added. Discover the secrets of Narmir as you take your turns.
 - **REGION CAPTURE & MASTERY** — Alliances can now contest and capture territories. Holding a region grants a global +10% bonus to the alliance's signature stat (Military, Magic, Economy, etc.).
 - **ALLIANCE LEADERBOARDS** — New rankings tab showing total alliance land, member counts, and average power. Rank your coalition against the world.
+- **BOUNTY BOARD** — Players can now place gold bounties on rival kingdoms. The first player to defeat a bountied target claims the reward instantly.
+- **DIRECT MESSAGING** — New private messaging system between kingdoms. Start conversations from the rankings table or a player's profile.
 - **KINGDOM LORE** — Players can now set a custom bio for their kingdom on the status panel, visible to everyone on their public profiles.
 - **NAKED EVIL REBRAND** — Complete overhaul to the "NARMIR REBORN" aesthetic.
 - **Racial Specializations (Level 5+)** — Unique bonuses unlocked at high unit levels:
@@ -144,7 +147,7 @@ All units gain XP from activity each turn. Level scaling: **+0.5% effectiveness 
 | Mages | +2/turn mana, +20/scroll completed | Mana production, scroll speed |
 | Scribes | +15 per map/blueprint completed | Craft speed |
 | Rangers | +3/turn exploring, +8/20/40 by expedition type | Expedition rewards, land discovery |
-| Fighters | +30 combat win, +10 combat loss | Combat power |
+| Fighters | +30 combat win, +10 combat loss · bounty claiming | Combat power |
 | Thieves | +12 spy success, +20 loot success | Loot amount, success chance |
 | Ninjas | +30 assassination success | Kills, success chance |
 
@@ -163,6 +166,8 @@ Training fields award passive XP with equipment bonuses.
 ---
 
 ### Social & Communication
+- **BOUNTY BOARD** — Place gold bounties on rival kingdoms from the Bounties panel or a kingdom's profile. Rewards are claimed automatically upon a successful attack.
+- **DIRECT MESSAGING** — Private 1-on-1 conversations between kingdoms. Accessible via the Messages panel or by clicking the ✉️ icon in the rankings.
 - Global chat with Socket.io — real-time, username-based (not kingdom name)
 - Online users sidebar with race icons and MOD badges
 - IRC commands for all users: `/me <action>`, `/msg <username> <text>`
@@ -193,7 +198,6 @@ Training fields award passive XP with equipment bonuses.
 
 **Gameplay**
 - Spell casting target history — remember last target per spell
-- Bounty board — players place gold bounties on other kingdoms
 - Diplomacy — non-aggression pacts, trade agreements between kingdoms
 - Seasons — periodic world events affecting all kingdoms (drought, plague, magic surge)
 - Prestige / reset system — kingdoms that reach max level can prestige for a permanent bonus
@@ -207,12 +211,11 @@ Training fields award passive XP with equipment bonuses.
 
 **Social**
 - Trade system — send gold or resources between kingdoms
-- Messaging — direct kingdom-to-kingdom messages
+- Named hero units — single high-level units with unique abilities
 
 **World**
 - World map — visual representation of kingdom territories
 - More races — Gnome (inventor), Vampire (undead mage), Troll (regenerating fighter)
-- Race lore panel — detailed backstory for each race
 
 **Polish**
 - iOS layout testing and fixes

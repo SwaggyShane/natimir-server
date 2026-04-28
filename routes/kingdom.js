@@ -52,7 +52,7 @@ module.exports = function(db) {
     
     const rows = await db.all(`
       SELECT k.id, k.name, k.race, k.land, k.turn, k.population,
-             k.fighters, k.mages, k.level, p.username, p.is_ai
+             k.fighters, k.mages, k.level, p.id as player_id, p.username, p.is_ai
       FROM kingdoms k JOIN players p ON k.player_id = p.id
       ORDER BY k.land DESC LIMIT 100
     `);
@@ -526,6 +526,24 @@ module.exports = function(db) {
     await applyBattle(k, result.attackerUpdates);
     await applyBattle(target, result.defenderUpdates);
     await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+
+    // Bounty claiming
+    if (result.win) {
+      const activeBounties = await db.all('SELECT * FROM bounties WHERE target_id = ? AND status = ?', [target.id, 'active']);
+      if (activeBounties.length > 0) {
+        let totalClaimed = 0;
+        for (const b of activeBounties) {
+          totalClaimed += b.amount;
+          await db.run('UPDATE bounties SET status = ?, claimed_by_id = ? WHERE id = ?', ['claimed', k.id, b.id]);
+        }
+        if (totalClaimed > 0) {
+          await db.run('UPDATE kingdoms SET gold = gold + ? WHERE id = ?', [totalClaimed, k.id]);
+          result.atkEvent += ` 💰 BOUNTY CLAIMED! You collected ${totalClaimed.toLocaleString()} gold in bounties placed on ${target.name}.`;
+          await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
+            [k.id, 'system', `💰 You claimed ${totalClaimed.toLocaleString()} gold in bounties by defeating ${target.name}!`, k.turn]);
+        }
+      }
+    }
 
     // 4% chance to find a map on a corpse if victory
     if (result.win && Math.random() < 0.04) {
@@ -1267,7 +1285,7 @@ module.exports = function(db) {
                k.fighters, k.mages, k.rangers, k.morale, k.turn, k.description,
                k.res_military, k.res_economy, k.res_construction, k.res_spellbook,
                k.res_attack_magic, k.res_entertainment,
-               p.username, p.is_ai
+               p.id as player_id, p.username, p.is_ai
         FROM kingdoms k JOIN players p ON k.player_id = p.id
         WHERE LOWER(k.name) = LOWER(?)`, [req.params.name]);
       if (!k) return res.status(404).json({ error: 'Kingdom not found' });
