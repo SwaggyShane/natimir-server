@@ -47,9 +47,7 @@ module.exports = function(db) {
       ORDER BY k.land DESC LIMIT 100
     `);
 
-    // Filter to only show self or discovered kingdoms
-    const filtered = rows.filter(r => r.id === k.id || (discovered[r.id] && discovered[r.id].found));
-    res.json(filtered.map((r, i) => ({ ...r, rank: i + 1 })));
+    res.json(rows.map((r, i) => ({ ...r, rank: i + 1 })));
   });
 
   router.get('/war-log', requireAuth, async (_req, res) => {
@@ -495,6 +493,12 @@ module.exports = function(db) {
     await applyBattle(k, result.attackerUpdates);
     await applyBattle(target, result.defenderUpdates);
     await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+
+    // 4% chance to find a map on a corpse if victory
+    if (result.win && Math.random() < 0.04) {
+      await db.run('UPDATE kingdoms SET maps = maps + 1 WHERE id = ?', [k.id]);
+      result.atkEvent += ` 🗺️ In the aftermath, your troops scavenged a map from a fallen scout's corpse.`;
+    }
 
     await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
       [k.id, 'attack', result.atkEvent, k.turn]);

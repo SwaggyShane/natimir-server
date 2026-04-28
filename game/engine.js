@@ -1654,6 +1654,8 @@ function moraleMult(morale) {
 }
 
 function resolveMilitaryAttack(attacker, defender, sentUnits, db_unused) {
+  const attackerUpdates = {};
+  const defenderUpdates = {};
   // sentUnits: { fighters, rangers, mages, warMachines, ninjas, thieves }
   const sent = {
     fighters:    Math.min(sentUnits.fighters    || 0, attacker.fighters    || 0),
@@ -1868,6 +1870,7 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, db_unused) {
       if (!atkDisc[defender.id] || !atkDisc[defender.id].mapped) {
         atkDisc[defender.id] = { found: true, mapped: true };
         attackerUpdates.discovered_kingdoms = JSON.stringify(atkDisc);
+        attackerUpdates.maps = (attacker.maps || 0) + 1;
         atkLines.push(`🗺️ You found a map of ${defender.name} on a fallen soldier's corpse.`);
       }
     }
@@ -1879,7 +1882,7 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, db_unused) {
   defenderUpdates.maps = (defender.maps || 0) + 1;
 
   // ── Build updates ─────────────────────────────────────────────────────────
-  const attackerUpdates = {
+  Object.assign(attackerUpdates, {
     fighters:          Math.max(0, attacker.fighters - atkFightersLost),
     rangers:           Math.max(0, attacker.rangers  - atkRangersLost),
     mages:             Math.max(0, attacker.mages    - atkMagesLost),
@@ -1888,13 +1891,13 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, db_unused) {
     land:              attacker.land + landTransferred,
     morale:            newAtkMorale,
     weapons_stockpile: Math.max(0, (attacker.weapons_stockpile||0) - Math.floor(weaponsEquipped * atkFighterLossPct)),
-  };
-  const defenderUpdates = {
+  });
+  Object.assign(defenderUpdates, {
     fighters:     Math.max(0, defender.fighters - defFightersLost - ninjaKills - rangerKills),
     war_machines: Math.max(0, (defender.war_machines||0) - defWmLost),
     land:         Math.max(0, defender.land - landTransferred),
     morale:       newDefMorale,
-  };
+  });
 
   // XP
   const atkTroopXpF = awardTroopXp(attacker, 'fighters', win ? 30 : 10);
