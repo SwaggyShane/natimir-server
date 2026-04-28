@@ -35,6 +35,7 @@ module.exports = function(io, db) {
       chatColor: player.chat_color
     });
 
+    socket.join(`player:${playerId}`);
     socket.join(`kingdom:${kingdom.id}`);
     socket.join('global');
     broadcastOnlineList(io);
@@ -186,9 +187,28 @@ module.exports = function(io, db) {
         if (cmd === 'msg' || cmd === 'pm' || cmd === 'whisper') {
           const targetName = args[0]; const pmMsg = args.slice(1).join(' ').trim();
           if (!targetName || !pmMsg) return ack?.({ error: 'Usage: /msg <username> <message>' });
+          
+          const tPlayer = await db.get('SELECT id FROM players WHERE username = ?', [targetName]);
+          if (!tPlayer) return ack?.({ error: `User "${targetName}" not found` });
+          
+          // Store in DB for persistent messages system
+          await db.run(
+            'INSERT INTO messages (sender_id, recipient_id, content) VALUES (?, ?, ?)',
+            [playerId, tPlayer.id, pmMsg]
+          );
+
           const tInfo = [...onlinePlayers.values()].find(p => p.username === targetName);
-          if (!tInfo) return ack?.({ error: `${targetName} is not online` });
-          io.to(tInfo.socketId).emit('chat:whisper', { from:username, message:pmMsg, ts:Date.now() });
+          if (tInfo) {
+            io.to(tInfo.socketId).emit('message:received', { 
+              sender_id: playerId, 
+              sender_name: username, 
+              content: pmMsg, 
+              ts: Date.now() 
+            });
+          }
+          
+          // Legacy whisper events for chat console
+          if (tInfo) io.to(tInfo.socketId).emit('chat:whisper', { from:username, message:pmMsg, ts:Date.now() });
           socket.emit('chat:whisper_sent', { to:targetName, message:pmMsg, ts:Date.now() });
           return ack?.({ ok:true });
         }

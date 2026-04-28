@@ -148,6 +148,20 @@ function initSocket(player) {
     socket.on('chat:message', (data) => {
       if (data.room === 'alliance') appendAllianceChatMessage(data);
     });
+    socket.on('message:received', (data) => {
+      window.toast && window.toast('New message from ' + data.sender_name, 'purple');
+      // Update badge
+      const b = document.getElementById('msg-badge') || document.getElementById('bnav-msg-badge');
+      if (b) {
+        b.style.display = 'block';
+        const v = parseInt(b.textContent) || 0;
+        b.textContent = v + 1;
+      }
+      // If currently in conversation with this sender, refresh
+      if (window.state && window.state.activeConversationPeerId === data.sender_id) {
+        window.loadMessages && window.loadMessages();
+      }
+    });
     socket.on('disconnect', () => console.log('[socket] disconnected'));
   } catch (err) {
     console.warn('[narmir] socket init failed:', err);

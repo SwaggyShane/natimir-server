@@ -648,12 +648,23 @@ async function start() {
     try {
       const { recipient_id, content } = req.body;
       if (!recipient_id || !content) return res.status(400).json({ error: 'Missing recipient or content' });
-      if (req.player.playerId === recipient_id) return res.status(400).json({ error: 'Cannot message yourself' });
+      const myId = req.player.playerId;
+      if (myId === recipient_id) return res.status(400).json({ error: 'Cannot message yourself' });
 
-      await db.run(
+      const result = await db.run(
         'INSERT INTO messages (sender_id, recipient_id, content) VALUES (?, ?, ?)',
-        [req.player.playerId, recipient_id, content]
+        [myId, recipient_id, content]
       );
+
+      // Emit real-time notification
+      const senderInfo = await db.get('SELECT username FROM players WHERE id = ?', [myId]);
+      io.to(`player:${recipient_id}`).emit('message:received', {
+        id: result.lastID,
+        sender_id: myId,
+        sender_name: senderInfo?.username || 'System',
+        content,
+        created_at: Math.floor(Date.now()/1000)
+      });
 
       res.json({ ok: true });
     } catch (e) {

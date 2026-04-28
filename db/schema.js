@@ -218,6 +218,20 @@ async function initDb() {
   if (!cols.includes('description'))         await addColumn('kingdoms', 'description',         'TEXT');
 
   await _db.run(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id         INTEGER NOT NULL REFERENCES players(id),
+      recipient_id      INTEGER NOT NULL REFERENCES players(id),
+      content           TEXT NOT NULL,
+      is_read           INTEGER NOT NULL DEFAULT 0,
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
+
+  await _db.run(`CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id)`);
+  await _db.run(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id)`);
+
+  await _db.run(`
     CREATE TABLE IF NOT EXISTS bounties (
       id                INTEGER PRIMARY KEY AUTOINCREMENT,
       placer_id         INTEGER NOT NULL REFERENCES players(id),
@@ -229,16 +243,8 @@ async function initDb() {
     )
   `);
 
-  await _db.run(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id                INTEGER PRIMARY KEY AUTOINCREMENT,
-      sender_id         INTEGER NOT NULL REFERENCES players(id),
-      recipient_id      INTEGER NOT NULL REFERENCES players(id),
-      content           TEXT NOT NULL,
-      is_read           INTEGER NOT NULL DEFAULT 0,
-      created_at        INTEGER NOT NULL DEFAULT (unixepoch())
-    )
-  `);
+  await _db.run(`CREATE INDEX IF NOT EXISTS idx_bounties_target ON bounties(target_id, status)`);
+  await _db.run(`CREATE INDEX IF NOT EXISTS idx_bounties_active ON bounties(status, amount DESC)`);
 
   await _db.run(`
     CREATE TABLE IF NOT EXISTS regions (

@@ -326,24 +326,40 @@
   
   .chat-bubble {
     background: var(--bg3);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 10px 14px;
     font-size: 13px;
     color: var(--text);
     word-break: break-word;
-    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
     border: 1px solid var(--border);
     max-width: 85%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     align-self: flex-start;
   }
   .chat-bubble.me {
-    background: rgba(124, 106, 245, 0.08);
-    border: 1px solid rgba(124, 106, 245, 0.2);
-    border-top-left-radius: 8px;
-    border-top-right-radius: 2px;
-    align-self: flex-start;
+    background: rgba(124, 106, 245, 0.1);
+    border: 1px solid rgba(124, 106, 245, 0.3);
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 2px;
+    align-self: flex-end;
   }
+
+  /* Bounties & Messages */
+  .target-row {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .target-row:hover { background: var(--bg4); border-color: var(--border2); }
+  .target-row.active { background: rgba(124, 106, 245, 0.1); border-color: var(--purple); }
+  .target-row .t-name { font-weight: 600; color: var(--text); }
+  .target-row .t-rank { font-size: 11px; color: var(--purple); font-weight: 700; }
 
   /* ── Chat Sidebar responsiveness ── */
   @media (max-width: 650px) {
@@ -4339,6 +4355,18 @@ function toast(msg, type) {
   toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
 }
 
+function openDirectMessage(otherId, otherName) {
+  switchTab('messages');
+  openConversation(otherId, otherName);
+}
+
+function openBountyAction(targetId, targetName) {
+  switchTab('bounties');
+  selectBountyTarget(targetId, targetName);
+  var amtInput = document.getElementById('bounty-amount');
+  if (amtInput) amtInput.focus();
+}
+
 function switchTab(id, btn) {
   window.scrollTo(0, 0);
   document.querySelectorAll('.panel').forEach(function(p){
@@ -5111,24 +5139,36 @@ function filterBountyTargets(q) {
   if (!el) return;
   
   if (!rankingsCache || rankingsCache.length === 0) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px">No kingdoms cached. Refresh rankings.</div>';
+    el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px">Refresh rankings to see targets...</div>';
     return;
   }
   
-  const filtered = rankingsCache.filter(r => 
-    r.id !== state.kingdomId && 
-    (r.name.toLowerCase().includes(q.toLowerCase()) || (r.username && r.username.toLowerCase().includes(q.toLowerCase())))
-  ).slice(0, 5);
+  let filtered;
+  if (!q) {
+    // Show top 5 potential targets (excluding self)
+    filtered = rankingsCache.filter(r => r.id !== state.kingdomId).slice(0, 5);
+  } else {
+    filtered = rankingsCache.filter(r => 
+      r.id !== state.kingdomId && 
+      (r.name.toLowerCase().includes(q.toLowerCase()) || (r.username && r.username.toLowerCase().includes(q.toLowerCase())))
+    ).slice(0, 10);
+  }
   
   if (filtered.length === 0) {
     el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px">No match found</div>';
   } else {
-    el.innerHTML = filtered.map(r => `
-      <div class="target-row" onclick="selectBountyTarget(${r.id}, '${r.name.replace(/'/g, "\\'")}')">
-        <span class="t-name">${r.name}</span>
-        <span class="t-rank">#${r.rank}</span>
-      </div>
-    `).join('');
+    el.innerHTML = `
+      ${!q ? '<div style="font-size:9px;color:var(--text3);padding:4px 8px;text-transform:uppercase;letter-spacing:1px">Suggested Targets</div>' : ''}
+      ${filtered.map(r => `
+        <div class="target-row" onclick="selectBountyTarget(${r.id}, '${r.name.replace(/'/g, "\\'")}')">
+          <span class="t-name">${r.name}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;color:var(--text3)">${fmt(r.land)} Land</span>
+            <span class="t-rank">#${r.rank}</span>
+          </div>
+        </div>
+      `).join('')}
+    `;
   }
 }
 
@@ -5976,13 +6016,14 @@ function renderRankingsPanel(rankings) {
     var actionBtns = isMe ? '<span style="font-size:11px;color:var(--text3)">—</span>' :
       (r.turn||0) < 400
         ? '<div style="display:flex;gap:4px;justify-content:center">'
-            + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="openKingdomProfile(\'' + r.name.replace(/'/g,"\\'") + '\')">👤</button>'
+            + '<button class="btn" style="font-size:11px;padding:3px 8px" title="Kingdom Profile" onclick="openKingdomProfile(\'' + r.name.replace(/'/g,"\\'") + '\')">👤</button>'
             + '<button class="btn btn-purple" style="font-size:11px;padding:3px 8px" title="Send message" onclick="openDirectMessage(' + r.player_id + ',\'' + r.name.replace(/'/g,"\\'") + '\')">✉️</button>'
             + '<span style="font-size:11px;color:var(--green);margin-left:4px" title="Protected until Turn 400">🛡️</span>'
             + '</div>'
         : '<div style="display:flex;gap:4px;justify-content:center">'
-            + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="openKingdomProfile(\'' + r.name.replace(/'/g,"\\'") + '\')">👤</button>'
+            + '<button class="btn" style="font-size:11px;padding:3px 8px" title="Kingdom Profile" onclick="openKingdomProfile(\'' + r.name.replace(/'/g,"\\'") + '\')">👤</button>'
             + '<button class="btn btn-purple" style="font-size:11px;padding:3px 8px" title="Send message" onclick="openDirectMessage(' + r.player_id + ',\'' + r.name.replace(/'/g,"\\'") + '\')">✉️</button>'
+            + '<button class="btn btn-gold" style="font-size:11px;padding:3px 8px" title="Place Bounty" onclick="openBountyAction(' + r.id + ',\'' + r.name.replace(/'/g,"\\'") + '\')">💰</button>'
             + '<button class="btn btn-red" style="font-size:11px;padding:3px 8px" onclick="targetFromRankings(' + r.id + ',\'attack\')">⚔️</button>'
             + '<button class="btn btn-purple" style="font-size:11px;padding:3px 8px" onclick="targetFromRankings(' + r.id + ',\'spells\')">✨</button>'
             + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="targetFromRankings(' + r.id + ',\'covert\')">🕵️</button>'
