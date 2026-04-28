@@ -35,10 +35,19 @@ const MAX_RESEARCH = 1000; // percent cap for most disciplines
 function raceBonus(kingdom, stat) {
   const bonuses = RACE_BONUSES[kingdom.race] || {};
   const base = bonuses[stat] || 1.0;
-  // Region bonus — +5% to the region's designated stat
-  const region = REGION_DATA[kingdom.race];
-  const regionMult = (region && region.bonus === stat) ? (1 + region.mult) : 1.0;
-  return base * regionMult;
+  
+  // Home Region bonus - +5% to the region's designated stat if it's your race's home
+  const homeRegion = REGION_DATA[kingdom.race];
+  const isHome = (homeRegion && homeRegion.name === kingdom.region);
+  const regionMult = (isHome && homeRegion.bonus === stat) ? (1 + homeRegion.mult) : 1.0;
+  
+  // Global Alliance Control bonus - +10% if your alliance owns this region
+  let allianceMult = 1.0;
+  if (kingdom._region_owned_by_my_alliance && kingdom._region_bonus_type === stat) {
+    allianceMult = 1.10;
+  }
+
+  return base * regionMult * allianceMult;
 }
 
 function goldPerTurn(k) {
@@ -3000,7 +3009,71 @@ function processActiveEffects(k, events) {
   return updates;
 }
 
+async function resolveRegions(db, io) {
+  const regions = await db.all('SELECT * FROM regions');
+  for (const region of regions) {
+    // Calculate current influence in this region
+    // Influence = Sum of Land for each alliance
+    const tallies = await db.all(`
+      SELECT am.alliance_id, SUM(k.land) as alliance_land
+      FROM kingdoms k
+      JOIN alliance_members am ON k.id = am.kingdom_id
+      WHERE k.region = ?
+      GROUP BY am.alliance_id
+      ORDER BY alliance_land DESC
+    `, [region.name]);
+
+    if (!tallies.length) continue;
+
+    const top = tallies[0];
+    const topAllianceId = top.alliance_id;
+    const topLand = top.alliance_land;
+
+    // To capture, you need either the most land OR a minimum threshold
+    // Let's say: if the top alliance has > 50% of the total LAND in the region, they start/continue capture
+    const totalLandInRegion = tallies.reduce((sum, t) => sum + t.alliance_land, 0);
+    const hasDominance = topLand > (totalLandInRegion * 0.51);
+
+    if (hasDominance) {
+      if (region.owner_alliance_id === topAllianceId) {
+        // Owner still dominate, reset contest if any
+        if (region.contest_alliance_id) {
+          await db.run('UPDATE regions SET contest_alliance_id = NULL, contest_progress = 0 WHERE name = ?', [region.name]);
+        }
+      } else {
+        // Challenging or starting capture
+        if (region.contest_alliance_id === topAllianceId) {
+          const progress = Math.min(100, region.contest_progress + 10); // 10% per turn cycle?
+          if (progress >= 100) {
+            // CAPTURED!
+            await db.run(`
+              UPDATE regions 
+              SET owner_alliance_id = ?, contest_alliance_id = NULL, contest_progress = 0, last_captured_at = unixepoch()
+              WHERE name = ?
+            `, [topAllianceId, region.name]);
+            
+            const alliance = await db.get('SELECT name FROM alliances WHERE id = ?', [topAllianceId]);
+            if (io) io.emit('chat', { room: 'global', username: 'System', message: `🚩 REGION CAPTURED: The alliance [${alliance.name}] has seized control of ${region.name}!`, is_system: true });
+          } else {
+            await db.run('UPDATE regions SET contest_progress = ? WHERE name = ?', [progress, region.name]);
+          }
+        } else {
+          // New challenger
+          await db.run('UPDATE regions SET contest_alliance_id = ?, contest_progress = 10 WHERE name = ?', [topAllianceId, region.name]);
+        }
+      }
+    } else {
+      // No dominance, decay contest
+      if (region.contest_progress > 0) {
+        const progress = Math.max(0, region.contest_progress - 5);
+        await db.run('UPDATE regions SET contest_progress = ? WHERE name = ?', [progress, region.name]);
+      }
+    }
+  }
+}
+
 module.exports = {
+  resolveRegions,
   goldPerTurn, manaPerTurn, foodBalance, farmProduction, foodConsumption,
   marketIncomeFull, tavernEntertainmentBonus, commodityPrice,
   processFoodEconomy, processMercenaries, hireMercenaries, purchaseUpgrade,

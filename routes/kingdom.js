@@ -33,6 +33,16 @@ module.exports = function(db) {
     res.json({ ok: true });
   });
 
+  router.post('/description', requireAuth, async (req, res) => {
+    const { description } = req.body;
+    if (description && typeof description !== 'string') return res.status(400).json({ error: 'Description must be a string' });
+    if (description && description.length > 1000) return res.status(400).json({ error: 'Description too long (max 1000 chars)' });
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    await db.run('UPDATE kingdoms SET description = ? WHERE id = ?', [description || null, k.id]);
+    res.json({ ok: true });
+  });
+
   router.get('/rankings', requireAuth, async (req, res) => {
     const k = await db.get('SELECT id, discovered_kingdoms FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
@@ -48,6 +58,22 @@ module.exports = function(db) {
     `);
 
     res.json(rows.map((r, i) => ({ ...r, rank: i + 1 })));
+  });
+
+  router.get('/alliance-rankings', requireAuth, async (req, res) => {
+    try {
+      const rows = await db.all(`
+        SELECT a.id, a.name, COUNT(am.kingdom_id) as member_count, SUM(k.land) as total_land, SUM(k.population) as total_pop
+        FROM alliances a
+        JOIN alliance_members am ON a.id = am.alliance_id
+        JOIN kingdoms k ON am.kingdom_id = k.id
+        GROUP BY a.id, a.name
+        ORDER BY total_land DESC
+      `);
+      res.json(rows.map((r, i) => ({ ...r, rank: i + 1 })));
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   router.get('/war-log', requireAuth, async (_req, res) => {
@@ -80,6 +106,12 @@ module.exports = function(db) {
 
   // ── Shared turn runner — used by ALL routes that consume a turn ──────────────
   async function runTurn(db, k) {
+    // Inject region ownership status for bonuses
+    const regionStatus = await db.get('SELECT owner_alliance_id, bonus_type FROM regions WHERE name = ?', [k.region]);
+    const myAlliance = await db.get('SELECT alliance_id FROM alliance_members WHERE kingdom_id = ?', [k.id]);
+    k._region_owned_by_my_alliance = (regionStatus && myAlliance && regionStatus.owner_alliance_id === myAlliance.alliance_id);
+    k._region_bonus_type = regionStatus?.bonus_type;
+
     const { updates, events } = engine.processTurn(k);
     updates.turns_stored = (k.turns_stored || 0) - 1;
 
@@ -1232,7 +1264,7 @@ module.exports = function(db) {
     try {
       const k = await db.get(`
         SELECT k.id, k.name, k.race, k.region, k.level, k.xp, k.land, k.population,
-               k.fighters, k.mages, k.rangers, k.morale, k.turn,
+               k.fighters, k.mages, k.rangers, k.morale, k.turn, k.description,
                k.res_military, k.res_economy, k.res_construction, k.res_spellbook,
                k.res_attack_magic, k.res_entertainment,
                p.username, p.is_ai

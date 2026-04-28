@@ -4,6 +4,9 @@
 ---
 
 ### Latest Updates (April 2026)
+- **REGION CAPTURE & MASTERY** — Alliances can now contest and capture territories. Holding a region grants a global +10% bonus to the alliance's signature stat (Military, Magic, Economy, etc.).
+- **ALLIANCE LEADERBOARDS** — New rankings tab showing total alliance land, member counts, and average power. Rank your coalition against the world.
+- **KINGDOM LORE** — Players can now set a custom bio for their kingdom on the status panel, visible to everyone on their public profiles.
 - **NAKED EVIL REBRAND** — Complete overhaul to the "NARMIR REBORN" aesthetic.
 - **Racial Specializations (Level 5+)** — Unique bonuses unlocked at high unit levels:
   - 🔨 **Dwarf Engineers** — Solo-crew war machines (normally requires full crew).
@@ -190,7 +193,6 @@ Training fields award passive XP with equipment bonuses.
 
 **Gameplay**
 - Spell casting target history — remember last target per spell
-- Kingdom descriptions — players can write a lore bio
 - Bounty board — players place gold bounties on other kingdoms
 - Diplomacy — non-aggression pacts, trade agreements between kingdoms
 - Seasons — periodic world events affecting all kingdoms (drought, plague, magic surge)
@@ -204,14 +206,11 @@ Training fields award passive XP with equipment bonuses.
 - Mercenary hiring — temporary troops available for gold at market
 
 **Social**
-- Alliance rankings — leaderboard for combined alliance land
-- Kingdom profiles — public page showing race, level, history
 - Trade system — send gold or resources between kingdoms
 - Messaging — direct kingdom-to-kingdom messages
 
 **World**
 - World map — visual representation of kingdom territories
-- Named regions — kingdoms occupy named land areas
 - More races — Gnome (inventor), Vampire (undead mage), Troll (regenerating fighter)
 - Race lore panel — detailed backstory for each race
 

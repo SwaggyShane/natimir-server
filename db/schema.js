@@ -215,6 +215,33 @@ async function initDb() {
   if (!cols.includes('training_allocation')) await addColumn('kingdoms', 'training_allocation', "TEXT NOT NULL DEFAULT '{}'"  );;
   if (!cols.includes('weapons_stockpile'))   await addColumn('kingdoms', 'weapons_stockpile',   'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('armor_stockpile'))     await addColumn('kingdoms', 'armor_stockpile',     'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('description'))         await addColumn('kingdoms', 'description',         'TEXT');
+
+  await _db.run(`
+    CREATE TABLE IF NOT EXISTS regions (
+      name              TEXT PRIMARY KEY,
+      owner_alliance_id INTEGER REFERENCES alliances(id),
+      contest_alliance_id INTEGER REFERENCES alliances(id),
+      contest_progress  INTEGER NOT NULL DEFAULT 0,
+      bonus_type        TEXT,
+      lore              TEXT,
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at        INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
+
+  // Initialize regions if they don't exist
+  const REGION_DATA_LOCAL = [
+    ['The Iron Holds',      'construction'],
+    ['The Silverwood',      'magic'],
+    ['The Bloodplains',     'military'],
+    ['The Underspire',      'stealth'],
+    ['The Heartlands',      'economy'],
+    ['The Ashfang Wilds',   'military']
+  ];
+  for (const [name, bonus] of REGION_DATA_LOCAL) {
+    await _db.run('INSERT OR IGNORE INTO regions (name, bonus_type) VALUES (?, ?)', [name, bonus]);
+  }
 
   const pCols = (await _db.all('PRAGMA table_info(players)')).map(c => c.name);
   if (!pCols.includes('is_admin'))   await addColumn('players', 'is_admin',   'INTEGER NOT NULL DEFAULT 0');

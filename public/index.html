@@ -655,8 +655,23 @@
         <h2 style="font-size: 16px; color: var(--gold); margin-bottom: 20px; border-bottom: 1px solid var(--border2); padding-bottom: 10px">🔥 LATEST UPDATES (APRIL 2026)</h2>
         
         <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">🚩 Region Capture & Mastery</div>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">Alliances can now contest and capture the six major regions of Narmir. Holding a region grants your entire alliance a 10% bonus to that region's signature stat (Military, Magic, Economy, etc.). Check the 🗺️ World Map to see capture progress!</p>
+        </div>
+
+        <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">📊 Alliance Leaderboards</div>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">A new "Alliances" tab has been added to the Rankings panel. Compare your coalition's total land, member counts, and average strength against every other alliance in the realm.</p>
+        </div>
+
+        <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">📜 Kingdom Lore & Bios</div>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">Tell your story. You can now write a custom lore description for your kingdom in your Kingdom view. These bios are saved to your profile and visible to all players who inspect your kingdom.</p>
+        </div>
+
+        <div style="margin-bottom: 24px">
           <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">💀 NARMIR REBORN: Pure. Damn. Evil.</div>
-          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">The land of Narmir has been plunged into darkness. A complete aesthetic rebrand has arrived, bringing a more "Pure. Damn. Evil." look and feel to your kingdom management experience.</p>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">Complete aesthetic overhaul. The land of Narmir has officially evolved into its darker, gritier "Reborn" state.</p>
         </div>
 
         <div style="margin-bottom: 24px">
@@ -816,7 +831,15 @@
           <div class="trow"><span class="name">Training fields</span><span class="count" id="kb-training">0</span></div>
           <div class="trow" style="border-bottom:none"><span class="name">Castles</span><span class="count" id="kb-castles">0</span></div>
         </div>
+      </div>
 
+      <!-- Kingdom Bio -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">Kingdom bio</div>
+        <textarea id="kingdom-description-input" maxlength="1000" placeholder="Tell the world about your kingdom..." style="width:100%; height:80px; background:var(--bg3); border:1px solid var(--border); border-radius:10px; color:var(--text2); padding:12px; font-size:13px; outline:none; transition:border-color 0.2s; resize:vertical"></textarea>
+        <div style="display:flex; justify-content:flex-end; margin-top:8px">
+          <button class="btn btn-purple" style="font-size:12px; padding:6px 16px" onclick="saveDescription()">Save Bio</button>
+        </div>
       </div>
 
       <!-- Active effects -->
@@ -2828,14 +2851,22 @@
 <div id="rankings" class="panel" style="display:none">
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-      <div class="card-title" style="margin:0">Kingdom Rankings</div>
+      <div style="display:flex; align-items:center; gap:16px">
+        <div id="rankings-title" class="card-title" style="margin:0">Rankings</div>
+        <div style="display:flex; gap:4px; background:var(--bg3); padding:4px; border-radius:8px">
+          <button id="rank-tab-kingdoms" class="btn btn-sm active" style="padding:4px 12px; font-size:11px" onclick="setRankType('kingdoms')">Kingdoms</button>
+          <button id="rank-tab-alliances" class="btn btn-sm" style="padding:4px 12px; font-size:11px" onclick="setRankType('alliances')">Alliances</button>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="rank-search" placeholder="Search kingdoms..." style="width:180px" oninput="filterRankings(this.value)">
-        <button class="btn" onclick="loadRankings(true)">↻ Refresh</button>
+        <input type="text" id="rank-search" placeholder="Search..." style="width:180px" oninput="filterRankings(this.value)">
+        <button class="btn" onclick="refreshRankings()">↻ Refresh</button>
       </div>
     </div>
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:13px" id="rankings-table">
+
+    <!-- KINGDOMS -->
+    <div id="rank-view-kingdoms" style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
           <tr style="color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border2)">
             <th style="padding:8px 6px;text-align:left;width:32px">#</th>
@@ -2850,6 +2881,25 @@
         </thead>
         <tbody id="rankings-list">
           <tr><td colspan="8" style="color:var(--text3);font-size:13px;text-align:center;padding:24px 0">Loading rankings...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ALLIANCES -->
+    <div id="rank-view-alliances" style="overflow-x:auto; display:none">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border2)">
+            <th style="padding:8px 6px;text-align:left;width:32px">#</th>
+            <th style="padding:8px 6px;text-align:left">Alliance</th>
+            <th style="padding:8px 6px;text-align:right">Members</th>
+            <th style="padding:8px 6px;text-align:right">Total Land</th>
+            <th style="padding:8px 6px;text-align:right">Avg Land</th>
+            <th style="padding:8px 6px;text-align:right">Total Pop</th>
+          </tr>
+        </thead>
+        <tbody id="alliance-rankings-list">
+          <tr><td colspan="6" style="color:var(--text3);font-size:13px;text-align:center;padding:24px 0">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -4990,6 +5040,7 @@ async function loadKingdom() {
     bld_markets: kingdom.bld_markets, bld_cathedrals: kingdom.bld_cathedrals,
     bld_training: kingdom.bld_training, bld_colosseums: kingdom.bld_colosseums,
     bld_castles: kingdom.bld_castles,
+    description: kingdom.description || '',
     weapons_stockpile: kingdom.weapons_stockpile || 0,
     armor_stockpile:   kingdom.armor_stockpile   || 0,
     war_machines:      kingdom.war_machines       || 0,
@@ -5054,6 +5105,9 @@ async function loadKingdom() {
   // Set tax slider to saved value
   var taxSlider = document.getElementById('tax-slider');
   if (taxSlider) { taxSlider.value = kingdom.tax || 42; updateTax(kingdom.tax || 42); }
+
+  var descInp = document.getElementById('kingdom-description-input');
+  if (descInp) descInp.value = state.description || '';
 
   loadRankings();
   // Load season
@@ -5298,6 +5352,14 @@ function appendNewsItems(events) {
   showNewsBadge(events.length);
 }
 
+async function saveDescription() {
+  var desc = document.getElementById('kingdom-description-input').value;
+  var result = await apiCall('POST', '/api/kingdom/description', { description: desc });
+  if (result.error) return toast(result.error, 'error');
+  state.description = desc;
+  toast('Kingdom bio updated!', 'success');
+}
+
 // ── War Log ───────────────────────────────────────────────────────────────────
 
 var ACTION_ICONS = {
@@ -5317,6 +5379,94 @@ var ACTION_LABELS = {
   sabotage:    'Sabotage',
   spell:       'Spell Cast',
 };
+
+async function loadWorldMap() {
+  const container = document.getElementById('world-map-container');
+  const legendList = document.getElementById('region-legend-list');
+  if (!container || !legendList) return;
+
+  container.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3)">Loading regions...</div>';
+
+  try {
+    const regions = await apiCall('GET', '/api/regions');
+    if (!Array.isArray(regions)) throw new Error('Invalid regions data');
+
+    legendList.innerHTML = '';
+    let mapHtml = `<svg viewBox="0 0 600 400" style="width:100%; height:auto; overflow:visible">
+      <defs>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+          <feOffset dx="0" dy="1" result="offsetblur" />
+          <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+          <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>`;
+
+    const colors = {
+      'The Iron Holds':    '#795548',
+      'The Silverwood':    '#2e7d32',
+      'The Bloodplains':   '#c62828',
+      'The Underspire':    '#4a148c',
+      'The Heartlands':    '#1565c0',
+      'The Ashfang Wilds': '#37474f'
+    };
+
+    regions.forEach((r, i) => {
+      const x = (i % 3) * 200 + 5;
+      const y = Math.floor(i / 3) * 200 + 5;
+      const w = 190;
+      const h = 190;
+      const color = colors[r.name] || '#444';
+      const isSelected = r.name === state.region;
+      const ownerName = r.owner_name || 'Neutral';
+      const progress = r.contest_progress || 0;
+      const isContested = r.contest_alliance_id !== null;
+
+      mapHtml += `
+        <g style="cursor:pointer" onclick="showRegionDetails('${r.name.replace(/'/g, "\\'")}')">
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" 
+            fill="${color}" fill-opacity="${isSelected ? 0.7 : 0.3}" 
+            stroke="${isSelected ? 'var(--gold)' : 'var(--border)'}" 
+            stroke-width="${isSelected ? 2 : 1}" 
+            filter="url(#shadow)" />
+          <text x="${x + 95}" y="${y + 40}" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">${r.name}</text>
+          <text x="${x + 95}" y="${y + 65}" text-anchor="middle" fill="#ddd" font-size="11">Owner: ${ownerName}</text>
+          
+          ${isContested ? `
+            <rect x="${x + 25}" y="${y + 85}" width="140" height="6" rx="3" fill="rgba(0,0,0,0.3)" />
+            <rect x="${x + 25}" y="${y + 85}" width="${140 * (progress / 100)}" height="6" rx="3" fill="var(--amber)" />
+            <text x="${x + 95}" y="${y + 110}" text-anchor="middle" fill="var(--amber)" font-size="10" font-weight="600">Capturing: ${progress}%</text>
+            <text x="${x + 95}" y="${y + 125}" text-anchor="middle" fill="var(--text3)" font-size="9">by ${r.challenger_name || 'Unknown'}</text>
+          ` : ''}
+
+          <text x="${x + 95}" y="${y + 160}" text-anchor="middle" fill="#999" font-size="10">Bonus: +10% ${r.bonus_type}</text>
+        </g>`;
+
+      const leg = document.createElement('div');
+      leg.className = 'trow';
+      leg.style.padding = '8px 0';
+      leg.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:12px;height:12px;border-radius:2px;background:${color};opacity:${isSelected ? 1 : 0.4}"></div>
+          <span style="${isSelected ? 'font-weight:700;color:var(--text)' : 'color:var(--text2)'}">${r.name}</span>
+        </div>
+        <span style="font-size:12px;color:var(--text3)">${ownerName}</span>
+      `;
+      legendList.appendChild(leg);
+    });
+
+    mapHtml += '</svg>';
+    container.innerHTML = mapHtml;
+  } catch (err) {
+    container.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px 0">Failed to load world map.</div>';
+    console.error(err);
+  }
+}
+
+function showRegionDetails(name) {
+  // Placeholder for future expanded region info panel
+  toast('Region: ' + name, 'info');
+}
 
 async function loadWarLog() {
   var el = document.getElementById('war-log-list');
@@ -5417,6 +5567,61 @@ var RACE_ICONS = {
   high_elf:'🧝', dwarf:'⛏️', dire_wolf:'🐺', dark_elf:'🗡️', human:'👑', orc:'💀'
 };
 
+var currentRankType = 'kingdoms';
+var allianceRankingsCache = null;
+
+async function setRankType(type) {
+  currentRankType = type;
+  document.getElementById('rank-tab-kingdoms').classList.toggle('active', type === 'kingdoms');
+  document.getElementById('rank-tab-alliances').classList.toggle('active', type === 'alliances');
+  document.getElementById('rank-view-kingdoms').style.display = type === 'kingdoms' ? 'block' : 'none';
+  document.getElementById('rank-view-alliances').style.display = type === 'alliances' ? 'block' : 'none';
+  
+  if (type === 'alliances' && !allianceRankingsCache) {
+    await loadAllianceRankings();
+  }
+}
+
+function refreshRankings() {
+  if (currentRankType === 'kingdoms') loadRankings(true);
+  else loadAllianceRankings();
+}
+
+async function loadAllianceRankings() {
+  var el = document.getElementById('alliance-rankings-list');
+  if (el) el.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:24px 0">Loading alliance rankings...</td></tr>';
+  
+  var rankings = await apiCall('GET', '/api/kingdom/alliance-rankings');
+  if (!Array.isArray(rankings)) {
+    if (el) el.innerHTML = '<tr><td colspan="6" style="color:var(--red);text-align:center;padding:24px 0">Failed to load alliances.</td></tr>';
+    return;
+  }
+  allianceRankingsCache = rankings;
+  renderAllianceRankings(rankings);
+}
+
+function renderAllianceRankings(rankings) {
+  var el = document.getElementById('alliance-rankings-list');
+  if (!el) return;
+  
+  if (rankings.length === 0) {
+    el.innerHTML = '<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:24px 0">No alliances found.</td></tr>';
+    return;
+  }
+
+  el.innerHTML = rankings.map(function(r) {
+    var avgLand = Math.floor(r.total_land / r.member_count);
+    return '<tr style="border-bottom:1px solid var(--border2)">'
+      + '<td style="padding:10px 6px;color:var(--text3)">' + r.rank + '</td>'
+      + '<td style="padding:10px 6px;font-weight:700;color:var(--gold)">[' + escHtml(r.name) + ']</td>'
+      + '<td style="padding:10px 6px;text-align:right">' + r.member_count + '</td>'
+      + '<td style="padding:10px 6px;text-align:right;font-weight:700">' + r.total_land.toLocaleString() + '</td>'
+      + '<td style="padding:10px 6px;text-align:right;color:var(--text2)">' + avgLand.toLocaleString() + '</td>'
+      + '<td style="padding:10px 6px;text-align:right;color:var(--text3)">' + r.total_pop.toLocaleString() + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
 async function loadRankings(forceRefresh) {
   var el = document.getElementById('rankings-list');
   if (el) el.innerHTML = '<tr><td colspan="8" style="color:var(--text3);text-align:center;padding:24px 0">Loading rankings...</td></tr>';
@@ -5441,11 +5646,19 @@ async function loadRankings(forceRefresh) {
 }
 
 function filterRankings(q) {
-  if (!rankingsCache) return;
-  var filtered = q
-    ? rankingsCache.filter(function(r) { return (r.name||'').toLowerCase().includes(q.toLowerCase()) || (r.username||'').toLowerCase().includes(q.toLowerCase()); })
-    : rankingsCache;
-  renderRankingsPanel(filtered);
+  if (currentRankType === 'kingdoms') {
+    if (!rankingsCache) return;
+    var filtered = q
+      ? rankingsCache.filter(function(r) { return (r.name||'').toLowerCase().includes(q.toLowerCase()) || (r.username||'').toLowerCase().includes(q.toLowerCase()); })
+      : rankingsCache;
+    renderRankingsPanel(filtered);
+  } else {
+    if (!allianceRankingsCache) return;
+    var filtered = q
+      ? allianceRankingsCache.filter(function(r) { return (r.name||'').toLowerCase().includes(q.toLowerCase()); })
+      : allianceRankingsCache;
+    renderAllianceRankings(filtered);
+  }
 }
 
 function renderRankingsPanel(rankings) {
@@ -5665,6 +5878,7 @@ function applyServerUpdates(u) {
   ['bld_farms','bld_barracks','bld_outposts','bld_guard_towers','bld_schools','bld_armories',
    'bld_vaults','bld_smithies','bld_markets','bld_cathedrals','bld_training','bld_colosseums','bld_castles'
   ].forEach(function(k) { if (u[k] !== undefined) state[k] = u[k]; });
+  if (u.description   !== undefined) state.description   = u.description;
   if (u.xp    !== undefined) state.xp    = u.xp;
   if (u.level !== undefined) state.level = u.level;
   if (u.troop_levels !== undefined) { try { state.troop_levels = typeof u.troop_levels === 'string' ? JSON.parse(u.troop_levels) : u.troop_levels; } catch { state.troop_levels = {}; } }
@@ -7160,6 +7374,7 @@ async function openKingdomProfile(name) {
     + escHtml(data.username || '?') + (data.is_ai ? ' 🤖' : '') + (isMe ? ' <span style="color:var(--purple)">(you)</span>' : '')
     + ' · <span style="color:' + (regionMeta.stroke||'#fff') + '">' + (data.region || regionMeta.name || '—') + '</span>'
     + '</div></div>'
+    + (data.description ? '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.6;font-style:italic">“' + escHtml(data.description).replace(/\n/g, '<br>') + '”</div>' : '')
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">'
     + mkStatBox('Rank', '#' + data.rank, 'var(--gold)')
     + mkStatBox('Level', data.level || 1, 'var(--purple)')

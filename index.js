@@ -130,6 +130,12 @@ async function runAiKingdom(db, engine, playerId) {
   for (let i = 0; i < turnsToSpend; i++) {
     if ((ai.turns_stored || 0) < 1) break;
 
+    // Inject region ownership status for AI bonus
+    const regionStatus = await db.get('SELECT owner_alliance_id, bonus_type FROM regions WHERE name = ?', [ai.region]);
+    const myAlliance = await db.get('SELECT alliance_id FROM alliance_members WHERE kingdom_id = ?', [ai.id]);
+    ai._region_owned_by_my_alliance = (regionStatus && myAlliance && regionStatus.owner_alliance_id === myAlliance.alliance_id);
+    ai._region_bonus_type = regionStatus?.bonus_type;
+
     // ── Process base turn — use in-memory ai state, no re-read needed ──
     const { updates } = engine.processTurn(ai);
     updates.turns_stored = ai.turns_stored - 1;
@@ -424,6 +430,14 @@ async function runRegen(db) {
     }
   }
 
+  // Resolve regions - calculate dominance and capture progress
+  try {
+    const engine = require('./game/engine');
+    await engine.resolveRegions(db, global._narmir_io);
+  } catch(e) {
+    console.error('[regions] resolution error:', e.message);
+  }
+
   await db.run(`
     UPDATE kingdoms
     SET turns_stored = MIN(?, turns_stored + ?)
@@ -552,6 +566,20 @@ async function start() {
     const kingdom = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     await db.run('DELETE FROM alliance_members WHERE kingdom_id = ?', [kingdom.id]);
     res.json({ ok: true });
+  });
+
+  app.get('/api/regions', requireAuth, async (req, res) => {
+    try {
+      const rows = await db.all(`
+        SELECT r.*, a.name as owner_name, ca.name as challenger_name
+        FROM regions r
+        LEFT JOIN alliances a ON r.owner_alliance_id = a.id
+        LEFT JOIN alliances ca ON r.contest_alliance_id = ca.id
+      `);
+      res.json(rows);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get('/api/alliance/:id', requireAuth, async (req, res) => {
