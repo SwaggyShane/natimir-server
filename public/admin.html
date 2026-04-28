@@ -321,6 +321,14 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <div class="card">
       <h2 style="margin-top:0;color:var(--green)">✅ Completed Features</h2>
 
+      <div class="cl-section" style="color:var(--gold); font-size: 13px">🔥 LATEST UPDATES (APRIL 2026)</div>
+      <div class="cl-item">✅ <b>NARMIR REBORN</b> — Aesthetic rebrand to "Pure. Damn. Evil."</div>
+      <div class="cl-item">✅ <b>Racial Unit Bonuses (Lv 5+)</b> — Dwarf Engines, HE Scrolls, Orc Free Training, DE Silent Kills, DW Fast Expeditions, Human Morale Aura</div>
+      <div class="cl-item">✅ <b>Persistent Personalization</b> — Saved chat nicknames and colors via `/nick` and `/color`</div>
+      <div class="cl-item">✅ <b>Extended Protection</b> — Newbie shield now lasts until Turn 400</div>
+      <div class="cl-item">✅ <b>Race Starting Buildings</b> — Custom starting kits for all 6 races</div>
+      <div class="cl-item">✅ <b>Tax System Fixes</b> — Persisted lock button and synced slider UI</div>
+
       <div class="cl-section">Core Systems</div>
       <div class="cl-item">✅ Registration, login, JWT auth with httpOnly cookie</div>
       <div class="cl-item">✅ Turn system — +7 every 25 min, max 400, crash-safe boot catch-up</div>
@@ -571,6 +579,11 @@ textarea{width:100%;resize:vertical;min-height:60px}
         <div class="cl-item wish">⬜ Email notifications — optional alerts for attacks, expedition return</div>
         <div class="cl-item wish">⬜ Tutorial / new player guide</div>
         <div class="cl-item wish">⬜ Achievements system</div>
+
+        <div class="cl-section" style="color:var(--purple); margin-top: 30px">💡 Player Wishlist (Live)</div>
+        <div id="player-wishlist" style="margin-top: 10px">
+          <div style="padding:10px;text-align:center;color:var(--text3)">Loading suggestions...</div>
+        </div>
       </div>
 
       <!-- Notes -->
@@ -929,6 +942,27 @@ function showAdminTab(id, btn) {
   document.getElementById('atab-'+id).style.display='block';
   if (btn) btn.classList.add('active');
   if (id === 'events') { loadEventLog(); loadEventList(); }
+  if (id === 'changelog') { loadSuggestions(); }
+}
+
+async function loadSuggestions() {
+  var el = document.getElementById('player-wishlist');
+  if (!el) return;
+  var rows = await api('GET', '/api/admin/suggestions');
+  if (!Array.isArray(rows) || rows.length === 0) {
+    el.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text3)">No player suggestions yet.</div>';
+    return;
+  }
+  el.innerHTML = rows.map(function(s) {
+    var date = new Date(s.created_at).toLocaleDateString();
+    return '<div style="background:var(--bg3); padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--border2)">'
+      + '<div style="display:flex; justify-content:space-between; margin-bottom:6px">'
+      + '<span style="font-weight:700; color:var(--gold); font-size:12px">' + escHtml(s.username || 'Unknown') + ' (' + escHtml(s.kingdom_name || 'No Kingdom') + ')</span>'
+      + '<span style="font-size:10px; color:var(--text3)">' + date + '</span>'
+      + '</div>'
+      + '<div style="font-size:13px; color:var(--text); line-height:1.4">' + escHtml(s.message) + '</div>'
+      + '</div>';
+  }).join('');
 }
 
 // ── Admin Events ──────────────────────────────────────────────────────────────

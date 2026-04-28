@@ -297,6 +297,17 @@ module.exports = function(db, io) {
     res.json(rows);
   });
 
+  router.get('/suggestions', async (_req, res) => {
+    const rows = await db.all(`
+      SELECT s.*, k.name as kingdom_name, p.username 
+      FROM suggestions s
+      LEFT JOIN kingdoms k ON s.kingdom_id = k.id
+      LEFT JOIN players p ON s.player_id = p.id
+      ORDER BY s.created_at DESC
+    `);
+    res.json(rows);
+  });
+
   router.post('/events/create', async (req, res) => {
     const { key, name, description, season, effect_type, effect_value, effect_duration, race_only, is_active, is_positive } = req.body;
     if (!key || !name) return res.status(400).json({ error: 'Key and name required' });

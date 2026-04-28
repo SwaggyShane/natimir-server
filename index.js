@@ -567,7 +567,7 @@ async function start() {
   app.get('/api/chat/:room', requireAuth, async (req, res) => {
     const msgs = await db.all(`
       SELECT cm.id, cm.message, cm.created_at, cm.username,
-             p.is_chat_mod, p.is_admin, k.race
+             p.is_chat_mod, p.is_admin, p.chat_color, p.chat_name, k.race
       FROM chat_messages cm
       JOIN players p ON cm.player_id = p.id
       JOIN kingdoms k ON cm.kingdom_id = k.id
@@ -631,6 +631,24 @@ async function start() {
   // Admin panel HTML served at /admin
   app.get('/admin', (_req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  });
+
+  app.post('/api/suggestions', requireAuth, async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message || message.length < 5) return res.status(400).json({ error: 'Suggestion too short' });
+      if (message.length > 1000) return res.status(400).json({ error: 'Suggestion too long (max 1000 chars)' });
+
+      const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+      await db.run(
+        'INSERT INTO suggestions (player_id, kingdom_id, message) VALUES (?, ?, ?)',
+        [req.player.playerId, k ? k.id : null, message]
+      );
+
+      res.json({ ok: true, message: 'Thank you! Your suggestion has been recorded.' });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get('*', (_req, res) => {

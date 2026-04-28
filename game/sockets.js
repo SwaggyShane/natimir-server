@@ -17,14 +17,23 @@ module.exports = function(io, db) {
   io.on('connection', async (socket) => {
     const { playerId, username } = socket.player;
 
-    const player  = await db.get('SELECT id, username, is_admin, is_chat_mod, chat_banned FROM players WHERE id = ?', [playerId]);
+    const player  = await db.get('SELECT id, username, is_admin, is_chat_mod, chat_banned, chat_color, chat_name FROM players WHERE id = ?', [playerId]);
     const kingdom = await db.get('SELECT id, name, race FROM kingdoms WHERE player_id = ?', [playerId]);
     if (!kingdom || !player) return socket.disconnect();
 
     if (player.chat_banned) socket.emit('chat:banned', { reason: 'You are banned from chat.' });
 
     const isMod = !!(player.is_chat_mod || player.is_admin);
-    onlinePlayers.set(playerId, { socketId: socket.id, username: player.username, race: kingdom.race, isMod, isAdmin: !!player.is_admin, kingdomName: kingdom.name });
+    onlinePlayers.set(playerId, { 
+      socketId: socket.id, 
+      username: player.username,
+      chatName: player.chat_name || player.username,
+      race: kingdom.race, 
+      isMod, 
+      isAdmin: !!player.is_admin, 
+      kingdomName: kingdom.name,
+      chatColor: player.chat_color
+    });
 
     socket.join(`kingdom:${kingdom.id}`);
     socket.join('global');
@@ -142,10 +151,36 @@ module.exports = function(io, db) {
         if (cmd === 'me') {
           const action = args.join(' ').trim();
           if (!action) return ack?.({ error: 'Usage: /me <action>' });
+          const info = onlinePlayers.get(playerId);
+          const activeName = info?.chatName || username;
           await db.run('INSERT INTO chat_messages (kingdom_id,player_id,username,room,message) VALUES (?,?,?,?,?)',
             [kingdom.id, playerId, username, 'global', `/me ${action}`]);
-          io.to('global').emit('chat:message', { room:'global', type:'me', from:username, race:kingdom.race, isMod:modPriv, message:action, ts:Date.now() });
+          io.to('global').emit('chat:message', { room:'global', type:'me', from:activeName, race:kingdom.race, isMod:modPriv, chatColor: info?.chatColor, message:action, ts:Date.now() });
           return ack?.({ ok:true });
+        }
+
+        if (cmd === 'color') {
+          const newColor = args[0];
+          if (!newColor) return ack?.({ error: 'Usage: /color <hex_code or css_color>' });
+          // Basic validation (hex or simple names)
+          if (!newColor.match(/^#[0-9a-fA-F]{3,6}$/) && !newColor.match(/^[a-z]+$/i)) {
+            return ack?.({ error: 'Invalid color format. Use #hex or name.' });
+          }
+          await db.run('UPDATE players SET chat_color = ? WHERE id = ?', [newColor, playerId]);
+          const info = onlinePlayers.get(playerId);
+          if (info) info.chatColor = newColor;
+          broadcastOnlineList(io);
+          return ack?.({ ok:true, message: `Chat color updated to ${newColor}` });
+        }
+
+        if (cmd === 'nick' || cmd === 'name') {
+          const newName = args.join(' ').trim().slice(0, 20);
+          if (!newName) return ack?.({ error: 'Usage: /nick <name>' });
+          await db.run('UPDATE players SET chat_name = ? WHERE id = ?', [newName, playerId]);
+          const info = onlinePlayers.get(playerId);
+          if (info) info.chatName = newName;
+          broadcastOnlineList(io);
+          return ack?.({ ok:true, message: `Chat name updated to ${newName}` });
         }
 
         if (cmd === 'msg' || cmd === 'pm' || cmd === 'whisper') {
@@ -200,9 +235,15 @@ module.exports = function(io, db) {
       }
 
       // Normal message
+      const info = onlinePlayers.get(playerId);
+      const activeName = info?.chatName || username;
       const res = await db.run('INSERT INTO chat_messages (kingdom_id,player_id,username,room,message) VALUES (?,?,?,?,?)',
         [kingdom.id, playerId, username, 'global', raw]);
-      io.to('global').emit('chat:message', { id:res.lastID, room:'global', type:'normal', from:username, race:kingdom.race, isMod:modPriv, message:raw, ts:Date.now() });
+      io.to('global').emit('chat:message', { 
+        id:res.lastID, room:'global', type:'normal', from:activeName, 
+        race:kingdom.race, isMod:modPriv, chatColor: info?.chatColor,
+        message:raw, ts:Date.now() 
+      });
       ack?.({ ok:true });
     });
 
@@ -230,7 +271,9 @@ module.exports = function(io, db) {
 };
 
 function broadcastOnlineList(io) {
-  const list = [...onlinePlayers.values()].map(p => ({ username:p.username, race:p.race, isMod:p.isMod }));
+  const list = [...onlinePlayers.values()].map(p => ({ 
+    username: p.chatName || p.username, race:p.race, isMod:p.isMod, chatColor: p.chatColor 
+  }));
   io.to('global').emit('chat:online', { users:list });
 }
 

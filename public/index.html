@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Narmir — Land of Magic and Conquest</title>
+<title>Narmir Reborn — Pure. Damn. Evil.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -172,9 +172,35 @@
   /* Exploration log full width on mobile */
   #exploration-log { max-height: 300px; }
 
+  @keyframes pulse-red {
+    0% { text-shadow: 0 0 5px #ff0000; opacity: 0.8; transform: scale(1); }
+    50% { text-shadow: 0 0 15px #ff0000, 0 0 25px #ff0000; opacity: 1; transform: scale(1.05); }
+    100% { text-shadow: 0 0 5px #ff0000; opacity: 0.8; transform: scale(1); }
+  }
+
   /* ── Topbar ── */
-  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: #fff; white-space: nowrap; display: flex; align-items: center; gap: 10px; }
-  .logo span { display: none; font-size: 13px; font-weight: 400; color: var(--text3); letter-spacing: 0; }
+  .logo { 
+    font-size: 20px; 
+    font-weight: 900; 
+    letter-spacing: 1px; 
+    color: #ffe4b5; 
+    text-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00, 0 0 30px #ff0000;
+    white-space: nowrap; 
+    display: flex; 
+    align-items: center; 
+    gap: 12px;
+    font-family: 'Cinzel', serif;
+  }
+  .logo span { 
+    display: none; 
+    font-size: 13px; 
+    font-weight: 900; 
+    color: #ff3131 !important; 
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: pulse-red 2s infinite;
+    margin-left: 10px;
+  }
   .logo-icon { width: 32px; height: 32px; background: var(--purple); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); border-radius: 8px; }
   .logo-icon-inner { width: 14px; height: 14px; border: 2px solid #fff; border-radius: 2px; transform: rotate(45deg); }
   .topbar-stats { display: flex; gap: 8px; align-items: center; }
@@ -213,11 +239,20 @@
     margin-bottom: 24px;
     width: 100%;
   }
-  .metric { background: var(--bg2); border: 1px solid var(--border); border-radius: 24px; padding: 20px; transition: transform 0.2s, border-color 0.2s; }
+  .metric { 
+    background: var(--bg2); 
+    border: 1px solid var(--border); 
+    border-radius: 24px; 
+    padding: 16px 20px; 
+    transition: transform 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
   .metric:hover { border-color: rgba(99,102,241,0.2); }
-  .metric .lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; }
-  .metric .val { font-size: 24px; font-weight: 300; color: #fff; line-height: 1; }
-  .metric .sub { font-size: 12px; color: var(--text3); margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+  .metric .lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; margin: 0; }
+  .metric .val { font-size: 20px; font-weight: 700; color: #fff; line-height: 1.2; margin: 0; }
+  .metric .sub { font-size: 11px; color: var(--text3); margin: 0; display: flex; align-items: center; gap: 4px; opacity: 0.8; }
   .metric.gold .val { color: var(--gold); }
   .metric.alert .val { color: var(--red); }
 
@@ -284,6 +319,9 @@
     border-radius: 16px;
     padding: 16px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-y: auto;
   }
   
   .chat-bubble {
@@ -297,12 +335,14 @@
     border: 1px solid var(--border);
     max-width: 85%;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    align-self: flex-start;
   }
   .chat-bubble.me {
     background: rgba(124, 106, 245, 0.08);
     border: 1px solid rgba(124, 106, 245, 0.2);
     border-top-left-radius: 8px;
     border-top-right-radius: 2px;
+    align-self: flex-start;
   }
 
   /* ── Chat Sidebar responsiveness ── */
@@ -312,13 +352,7 @@
     .chat-online-sidebar .on-item { padding: 8px 0; justify-content: center; }
     .chat-online-sidebar .on-item .on-name { display: none; }
   }
-  @media (max-width: 450px) {
-    .chat-online-sidebar { display: none !important; }
-  }
-    font-size: 13px;
-    line-height: 1.6;
-    overflow-y: auto;
-  }
+
   .news-item { display:flex; align-items:flex-start; gap:10px; padding:4px 0; color:var(--text2); }
   .news-item:hover { background: rgba(255,255,255,0.02); }
   .news-item .time { color: var(--text3); font-weight: 600; opacity: 0.5; min-width: 65px; }
@@ -457,10 +491,10 @@
     .tstat .lbl { font-size: 11px; }
     .turn-btn { padding: 8px 18px; font-size: 13px; }
     .metrics { grid-template-columns: repeat(6, minmax(0,1fr)); gap: 12px; margin-bottom: 24px; }
-    .metric { padding: 14px 16px; }
-    .metric .val { font-size: 22px; }
-    .metric .lbl { font-size: 11px; }
-    .metric .sub { font-size: 12px; }
+    .metric { padding: 12px 14px; gap: 2px; }
+    .metric .val { font-size: 18px; }
+    .metric .lbl { font-size: 9px; letter-spacing: 1px; }
+    .metric .sub { font-size: 11px; }
     .card { padding: 20px 24px; margin-bottom: 16px; }
     .card-title { font-size: 13px; }
     .two-col { grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -502,7 +536,7 @@
   <!-- Topbar -->
   <header class="topbar">
     <div style="display:flex;align-items:center;gap:12px">
-      <div class="logo">NARMIR <span>Land of Magic and Conquest</span></div>
+      <div class="logo">NARMIR REBORN <span>Pure. Damn. Evil.</span></div>
     </div>
     <div class="topbar-stats">
       <div class="tstat hide-sm"><div class="val" id="top-rank">—</div><div class="lbl">Rank</div></div>
@@ -523,24 +557,25 @@
   <!-- Sidebar -->
   <nav class="sidebar">
     <div class="nav-section">Kingdom</div>
-    <button class="nav-item active" onclick="switchTab('status',this)"><span class="icon">&#9632;</span>Status</button>
-    <button class="nav-item" onclick="switchTab('hire',this)"><span class="icon">&#9651;</span>Hire</button>
-    <button class="nav-item" onclick="switchTab('studies',this)"><span class="icon">🏛️</span>Studies</button>
-    <button class="nav-item" onclick="switchTab('economy',this)"><span class="icon">💰</span>Economy</button>
-    <button class="nav-item" onclick="switchTab('build',this)"><span class="icon">&#9650;</span>Build</button>
-    <button class="nav-item" onclick="switchTab('training',this)"><span class="icon">&#9876;</span>Training</button>
-    <button class="nav-item" onclick="switchTab('exploration',this)"><span class="icon">&#9685;</span>Exploration</button>
+    <button class="nav-item active" onclick="switchTab('status',this)"><span class="icon" style="color:#4a90e2">🏰</span>Status</button>
+    <button class="nav-item" onclick="switchTab('hire',this)"><span class="icon" style="color:#7ed321">🤝</span>Hire</button>
+    <button class="nav-item" onclick="switchTab('studies',this)"><span class="icon" style="color:#d0021b">🏛️</span>Studies</button>
+    <button class="nav-item" onclick="switchTab('economy',this)"><span class="icon" style="color:#f5a623">💰</span>Economy</button>
+    <button class="nav-item" onclick="switchTab('build',this)"><span class="icon" style="color:#8b572a">🔨</span>Build</button>
+    <button class="nav-item" onclick="switchTab('training',this)"><span class="icon" style="color:#fbbf24">🎯</span>Training</button>
+    <button class="nav-item" onclick="switchTab('exploration',this)"><span class="icon" style="color:#417505">🧭</span>Exploration</button>
 
     <div class="nav-section">Warfare</div>
-    <button class="nav-item" onclick="switchTab('defence',this)"><span class="icon">🛡️</span>Defence</button>
-    <button class="nav-item" onclick="switchTab('warfare',this)"><span class="icon">⚔️</span>Warfare</button>
+    <button class="nav-item" onclick="switchTab('defense',this)"><span class="icon" style="color:#4a4a4a">🛡️</span>Defense</button>
+    <button class="nav-item" onclick="switchTab('warfare',this)"><span class="icon" style="color:#d0021b">⚔️</span>Warfare</button>
 
     <div class="nav-section">Social</div>
-    <button class="nav-item" onclick="switchTab('rankings',this)"><span class="icon">🏆</span>Rankings</button>
-    <button class="nav-item" onclick="switchTab('worldmap',this)"><span class="icon">🗺️</span>World Map</button>
-    <button class="nav-item" onclick="switchTab('alliances',this)"><span class="icon">&#9876;</span>Alliances</button>
-    <button class="nav-item" onclick="switchTab('globalchat',this)"><span class="icon">💬</span>Chat <span id="chat-badge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">!</span></button>
-    <button class="nav-item" onclick="switchTab('news',this)"><span class="icon">&#9741;</span>News <span id="news-badge" class="nav-badge" style="display:none"></span></button>
+    <button class="nav-item" onclick="switchTab('rankings',this)"><span class="icon" style="color:#f8e71c">🏆</span>Rankings</button>
+    <button class="nav-item" onclick="switchTab('worldmap',this)"><span class="icon" style="color:#50e3c2">🗺️</span>World Map</button>
+    <button class="nav-item" onclick="switchTab('alliances',this)"><span class="icon" style="color:#bd10e0">🤝</span>Alliances</button>
+    <button class="nav-item" onclick="switchTab('globalchat',this)"><span class="icon" style="color:#4a90e2">💬</span>Chat <span id="chat-badge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">!</span></button>
+    <button class="nav-item" onclick="switchTab('news',this)"><span class="icon" style="color:#9b9b9b">📰</span>News <span id="news-badge" class="nav-badge" style="display:none"></span></button>
+    <button class="nav-item" onclick="switchTab('changelog',this)"><span class="icon" style="color:var(--green)">📋</span>Changelog</button>
 
     <div style="flex:1"></div>
     <button class="nav-item" onclick="doLogout()" style="color:var(--red);margin-top:8px"><span class="icon">&#10005;</span>Logout</button>
@@ -574,37 +609,37 @@
 
     <!-- Metrics strip -->
     <div class="metrics">
-      <div class="metric gold">
+      <div class="metric" id="metric-gold">
         <div class="lbl">Gold</div>
         <div class="val" id="m-gold">10k</div>
         <div class="sub" id="m-gold-sub">+0/turn</div>
       </div>
-      <div class="metric">
+      <div class="metric" id="metric-mana">
         <div class="lbl">Mana</div>
         <div class="val" id="m-mana">5k</div>
         <div class="sub" id="m-mana-sub">+40/turn</div>
       </div>
-      <div class="metric">
+      <div class="metric" id="metric-land">
         <div class="lbl">Land</div>
         <div class="val" id="m-land">0</div>
         <div class="sub"><span id="m-land-free">0</span> free</div>
       </div>
-      <div class="metric">
+      <div class="metric" id="metric-pop">
         <div class="lbl">Population</div>
         <div class="val" id="m-pop">50k</div>
         <div class="sub">cap: <span id="m-pop-cap">50k</span></div>
       </div>
-      <div class="metric">
+      <div class="metric" id="metric-morale">
         <div class="lbl">Morale</div>
         <div class="val" id="m-morale">100</div>
         <div class="sub">Tax: <span id="m-tax">42%</span></div>
       </div>
-      <div class="metric">
-        <div class="lbl">Defence</div>
+      <div class="metric" id="metric-defense">
+        <div class="lbl">Defense</div>
         <div class="val" style="font-size:14px" id="m-defence-rating">—</div>
         <div class="sub"><span id="m-walls">0</span> walls</div>
       </div>
-      <div class="metric">
+      <div class="metric" id="metric-food">
         <div class="lbl">Food</div>
         <div class="val" id="m-food">0</div>
         <div class="sub"><span id="m-farms">0</span> farms · <span id="m-food-balance" style="font-weight:600">+0</span>/turn</div>
@@ -614,12 +649,59 @@
 
     <!-- Panels -->
 
-    <!-- STATUS -->
+    <div id="changelog" class="panel">
+      <div class="panel-title">Changelog & Updates</div>
+      <div class="card" style="max-width: 800px; margin: 0 auto">
+        <h2 style="font-size: 16px; color: var(--gold); margin-bottom: 20px; border-bottom: 1px solid var(--border2); padding-bottom: 10px">🔥 LATEST UPDATES (APRIL 2026)</h2>
+        
+        <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">💀 NARMIR REBORN: Pure. Damn. Evil.</div>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">The land of Narmir has been plunged into darkness. A complete aesthetic rebrand has arrived, bringing a more "Pure. Damn. Evil." look and feel to your kingdom management experience.</p>
+        </div>
+
+        <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">✨ Racial Unit Specializations (Level 5+)</div>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 8px">Veteran units now unlock powerful race-specific abilities once they reach Level 5:</p>
+          <ul style="font-size: 13px; color: var(--text2); line-height: 1.8; list-style: none; padding-left: 10px">
+            <li>🔨 <strong style="color:var(--text)">Dwarf Engineers:</strong> Can solo-crew heavy war machines.</li>
+            <li>✨ <strong style="color:var(--text)">High Elf Mages:</strong> Produce two scrolls per crafting session.</li>
+            <li>🪓 <strong style="color:var(--text)">Orc Fighters:</strong> Passively train 1 free fighter per 10 every turn.</li>
+            <li>🕵️ <strong style="color:var(--text)">Dark Elf Ninjas:</strong> Silent assassination (targets get no news).</li>
+            <li>🐺 <strong style="color:var(--text)">Dire Wolf Rangers:</strong> Expeditions return 1 turn early.</li>
+            <li>💚 <strong style="color:var(--text)">Human Clerics:</strong> Radiate a morale aura (+1 morale/turn).</li>
+          </ul>
+        </div>
+
+        <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">💬 Chat Personalization</div>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">Use <code style="color:var(--purple)">/nick &lt;name&gt;</code> to set a persistent nickname and <code style="color:var(--purple)">/color &lt;hex&gt;</code> to choose your chat color. These settings are now saved to your profile!</p>
+        </div>
+
+        <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">🛡️ Extended Newbie Protection</div>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">To ensure all new leaders have time to fortify their holds, protection from attacks and spells has been extended to <strong style="color:var(--gold)">Turn 400</strong>.</p>
+        </div>
+
+        <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">🏗️ Racial Starting Buildings</div>
+          <p style="font-size: 13px; color: var(--text2); line-height: 1.6">Fresh kingdoms now receive a starting kit of buildings unique to their heritage, allowing you to leverage your race's strengths from day one.</p>
+        </div>
+
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border2)">
+          <div style="font-size: 14px; font-weight: 700; color: var(--gold); margin-bottom: 12px">💡 Have an Idea?</div>
+          <p style="font-size: 13px; color: var(--text3); margin-bottom: 12px">We want to build the ultimate dark fantasy world with you. Tell us what features or changes you'd like to see!</p>
+          <textarea id="suggestion-input" placeholder="Enter your suggestion here..." style="width: 100%; height: 100px; margin-bottom: 12px; background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px"></textarea>
+          <button class="btn btn-green" style="width: 100%; padding: 10px" onclick="submitSuggestion()">Submit Idea</button>
+        </div>
+
+        <button class="btn btn-purple" style="width: 100%; padding: 12px; margin-top: 20px" onclick="switchTab('status')">Return to Kingdom</button>
+      </div>
+    </div>
     <div id="status" class="panel active">
         <div class="card" id="status-tax-card" style="margin-top:0; margin-bottom:16px; display:none">
         <div class="card-title">Tax rate</div>
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-          <input type="range" id="tax-slider" min="1" max="100" step="1" value="42" oninput="updateTax(this.value)" style="flex:1">
+          <input type="range" id="strip-tax-slider" min="1" max="100" step="1" value="42" oninput="updateTax(this.value)" style="flex:1">
           <span style="font-size:22px;font-weight:700;color:var(--gold);min-width:48px" id="tax-disp">42%</span>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -698,10 +780,10 @@
             <span class="badge badge-blue" style="text-align:center;font-size:9px">Study</span>
           </div>
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0">
-            <span style="font-size:13px;color:var(--text)">Siege</span>
+            <span style="font-size:13px;color:var(--text)">Warmachines</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-war_machines">0</span>
             <span></span>
-            <span class="badge" style="text-align:center;font-size:9px;background:#000;color:rgb(255,255,0);border:1px solid rgb(255,255,0)">Siege</span>
+            <span class="badge yellow" style="text-align:center;font-size:9px">Warmachines</span>
           </div>
         </div>
 
@@ -714,7 +796,7 @@
           <div class="trow"><span class="name">Military</span><div class="prog-wrap"><div class="prog-bar mil" id="pb-mil-st" style="width:0%"></div></div></div>
           <div class="trow"><span class="name">Spellbook</span><div class="prog-wrap"><div class="prog-bar spell" id="pb-spell-st" style="width:0%"></div></div></div>
           <div class="trow"><span class="name">Atk magic</span><div class="prog-wrap"><div class="prog-bar" id="pb-atk-st" style="width:0%;background:var(--red)"></div></div></div>
-          <div class="trow"><span class="name">Def magic</span><div class="prog-wrap"><div class="prog-bar arm" id="pb-def-st" style="width:0%"></div></div></div>
+          <div class="trow"><span class="name">Defense magic</span><div class="prog-wrap"><div class="prog-bar arm" id="pb-def-st" style="width:0%"></div></div></div>
           <div class="trow"><span class="name">Mana</span><div class="prog-wrap"><div class="prog-bar mana" id="pb-mana-s" style="width:0%"></div></div></div>
           <div class="trow"><span class="name">Entertainment</span><div class="prog-wrap"><div class="prog-bar" id="pb-ent-s" style="width:0%;background:var(--green)"></div></div></div>
           <div class="trow" style="border-bottom:none"><span class="name">Construction</span><div class="prog-wrap"><div class="prog-bar" id="pb-con-st" style="width:0%;background:var(--amber)"></div></div></div>
@@ -1518,7 +1600,7 @@
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:14px 0 6px">Equipment &amp; War Machines</div>
         <div class="trow">
           <span class="bld-icon" style="background:#5a3a1a">🪖</span>
-          <span class="name">War machines</span><span class="desc">Siege engines for attacks</span>
+          <span class="name">Warmachines</span><span class="desc">Heavy assault engines</span>
           <span class="count" id="bld-war_machines">0</span>
           <input type="number" id="ba-wm" min="0" value="0" oninput="updateBuildDisplay()" style="width:80px" placeholder="Eng">
           <button class="btn" onclick="setBuildMax('ba-wm','war_machine')" style="padding:5px 10px;font-size:11px">Max</button>
@@ -1710,13 +1792,13 @@
 
 <!-- ═══════════════════════════════════════════ ATTACK PANEL ══ -->
 <!-- DEFENCE PANEL -->
-<div id="defence" class="panel" style="display:none">
+<div id="defense" class="panel" style="display:none">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
     <div>
-      <div class="card-title">🛡️ Defence</div>
+      <div class="card-title">🛡️ Defense</div>
       <div style="font-size:13px;color:var(--text3);margin-top:2px">Rating: <span id="def-rating" style="font-weight:700">—</span></div>
     </div>
-    <button class="btn" onclick="loadDefence()">↻ Refresh</button>
+    <button class="btn" onclick="loadDefense()">↻ Refresh</button>
   </div>
 
   <!-- Citadel progress bar -->
@@ -2550,7 +2632,7 @@
 
     <!-- Messages area -->
     <div style="flex:1;display:flex;flex-direction:column;min-width:0">
-      <div id="global-chat-messages" style="flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:1px;padding:14px 16px;word-break:break-word">
+      <div id="global-chat-messages" style="flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:1px;padding:14px 16px;word-break:break-word;align-items:flex-start">
         <div style="text-align:center;color:var(--text3);font-size:13px;padding:40px 0">Connecting to chat...</div>
       </div>
       <div style="border-top:1px solid var(--border);padding:12px 16px;background:var(--bg2);flex-shrink:0">
@@ -3804,7 +3886,7 @@ function renderOnlineList(users) {
     var isMe = u.username === state.chatUsername;
     return '<div class="on-item" style="display:flex;align-items:center;gap:6px;padding:5px 12px;font-size:12px;color:'+(isMe?'var(--purple)':'var(--text2)')+'">'
       + '<span style="font-size:16px;flex-shrink:0">'+icon+'</span>'
-      + '<span class="on-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(u.username)+modBadge+'</span>'
+      + '<span class="on-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:'+(u.chatColor||'')+'">'+escHtml(u.username)+modBadge+'</span>'
       + (isMe?'<span class="on-name" style="font-size:10px;color:var(--text3)">(you)</span>':'')
       + '</div>';
   }).join('');
@@ -3816,7 +3898,7 @@ function appendChatMessage(containerId, data) {
   var raceIcon = RACE_ICONS[data.race] || '👤';
   var time = new Date(data.ts || Date.now());
   var timeStr = time.getHours().toString().padStart(2,'0')+':'+time.getMinutes().toString().padStart(2,'0');
-  var isMe = data.from === state.chatUsername;
+  var isMe = data.from === state.chatName || data.from === state.chatUsername;
   var modTag = data.isMod ? '<span style="font-size:9px;background:var(--purple);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px">MOD</span>' : '';
   var div = document.createElement('div');
   if (data.id) div.id = 'cmsg-' + data.id;
@@ -3828,7 +3910,7 @@ function appendChatMessage(containerId, data) {
     div.innerHTML = '<span style="flex-shrink:0;font-size:18px;line-height:1.2;margin-top:2px">'+raceIcon+'</span>'
       + '<div style="flex:1;min-width:0">'
       + '<div style="font-size:11px;color:var(--text3);margin-bottom:3px">'
-      + '<strong style="color:var(--text2)">'+escHtml(data.from)+'</strong>'+modTag+' <span style="margin-left:6px;opacity:0.7">'+timeStr+'</span></div>'
+      + '<strong style="color:'+(data.chatColor || 'var(--text2)')+'">'+escHtml(data.from)+'</strong>'+modTag+' <span style="margin-left:6px;opacity:0.7">'+timeStr+'</span></div>'
       + '<div class="chat-bubble '+(isMe?'me':'')+'">'+escHtml(data.message)+'</div>'
       + '</div>';
   }
@@ -3868,6 +3950,20 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+async function submitSuggestion() {
+  var inp = document.getElementById('suggestion-input');
+  var msg = (inp.value || '').trim();
+  if (msg.length < 5) return toast('Please enter a longer suggestion!', 'error');
+  
+  var res = await apiCall('POST', '/api/suggestions', { message: msg });
+  if (res.error) {
+    toast(res.error, 'error');
+  } else {
+    toast(res.message, 'success');
+    inp.value = '';
+  }
+}
+
 async function loadGlobalChatHistory() {
   var msgs = await apiCall('GET', '/api/chat/global');
   var el = document.getElementById('global-chat-messages');
@@ -3882,8 +3978,9 @@ async function loadGlobalChatHistory() {
     appendChatMessage('global-chat-messages', {
       id: m.id, room:'global',
       type: isMeMsg ? 'me' : 'normal',
-      from: m.username || '?', race: m.race,
+      from: m.chat_name || m.username || '?', race: m.race,
       isMod: m.is_chat_mod || m.is_admin,
+      chatColor: m.chat_color,
       message: isMeMsg ? m.message.slice(4) : m.message,
       ts: (m.created_at||0)*1000,
     });
@@ -3895,7 +3992,17 @@ function sendGlobalChat() {
   var msg = (inp.value || '').trim();
   if (!msg || !socket) return;
   socket.emit('chat:global', { message: msg }, function(res) {
-    if (res && res.error) toast(res.error, 'error');
+    if (res && res.error) {
+      toast(res.error, 'error');
+    } else if (res && res.ok && res.message) {
+      // Handle local state updates for commands
+      if (msg.startsWith('/nick ') || msg.startsWith('/name ')) {
+        state.chatName = msg.split(' ').slice(1).join(' ').trim().slice(0, 20);
+      } else if (msg.startsWith('/color ')) {
+        state.chatColor = msg.split(' ')[1];
+      }
+      appendSystemMessage('global-chat-messages', res.message);
+    }
   });
   inp.value = '';
 }
@@ -4116,6 +4223,45 @@ function switchTab(id, btn) {
   panel.classList.add('active');
   panel.style.display = 'block';
   btn.classList.add('active');
+
+  // Handle kd-top visibility and context
+  var kdTop = document.getElementById('kd-top');
+  if (kdTop) {
+    if (['status','hire','studies','economy','build','training','exploration','defense','warfare'].includes(id)) {
+      kdTop.style.display = 'block';
+      // Contextual visibility
+      var metrics = ['metric-gold', 'metric-mana', 'metric-land', 'metric-pop', 'metric-morale', 'metric-defense', 'metric-food'];
+      metrics.forEach(function(m) { 
+        var el = document.getElementById(m);
+        if (el) el.style.display = 'flex';
+      });
+
+      if (id === 'hire') {
+        ['metric-mana','metric-land','metric-morale','metric-defense','metric-food'].forEach(function(m){
+          var el = document.getElementById(m); if(el) el.style.display = 'none';
+        });
+      } else if (id === 'build') {
+        ['metric-mana','metric-pop','metric-morale','metric-defense','metric-food'].forEach(function(m){
+          var el = document.getElementById(m); if(el) el.style.display = 'none';
+        });
+      } else if (id === 'studies' || id === 'training' || id === 'exploration' || id === 'warfare' || id === 'defense') {
+        if (id !== 'status' && id !== 'economy') {
+           metrics.forEach(function(m){
+             var el = document.getElementById(m); if(el) el.style.display = 'none';
+           });
+           // Always show gold for context
+           var gel = document.getElementById('metric-gold'); if(gel) gel.style.display = 'flex';
+           
+           if (id === 'defense') {
+             var del = document.getElementById('metric-defense'); if(del) del.style.display = 'flex';
+           }
+        }
+      }
+    } else {
+      kdTop.style.display = 'none';
+    }
+  }
+
   if (id === 'news') {
     ['news-badge','bnav-news-badge'].forEach(function(bid) {
       var b = document.getElementById(bid);
@@ -4150,7 +4296,7 @@ function switchTab(id, btn) {
     loadWarfarePanel();
   }
   if (id === 'defence') {
-    loadDefence();
+    loadDefense();
   }
   if (id === 'studies') {
     loadStudies();
@@ -4232,8 +4378,10 @@ function updateTax(v) {
   v = parseInt(v) || 0;
   state.tax = v;
   var t1 = document.getElementById('tax-slider'); if(t1) t1.value = v;
+  var t2 = document.getElementById('strip-tax-slider'); if(t2) t2.value = v;
   var d1 = document.getElementById('tax-disp'); if(d1) d1.textContent = v + '%';
   var m1 = document.getElementById('m-tax'); if(m1) m1.textContent = v + '%';
+  var s1 = document.getElementById('strip-tax'); if(s1) s1.textContent = v + '%';
   
   // Calculate projected net income
   var pop = state.pop || 0;
@@ -4250,11 +4398,11 @@ function updateTax(v) {
 }
 
 async function lockTax() {
-  var v = parseInt(document.getElementById('tax-slider').value);
+  var v = parseInt(state.tax) || 42;
   var result = await apiCall('POST', '/api/kingdom/options', { tax: v });
   if (result.error) return toast(result.error, 'error');
   state.tax = v;
-  syncUI();
+  updateTax(v);
   toast('Tax rate locked at ' + v + '%', v > 50 ? 'warn' : 'success');
 }
 
@@ -4560,16 +4708,16 @@ function syncUI() {
   if (hSlider) hSlider.max = smithies;
   if (sSlider) sSlider.max = smithies;
   var pb = document.getElementById('protection-badge');
-  if (pb) pb.style.display = (state.turn || 0) < 200 ? 'inline' : 'none';
-  // Defence rating on status panel
+  if (pb) pb.style.display = (state.turn || 0) < 400 ? 'inline' : 'none';
+  // Defense rating on status panel
   var WALL_MULT = { human:1.00, dwarf:1.35, high_elf:1.10, orc:0.85, dark_elf:0.90, dire_wolf:0.80 };
   var defWalls   = state.bld_walls || 0;
   var defTowers  = state.bld_guard_towers || 0;
   var defOutpost = state.bld_outposts || 0;
   var defCastle  = state.bld_castles || 0;
   var defUpgrades = {};
-  try { defUpgrades = typeof state.defence_upgrades === 'string' ? JSON.parse(state.defence_upgrades||'{}') : (state.defence_upgrades||{}); } catch {}
-  var drEl = document.getElementById('m-defence-rating');
+  try { defUpgrades = typeof state.defense_upgrades === 'string' ? JSON.parse(state.defense_upgrades||'{}') : (state.defense_upgrades||{}); } catch {}
+  var drEl = document.getElementById('m-defense-rating');
   var wlEl = document.getElementById('m-walls');
   if (wlEl) wlEl.textContent = fmt(defWalls);
   if (drEl) {
@@ -4622,20 +4770,21 @@ function updateTurnsDisplay() {
 
 
 <nav class="bottom-nav" id="bottom-nav">
-  <button class="bnav-item active" onclick="switchTabMobile('status',this)"><span class="bicon">🏰</span>Status</button>
-  <button class="bnav-item" onclick="switchTabMobile('hire',this)"><span class="bicon">⚔️</span>Hire</button>
-  <button class="bnav-item" onclick="switchTabMobile('studies',this)"><span class="bicon">🏛️</span>Studies</button>
-  <button class="bnav-item" onclick="switchTabMobile('build',this)"><span class="bicon">🔨</span>Build</button>
-  <button class="bnav-item" onclick="switchTabMobile('economy',this)"><span class="bicon">💰</span>Economy</button>
-  <button class="bnav-item" onclick="switchTabMobile('training',this)"><span class="bicon">🛡️</span>Train</button>
-  <button class="bnav-item" onclick="switchTabMobile('exploration',this)"><span class="bicon">🧭</span>Explore</button>
-  <button class="bnav-item" onclick="switchTabMobile('defence',this)"><span class="bicon">🛡️</span>Defence</button>
-  <button class="bnav-item" onclick="switchTabMobile('warfare',this)"><span class="bicon">⚔️</span>Warfare</button>
+  <button class="bnav-item active" onclick="switchTabMobile('status',this)"><span class="bicon" style="color:#4a90e2">🏰</span>Status</button>
+  <button class="bnav-item" onclick="switchTabMobile('hire',this)"><span class="bicon" style="color:#7ed321">🤝</span>Hire</button>
+  <button class="bnav-item" onclick="switchTabMobile('studies',this)"><span class="bicon" style="color:#d0021b">🏛️</span>Studies</button>
+  <button class="bnav-item" onclick="switchTabMobile('build',this)"><span class="bicon" style="color:#8b572a">🏗️</span>Build</button>
+  <button class="bnav-item" onclick="switchTabMobile('economy',this)"><span class="bicon" style="color:#f5a623">💰</span>Economy</button>
+  <button class="bnav-item" onclick="switchTabMobile('training',this)"><span class="bicon" style="color:#fbbf24">🎯</span>Train</button>
+  <button class="bnav-item" onclick="switchTabMobile('exploration',this)"><span class="bicon" style="color:#417505">🗺️</span>Explore</button>
+  <button class="bnav-item" onclick="switchTabMobile('defense',this)"><span class="bicon" style="color:#9b9b9b">🛡️</span>Defense</button>
+  <button class="bnav-item" onclick="switchTabMobile('warfare',this)"><span class="bicon" style="color:#d0021b">⚔️</span>Warfare</button>
   <div class="bnav-sep"></div>
-  <button class="bnav-item" onclick="switchTabMobile('rankings',this)"><span class="bicon">🏆</span>Ranks</button>
-  <button class="bnav-item" onclick="switchTabMobile('alliances',this)"><span class="bicon">🤝</span>Allies</button>
-  <button class="bnav-item" onclick="switchTabMobile('globalchat',this)"><span class="bicon">💬</span>Chat</button>
-  <button class="bnav-item" onclick="switchTabMobile('news',this)"><span class="bicon">📰</span>News<span id="bnav-news-badge" class="bnav-badge" style="display:none"></span></button>
+  <button class="bnav-item" onclick="switchTabMobile('worldmap',this)"><span class="bicon" style="color:#22d3ee">🌎</span>Map</button>
+  <button class="bnav-item" onclick="switchTabMobile('rankings',this)"><span class="bicon" style="color:#f8e71c">🏆</span>Ranks</button>
+  <button class="bnav-item" onclick="switchTabMobile('alliances',this)"><span class="bicon" style="color:#bd10e0">🤝</span>Allies</button>
+  <button class="bnav-item" onclick="switchTabMobile('globalchat',this)"><span class="bicon" style="color:#f472b6">💬</span>Chat</button>
+  <button class="bnav-item" onclick="switchTabMobile('news',this)"><span class="bicon" style="color:#fbbf24">🗞️</span>News<span id="bnav-news-badge" class="bnav-badge" style="display:none"></span></button>
   <div class="bnav-sep"></div>
   <button class="bnav-item" onclick="doLogout()" style="color:var(--red)"><span class="bicon">🚪</span>Logout</button>
 </nav>
@@ -4823,6 +4972,8 @@ async function loadKingdom() {
     research_focus:   (function(){ try{ return JSON.parse(kingdom.research_focus  ||'[]'); }catch(e){ return []; } })(),
     active_effects:     kingdom.active_effects     || {},
     kingdomId: kingdom.id, kingdomName: kingdom.name, chatUsername: kingdom.username || '',
+    chatName: kingdom.chat_name || kingdom.username || '',
+    chatColor: kingdom.chat_color || 'var(--text2)',
     turns_stored: kingdom.turns_stored !== undefined ? kingdom.turns_stored : 400,
     // Research
     res_economy: kingdom.res_economy, res_weapons: kingdom.res_weapons,
@@ -5324,7 +5475,7 @@ function renderRankingsPanel(rankings) {
     var nameColor = isMe ? 'color:var(--purple);font-weight:700' : 'color:var(--text);font-weight:600';
     var meTag = isMe ? ' <span style="font-size:10px;color:var(--purple);font-weight:400">(you)</span>' : '';
     var aiTag = r.is_ai ? ' <span style="font-size:10px;color:var(--text3)">🤖</span>' : '';
-    var protTag = (!isMe && (r.turn||0) < 200) ? ' <span style="font-size:10px;color:var(--green)" title="Newbie protection — cannot be attacked until Turn 200">🛡️</span>' : '';
+    var protTag = (!isMe && (r.turn||0) < 400) ? ' <span style="font-size:10px;color:var(--green)" title="Newbie protection — cannot be attacked until Turn 400">🛡️</span>' : '';
     
     var rankColor = r.rank === 1 ? 'color:var(--gold);font-weight:700' : r.rank <= 3 ? 'color:var(--amber)' : 'color:var(--text3)';
     var rankBadge = r.rank === 1 ? '👑' : r.rank <= 3 ? '🥈' : '';
@@ -6241,23 +6392,23 @@ var OUTPOST_RACE_MULT = { human:1.00, dwarf:0.80, high_elf:0.95, orc:0.90, dark_
 
 function showDefTab(id, btn) {
   ['walls','towers','outposts'].forEach(function(t){ document.getElementById('dtab-'+t).style.display='none'; });
-  document.querySelectorAll('#defence .admin-tab').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('#defense .admin-tab').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('dtab-'+id).style.display='block';
   if (btn) btn.classList.add('active');
 }
 
-async function loadDefence() {
-  var data = await apiCall('GET', '/api/kingdom/defence/overview');
+async function loadDefense() {
+  var data = await apiCall('GET', '/api/kingdom/defense/overview');
   if (data.error) return toast(data.error, 'error');
   var race = state.race || 'human';
 
   var el = function(id){ return document.getElementById(id); };
 
   // Rating
-  if (el('def-rating')) el('def-rating').textContent = data.defence_rating || '—';
+  if (el('def-rating')) el('def-rating').textContent = data.defense_rating || '—';
 
   // Citadel progress
-  var cit = data.defence_upgrades?.citadel;
+  var cit = data.defense_upgrades?.citadel;
   if (el('citadel-status')) { el('citadel-status').textContent = cit ? '🏰 ACHIEVED' : 'Not yet achieved'; el('citadel-status').style.color = cit ? 'var(--gold)' : 'var(--text3)'; }
   var setBar = function(id, val, max) {
     var e = el(id); if (!e) return;
@@ -6828,7 +6979,7 @@ function renderWorldMap(kingdoms) {
   });
 
   // Title
-  svg += '<text x="' + (W/2) + '" y="24" text-anchor="middle" font-family="Georgia,serif" font-size="14" fill="#c8962a" filter="url(#glow)">NARMIR — Land of Magic and Conquest</text>';
+  svg += '<text x="' + (W/2) + '" y="24" text-anchor="middle" font-family="Georgia,serif" font-size="14" fill="#c8962a" filter="url(#glow)">NARMIR REBORN — Pure. Damn. Evil.</text>';
   // Compass rose
   svg += '<g transform="translate(' + (W-40) + ',' + (H-40) + ')">'
     + '<circle r="18" fill="rgba(0,0,0,.5)" stroke="#3a3050" stroke-width="1"/>'
@@ -7582,8 +7733,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <div id="login-overlay" style="min-height:100vh;background:#0d0e14;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
   <div style="background:#13141d;border:1px solid #363a52;border-radius:12px;padding:28px 32px;width:90%;max-width:400px;">
-    <div style="font-size:22px;font-weight:700;color:#e8b84b;margin-bottom:4px">NARMIR</div>
-    <div style="font-size:13px;color:#9a9bb5;margin-bottom:20px">Land of Magic and Conquest</div>
+    <div style="font-size:22px;font-weight:700;color:#e8b84b;margin-bottom:4px">NARMIR REBORN</div>
+    <div style="font-size:13px;color:#9a9bb5;margin-bottom:20px">Pure. Damn. Evil.</div>
     <div id="auth-error" style="font-size:13px;color:#e05c5c;margin-bottom:12px;min-height:18px"></div>
     <input id="auth-user" type="text" placeholder="Username" style="width:100%;margin-bottom:10px;padding:10px 12px;font-size:16px;background:#1a1c27;border:1px solid #363a52;border-radius:8px;color:#e8e9f0;box-sizing:border-box;">
     <input id="auth-pass" type="password" placeholder="Password" style="width:100%;padding:10px 12px;font-size:16px;background:#1a1c27;border:1px solid #363a52;border-radius:8px;color:#e8e9f0;box-sizing:border-box;">

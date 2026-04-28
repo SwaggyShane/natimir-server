@@ -1,5 +1,21 @@
-# Narmir — Land of Magic and Conquest
+# Narmir Reborn — Pure. Damn. Evil.
 ## Changelog
+
+---
+
+### Latest Updates (April 2026)
+- **NAKED EVIL REBRAND** — Complete overhaul to the "NARMIR REBORN" aesthetic.
+- **Racial Specializations (Level 5+)** — Unique bonuses unlocked at high unit levels:
+  - 🔨 **Dwarf Engineers** — Solo-crew war machines (normally requires full crew).
+  - ✨ **High Elf Mages** — Double scroll production (2 scrolls per craft).
+  - 🪓 **Orc Fighters** — War Culture: 1 free fighter trained per 10 every turn.
+  - 🕵️ **Dark Elf Ninjas** — Silent Assassination: Targets no longer receive news of the deed.
+  - 🐺 **Dire Wolf Rangers** — Fast Expeditions: Scouts and Dungeons return 1 turn early.
+  - 💚 **Human Clerics** — Morale Aura: Passive +1 morale to the kingdom every turn.
+- **Chat Personalization** — New commands `/nick <name>` and `/color <hex>` persist correctly across sessions.
+- **Extended Protection** — Newbie protection now lasts until Turn 400 to allow deeper development before open warfare.
+- **Economic Stability** — Fixed tax slider persistence and synchronized UI updates across all panels.
+- **Starting Advantages** — Each race now begins with a set of starting buildings tailored to their strengths.
 
 ---
 

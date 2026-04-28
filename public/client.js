@@ -71,8 +71,8 @@ function showLoginModal() {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,14,20,.97);z-index:9999;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML = `
     <div style="background:#13141d;border:1px solid #363a52;border-radius:12px;padding:28px 32px;width:90%;max-width:360px;">
-      <div style="font-size:22px;font-weight:700;color:#e8b84b;margin-bottom:4px">NARMIR</div>
-      <div style="font-size:13px;color:#9a9bb5;margin-bottom:22px">Land of Magic and Conquest</div>
+      <div style="font-size:22px;font-weight:700;color:#e8b84b;margin-bottom:4px">NARMIR REBORN</div>
+      <div style="font-size:13px;color:#9a9bb5;margin-bottom:22px">Pure. Damn. Evil.</div>
       <div id="auth-error" style="font-size:13px;color:#e05c5c;margin-bottom:12px;min-height:18px"></div>
       <input id="auth-user" type="text" placeholder="Username" style="width:100%;margin-bottom:10px;padding:10px 12px;font-size:16px;background:#1a1c27;border:1px solid #363a52;border-radius:8px;color:#e8e9f0;box-sizing:border-box;">
       <input id="auth-pass" type="password" placeholder="Password" style="width:100%;margin-bottom:10px;padding:10px 12px;font-size:16px;background:#1a1c27;border:1px solid #363a52;border-radius:8px;color:#e8e9f0;box-sizing:border-box;">

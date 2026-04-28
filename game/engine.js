@@ -247,7 +247,7 @@ function awardUnitXp(k, unit, xpAmount) {
   return awardTroopXp(k, unit, xpAmount).troop_levels;
 }
 
-// ── Defence system ────────────────────────────────────────────────────────────
+// ── Defense system ────────────────────────────────────────────────────────────
 
 // Wall strength racial modifier
 const WALL_STRENGTH_MULT = {
@@ -268,7 +268,7 @@ const WALL_UPGRADES = {
   fortress_walls:{ name:'Fortress Walls',    cost:100000, desc:'War machines on walls deal +50% damage',             requires:'battlements' },
 };
 const TOWER_DEF_UPGRADES = {
-  arrow_slits:   { name:'Arrow Slits',       cost:5000,   desc:'+20% ranged defence from guard towers',              requires:null           },
+  arrow_slits:   { name:'Arrow Slits',       cost:5000,   desc:'+20% ranged defense from guard towers',              requires:null           },
   watchtower:    { name:'Watchtower',         cost:20000,  desc:'Thieves detect incoming attacks 1 turn early',       requires:'arrow_slits'  },
   signal_tower:  { name:'Signal Tower',       cost:50000,  desc:'Attack warnings shared with alliance members',       requires:'watchtower'   },
 };
@@ -281,15 +281,15 @@ const OUTPOST_UPGRADES = {
 // Citadel threshold
 const CITADEL_REQ = { walls:50, guard_towers:20, outposts:20, castles:1 };
 
-// Compute overall defence rating label
-function defenceRating(k) {
+// Compute overall defense rating label
+function defenseRating(k) {
   const walls   = k.bld_walls         || 0;
   const towers  = k.bld_guard_towers  || 0;
   const outpost = k.bld_outposts      || 0;
   const wm      = k.war_machines      || 0;
   const castle  = k.bld_castles       || 0;
   let defUpgrades = {};
-  try { defUpgrades = JSON.parse(k.defence_upgrades||'{}'); } catch {}
+  try { defUpgrades = JSON.parse(k.defense_upgrades||'{}'); } catch {}
   if (defUpgrades.citadel) return '🏰 Citadel';
   if (walls === 0)                               return '🔴 Undefended';
   if (walls < 10 && towers === 0)               return '🟠 Lightly Defended';
@@ -300,8 +300,8 @@ function defenceRating(k) {
   return '🟠 Lightly Defended';
 }
 
-// Wall contribution to defence power
-function wallDefencePower(k) {
+// Wall contribution to defense power
+function wallDefensePower(k) {
   const walls   = k.bld_walls || 0;
   if (!walls) return 0;
   const race   = k.race || 'human';
@@ -311,7 +311,7 @@ function wallDefencePower(k) {
   const reinMult   = wallUpgrades.reinforced    ? 1.25 : 1.0;
   const fortMult   = wallUpgrades.fortress_walls? 1.50 : 1.0; // on WM power — applied in combat
 
-  // Base: each wall = 100 defence power (scaled by race + upgrades)
+  // Base: each wall = 100 defense power (scaled by race + upgrades)
   const wmOnWalls  = Math.min(k.war_machines||0, walls);
   const wmBonus    = wmOnWalls * 500 * ((k.res_war_machines||100)/100) * (wallUpgrades.fortress_walls ? 1.75 : wallUpgrades.battlements ? 1.20 : 1.0);
   return Math.floor(walls * 100 * mult * reinMult + wmBonus);
@@ -331,7 +331,7 @@ function towerDetectionPower(k) {
   return Math.floor((towers * 50 + thievesOnWatch * 15) * mult * arrowMult * btlMult);
 }
 
-// Outpost contribution — ranger patrol defence
+// Outpost contribution — ranger patrol defense
 function outpostRangerPower(k) {
   const outposts = k.bld_outposts || 0;
   if (!outposts) return 0;
@@ -348,20 +348,20 @@ function outpostRangerPower(k) {
 function checkCitadel(k, events) {
   const updates = {};
   let defUpgrades = {};
-  try { defUpgrades = JSON.parse(k.defence_upgrades||'{}'); } catch {}
+  try { defUpgrades = JSON.parse(k.defense_upgrades||'{}'); } catch {}
   if (defUpgrades.citadel) return updates; // already unlocked
   const req = CITADEL_REQ;
   if ((k.bld_walls||0) >= req.walls && (k.bld_guard_towers||0) >= req.guard_towers &&
       (k.bld_outposts||0) >= req.outposts && (k.bld_castles||0) >= req.castles) {
     defUpgrades.citadel = true;
-    updates.defence_upgrades = JSON.stringify(defUpgrades);
-    events.push({ type:'system', message:`🏰 Castle Citadel achieved! Your fortress stands among the greatest in Narmir. +15% permanent defence bonus, war machines on walls deal ×2 damage.` });
+    updates.defense_upgrades = JSON.stringify(defUpgrades);
+    events.push({ type:'system', message:`🏰 Castle Citadel achieved! Your fortress stands among the greatest in Narmir. +15% permanent defense bonus, warmachines on walls deal ×2 damage.` });
   }
   return updates;
 }
 
-// Process building siege damage on successful attack (no walls = building damage)
-function applySiegeDamage(attacker, defender, win) {
+// Process building warmachine damage on successful attack (no walls = building damage)
+function applyWarmachineDamage(attacker, defender, win) {
   const updates = {};
   if (!win) return updates;
   const walls = defender.bld_walls || 0;
@@ -369,8 +369,8 @@ function applySiegeDamage(attacker, defender, win) {
     // Walls take damage — % based on wall upgrades
     let wallUpgrades = {};
     try { wallUpgrades = JSON.parse(defender.wall_upgrades||'{}'); } catch {}
-    const siegeResist = wallUpgrades.fortress_walls ? 0.03 : wallUpgrades.reinforced ? 0.06 : 0.10;
-    const wallLost    = Math.max(1, Math.floor(walls * siegeResist));
+    const warmachineResist = wallUpgrades.fortress_walls ? 0.03 : wallUpgrades.reinforced ? 0.06 : 0.10;
+    const wallLost    = Math.max(1, Math.floor(walls * warmachineResist));
     updates.bld_walls = Math.max(0, walls - wallLost);
   } else {
     // No walls — random buildings take damage
@@ -994,8 +994,20 @@ function processTurn(k) {
   // Orc: every 10 fighters (level 5+) trains 1 free fighter per turn
   const orcBonus = racialUnitBonus({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'fighters');
   if (orcBonus.freeTrainees > 0) {
-    updates.fighters = (updates.fighters || k.fighters || 0) + orcBonus.freeTrainees;
-    events.push({ type: 'system', message: `⚔️ Orcish war culture: ${orcBonus.freeTrainees} new fighter${orcBonus.freeTrainees > 1 ? 's' : ''} trained this turn.` });
+    const BARRACKS_TROOPS = ['fighters','rangers','clerics','thieves','ninjas'];
+    const barracksCap = (k.bld_barracks || 0) * 500;
+    const currentBarracksTroops = BARRACKS_TROOPS.reduce((s, u) => s + (updates[u] !== undefined ? updates[u] : (k[u] || 0)), 0);
+    const levelCapVal = getCap('fighters', k.level || 1);
+    const currentFighters = (updates.fighters !== undefined ? updates.fighters : (k.fighters || 0));
+    
+    const barracksSpace = Math.max(0, barracksCap - currentBarracksTroops);
+    const levelSpace = Math.max(0, levelCapVal - currentFighters);
+    const added = Math.min(orcBonus.freeTrainees, barracksSpace, levelSpace);
+    
+    if (added > 0) {
+      updates.fighters = currentFighters + added;
+      events.push({ type: 'system', message: `🪓 Orcish war culture: ${added.toLocaleString()} free fighters trained this turn.` });
+    }
   }
   // Human: level 5+ clerics restore 1 morale per turn
   const humanBonus = racialUnitBonus({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'clerics');
@@ -1755,7 +1767,7 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, db_unused) {
   const atkPowerRaw = (atkFighterPower + atkRangerPower + atkMagePower + wmPower) * atkMoraleMult * bullyPenalty;
   const atkPower    = atkPowerRaw;
 
-  // ── Step 5: Defence power ─────────────────────────────────────────────────
+  // ── Step 5: Defense power ─────────────────────────────────────────────────
   const armorEquipped   = Math.min(defFightersAfterVolley, defender.armor_stockpile || 0);
   const armorBonus      = 1 + (armorEquipped / Math.max(defFightersAfterVolley, 1)) * 0.25;
   const defArmor        = ((defender.res_armor || 100) / 100) * armorBonus;
@@ -1777,17 +1789,17 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, db_unused) {
   const defWmPower      = defWmCrewable * 500 * ((defender.res_war_machines||100)/100) * raceBonus(defender,'war_machines');
   // Engineer garrison repair bonus
   const defEngBonus     = Math.floor((defender.engineers||0) / 10) * 50;
-  // Wall defence power (includes war machines mounted on walls)
-  const defWallPower    = wallDefencePower(defender);
+  // Wall defense power (includes warmachines mounted on walls)
+  const defWallPower    = wallDefensePower(defender);
   // Outpost ranger patrol power
   const defOutpostPower = outpostRangerPower(defender);
-  // Guard tower detection power (adds to structural defence)
+  // Guard tower detection power (adds to structural defense)
   const defTowerPower   = towerDetectionPower(defender);
-  // Structure defence (castles)
+  // Structure defense (castles)
   const defStructures   = Math.floor((defender.bld_castles||0) / 500) * 5000;
   // Citadel bonus
   let defCitadelMult = 1.0;
-  try { if (JSON.parse(defender.defence_upgrades||'{}').citadel) defCitadelMult = 1.15; } catch {}
+  try { if (JSON.parse(defender.defense_upgrades||'{}').citadel) defCitadelMult = 1.15; } catch {}
 
   const defPower = (defFighterPower + defRangerPower + defMagePower + defWmPower + defEngBonus + defWallPower + defOutpostPower + defTowerPower + defStructures) * defMoraleMult * defCitadelMult;
 
@@ -1822,15 +1834,15 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, db_unused) {
   // Land transfer
   const landTransferred = win ? Math.floor(defender.land * 0.10) : 0;
 
-  // Siege damage — walls take damage on win, no walls = building damage
-  const siegeUpdates = applySiegeDamage(attacker, defender, win);
-  Object.assign(defenderUpdates, siegeUpdates);
-  if (win && siegeUpdates.bld_walls !== undefined) {
-    const wallsLost = (defender.bld_walls||0) - siegeUpdates.bld_walls;
+  // Warmachine damage — walls take damage on win, no walls = building damage
+  const warmachineUpdates = applyWarmachineDamage(attacker, defender, win);
+  Object.assign(defenderUpdates, warmachineUpdates);
+  if (win && warmachineUpdates.bld_walls !== undefined) {
+    const wallsLost = (defender.bld_walls||0) - warmachineUpdates.bld_walls;
     if (wallsLost > 0) report.wallsDestroyed = wallsLost;
   }
   if (win && !defender.bld_walls) {
-    const dmgCol = Object.keys(siegeUpdates)[0];
+    const dmgCol = Object.keys(warmachineUpdates)[0];
     if (dmgCol) report.buildingDamaged = dmgCol.replace('bld_','').replace(/_/g,' ');
   }
 
@@ -2311,9 +2323,9 @@ function covertAssassinate(assassin, target, ninjasSent, unitType) {
   };
 }
 
-// ── Alliance pledge defence ───────────────────────────────────────────────────
+// ── Alliance pledge defense ───────────────────────────────────────────────────
 
-function resolveAllianceDefence(attackResult, allies) {
+function resolveAllianceDefense(attackResult, allies) {
   // When a kingdom is attacked, allied kingdoms send pledge % of their fighters
   if (!attackResult.win) return [];
   return allies.map(ally => {
@@ -2996,8 +3008,8 @@ module.exports = {
   LOCATE_RACE_MULT, calcDiscoveryChance, processLocationMapsWip,
   WALL_UPGRADES, TOWER_DEF_UPGRADES, OUTPOST_UPGRADES,
   WALL_STRENGTH_MULT, TOWER_DETECT_MULT, OUTPOST_RANGER_MULT, CITADEL_REQ,
-  defenceRating, wallDefencePower, towerDetectionPower, outpostRangerPower,
-  checkCitadel, applySiegeDamage,
+  defenseRating, wallDefensePower, towerDetectionPower, outpostRangerPower,
+  checkCitadel, applyWarmachineDamage,
   TOWER_UPGRADES, SCHOOL_UPGRADES, SHRINE_UPGRADES, LIBRARY_UPGRADES,
   FARM_UPGRADES, MARKET_UPGRADES, TAVERN_UPGRADES, MERC_TIERS, COMMODITY_VALUES,
   FARM_YIELD_MULT, FOOD_CONSUMPTION_MULT, MARKET_INCOME_MULT, TRADE_RATE_MULT,
@@ -3005,7 +3017,7 @@ module.exports = {
   queueBuildings, processBuildQueue, processLibrary, processMageTower, processShrine, processActiveEffects, forgeTools,
   resolveMilitaryAttack, castSpell,
   covertSpy, covertLoot, covertAssassinate,
-  resolveAllianceDefence, resolveExpeditions,
+  resolveAllianceDefense, resolveExpeditions,
   awardXp, xpForLevel, xpToNextLevel, levelFromXp,
   awardTroopXp, awardUnitXp, diluteTroopXp, unitLevelMult, racialUnitBonus,
   troopXpForLevel, effectiveTroopLevel,

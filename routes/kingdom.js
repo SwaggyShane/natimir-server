@@ -8,7 +8,7 @@ module.exports = function(db) {
 
   router.get('/me', requireAuth, async (req, res) => {
     const k = await db.get(
-      'SELECT k.*, p.username FROM kingdoms k JOIN players p ON k.player_id = p.id WHERE k.player_id = ?',
+      'SELECT k.*, p.username, p.chat_name, p.chat_color FROM kingdoms k JOIN players p ON k.player_id = p.id WHERE k.player_id = ?',
       [req.player.playerId]
     );
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
@@ -455,7 +455,8 @@ module.exports = function(db) {
     const target = await db.get('SELECT * FROM kingdoms WHERE id = ?', [targetId]);
     if (!target) return res.status(404).json({ error: 'Target kingdom not found' });
     if (target.id === k.id) return res.status(400).json({ error: 'Cannot attack yourself' });
-    if ((target.turn || 0) < 200) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 200` });
+    if ((k.turn || 0) < 400) return res.status(400).json({ error: `You are under newbie protection until Turn 400. You cannot attack yet.` });
+    if ((target.turn || 0) < 400) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 400` });
 
     // Location system — must have mapped this kingdom (warn but don't block during transition)
     let attackerDisc = {};
@@ -548,11 +549,11 @@ module.exports = function(db) {
       }
     }
 
-    // Siege damage report
+    // Warmachine damage report
     if (result.win) {
       if (result.report.wallsDestroyed > 0) {
         await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
-          [target.id, 'attack', `🧱 ${result.report.wallsDestroyed} walls were destroyed in the siege.`, target.turn]);
+          [target.id, 'attack', `🧱 ${result.report.wallsDestroyed} walls were destroyed in the bombardment.`, target.turn]);
       } else if (result.report.buildingDamaged) {
         await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
           [target.id, 'attack', `🔥 Attackers burned ${result.report.buildingDamaged} with no walls to stop them.`, target.turn]);
@@ -582,11 +583,12 @@ module.exports = function(db) {
       target = k; // cast on self
     } else {
       if (!targetId) return res.status(400).json({ error: 'targetId required for offensive spells' });
+      if ((k.turn || 0) < 400) return res.status(400).json({ error: 'You are under newbie protection until Turn 400. You cannot cast offensive spells yet.' });
       if ((k.maps || 0) < 1) return res.status(400).json({ error: 'You need a map to cast on other kingdoms — craft one in your Library' });
       target = await db.get('SELECT * FROM kingdoms WHERE id = ?', [targetId]);
       if (!target) return res.status(404).json({ error: 'Target kingdom not found' });
       if (target.player_id === k.player_id) return res.status(400).json({ error: 'Cannot cast offensive spells on yourself' });
-      if ((target.turn || 0) < 200) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 200 (currently Turn ${target.turn})` });
+      if ((target.turn || 0) < 400) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 400 (currently Turn ${target.turn})` });
     }
 
     const result = engine.castSpell(k, target, spellId, !!obscure);
@@ -669,7 +671,8 @@ module.exports = function(db) {
     if ((k.maps || 0) < 1) return res.status(400).json({ error: 'You need a map to interact with other kingdoms — craft one in your Library' });
 
     // Newbie protection
-    if ((target.turn || 0) < 200) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 200 (currently Turn ${target.turn})` });
+    if ((k.turn || 0) < 400) return res.status(400).json({ error: `You are under newbie protection until Turn 400. You cannot perform covert actions yet.` });
+    if ((target.turn || 0) < 400) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 400 (currently Turn ${target.turn})` });
 
     let result;
     const VALID_COLS = new Set([
@@ -926,8 +929,8 @@ module.exports = function(db) {
     res.json({ ok: true, updates });
   });
 
-  // ── Defence overview ──────────────────────────────────────────────────────────
-  router.get('/defence/overview', requireAuth, async (req, res) => {
+  // ── Defense overview ──────────────────────────────────────────────────────────
+  router.get('/defense/overview', requireAuth, async (req, res) => {
     const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
     res.json({
@@ -939,9 +942,9 @@ module.exports = function(db) {
       wall_upgrades:     JSON.parse(k.wall_upgrades     ||'{}'),
       tower_def_upgrades:JSON.parse(k.tower_def_upgrades||'{}'),
       outpost_upgrades:  JSON.parse(k.outpost_upgrades  ||'{}'),
-      defence_upgrades:  JSON.parse(k.defence_upgrades  ||'{}'),
-      defence_rating:    engine.defenceRating(k),
-      wall_power:        engine.wallDefencePower(k),
+      defense_upgrades:  JSON.parse(k.defense_upgrades  ||'{}'),
+      defense_rating:    engine.defenseRating(k),
+      wall_power:        engine.wallDefensePower(k),
       tower_power:       engine.towerDetectionPower(k),
       outpost_power:     engine.outpostRangerPower(k),
       citadel_req:       engine.CITADEL_REQ,
@@ -1310,7 +1313,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'tools_hammers','tools_scaffolding','tools_blueprints','blueprints_stored',
     'hammer_turns_used','smithy_allocation','racial_bonuses_unlocked',
     'last_event_at','active_event','discovered_kingdoms','location_maps_wip',
-    'bld_walls','wall_upgrades','tower_def_upgrades','outpost_upgrades','defence_upgrades',
+    'bld_walls','wall_upgrades','tower_def_upgrades','outpost_upgrades','defense_upgrades',
     'tower_upgrades','school_upgrades','shrine_upgrades','library_upgrades',
     'research_focus','divine_sanctuary_used',
     'farm_upgrades','market_upgrades','tavern_upgrades',

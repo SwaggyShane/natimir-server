@@ -228,7 +228,19 @@ async function initDb() {
   if (!pCols.includes('is_chat_mod'))  await addColumn('players', 'is_chat_mod',  'INTEGER NOT NULL DEFAULT 0');
   if (!pCols.includes('chat_banned'))  await addColumn('players', 'chat_banned',  'INTEGER NOT NULL DEFAULT 0');
   if (!pCols.includes('chat_ban_reason')) await addColumn('players', 'chat_ban_reason', 'TEXT');
+  if (!pCols.includes('chat_color'))  await addColumn('players', 'chat_color',  "TEXT DEFAULT NULL");
+  if (!pCols.includes('chat_name'))   await addColumn('players', 'chat_name',   "TEXT DEFAULT NULL");
 
+  await _db.run(`
+    CREATE TABLE IF NOT EXISTS suggestions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_id INTEGER,
+      kingdom_id INTEGER,
+      message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
   const cmCols = (await _db.all('PRAGMA table_info(chat_messages)')).map(c => c.name);
   if (!cmCols.includes('username')) await addColumn('chat_messages', 'username', 'TEXT NOT NULL DEFAULT \'\'');
   if (!cmCols.includes('player_id')) await addColumn('chat_messages', 'player_id', 'INTEGER NOT NULL DEFAULT 0');
@@ -273,7 +285,12 @@ async function initDb() {
   if (!cols.includes('wall_upgrades'))      await addColumn('kingdoms', 'wall_upgrades',      "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('tower_def_upgrades')) await addColumn('kingdoms', 'tower_def_upgrades', "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('outpost_upgrades'))   await addColumn('kingdoms', 'outpost_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
-  if (!cols.includes('defence_upgrades'))   await addColumn('kingdoms', 'defence_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('defense_upgrades'))   await addColumn('kingdoms', 'defense_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
+
+  // Legacy data migration: if defence_upgrades exists but defense_upgrades is empty, copy it
+  if (cols.includes('defence_upgrades') && cols.includes('defense_upgrades')) {
+    await _db.run(`UPDATE kingdoms SET defense_upgrades = defence_upgrades WHERE defense_upgrades = '{}' AND defence_upgrades != '{}'`);
+  }
   if (!cols.includes('tower_upgrades'))    await addColumn('kingdoms', 'tower_upgrades',    "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('school_upgrades'))   await addColumn('kingdoms', 'school_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('shrine_upgrades'))   await addColumn('kingdoms', 'shrine_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
