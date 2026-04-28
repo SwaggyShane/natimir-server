@@ -6,3 +6,15 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+db/data/
+
+# OS and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -166,6 +166,24 @@ When found, every kingdom receives a news event and a global chat broadcast. The
 
 ---
 
+## GitHub Deployment Checklist
+
+Before pushing to a public repository, ensure you have completed these steps:
+
+1. **Environment Variables**: Never commit your real `.env` file. Ensure `.env.example` is up to date and contains placeholders.
+2. **Database**: Verify that `narmir.db` and its variants (`-shm`, `-wal`) are excluded via `.gitignore`.
+3. **Secrets Audit**: Scan your code for any hardcoded API keys, passwords, or tokens.
+4. **README Update**: Ensure URLs and instructions in this README match your target environment.
+
+### Pushing to GitHub
+
+1. Create a new repository on GitHub.
+2. Open the AI Studio **Settings** menu and select **Export to GitHub**.
+3. Follow the prompts to link your repository and push the code.
+4. Alternatively, use the **Download ZIP** option if you prefer manual Git management.
+
+---
+
 ## License
 
 Private project. All rights reserved.
