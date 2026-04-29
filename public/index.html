@@ -119,13 +119,12 @@
   body.panel-alliances .main,
   body.panel-hire .main { padding-top: 6px; }
 
-  /* Special padding for Chat/Allies on mobile to maximize space */
-  @media (max-width: 699px) {
-    body.panel-globalchat .main,
-    body.panel-alliances .main {
-      padding: 0 6px 100px !important;
-    }
-  }
+
+
+  /* Right justify numeric and generic inputs */
+  input[type=number] { text-align: right; }
+  input.bld-input, .trow input, .hire-row input, .option-row input, .merc-board-grid input { text-align: right; }
+  ::placeholder { opacity: 0.6; }
   .admin-tab { background:none; border:none; border-bottom:3px solid transparent; color:var(--text3); cursor:pointer; font-size:15px; font-weight:600; padding:10px 14px; margin-bottom:-2px; transition:all .2s; white-space:nowrap; border-radius:6px 6px 0 0; }
   @media (min-width:500px) { .admin-tab { font-size:19px; padding:12px 20px; } }
   .admin-tab:hover { color:var(--text2); background:var(--bg3); }
@@ -373,11 +372,24 @@
   .target-row .t-rank { font-size: 11px; color: var(--purple); font-weight: 700; }
 
   /* ── Chat Sidebar responsiveness ── */
-  @media (max-width: 650px) {
-    .chat-online-sidebar { width: 48px !important; overflow: hidden; }
-    .chat-online-sidebar > div:first-child { display: none; }
-    .chat-online-sidebar .on-item { padding: 8px 0; justify-content: center; }
-    .chat-online-sidebar .on-item .on-name { display: none; }
+  @media (max-width: 768px) {
+    .globalchat-container { flex-direction: column; }
+    .chat-online-sidebar { 
+      width: 100% !important; 
+      height: 120px; 
+      border-left: none !important; 
+      border-top: 1px solid var(--border); 
+      order: -1; /* Make it appear at the top */
+    }
+    .chat-online-sidebar .on-item { flex-direction: row; display: inline-flex; width: auto; margin-right: 12px; }
+    .chat-online-sidebar #chat-online-list { display: flex; flex-direction: row; flex-wrap: wrap; }
+    
+    .msg-layout { grid-template-columns: 1fr !important; grid-template-rows: 200px minmax(300px, 1fr) !important; height: calc(100vh - 180px) !important; }
+  }
+
+  input[type="number"] {
+    text-align: right !important;
+    min-width: 90px !important;
   }
 
   .news-item { display:flex; align-items:flex-start; gap:10px; padding:4px 0; color:var(--text2); }
@@ -387,12 +399,6 @@
   .news-turn-group { margin-bottom: 16px; }
   .news-filter.active { background: var(--purple); color:#fff; border-color:var(--purple); }
   .bld-icon { display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;font-size:15px;flex-shrink:0;margin-right:4px; }
-  .build-trow { display: grid; grid-template-columns: 32px 1fr 50px 70px; gap: 4px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
-  @media (min-width: 600px) {
-    .build-trow { grid-template-columns: 36px 1fr 60px 88px 52px; gap: 8px; }
-  }
-  .build-trow .bname { font-size:13px;color:var(--text); }
-  .build-trow .bcount { text-align:right;font-weight:600;font-size:13px;color:var(--text); }
   .news-turn-header {
     display: flex; align-items: center; gap: 10px;
     font-size: 11px; font-weight: 700; color: var(--text3);
@@ -467,12 +473,15 @@
   @media (min-width: 900px) and (max-width: 1099px) { .r-grid-sidebar { grid-template-columns: minmax(0, 1fr) 260px; } }
 
   /* ── Hire rows responsiveness ── */
-  .hire-row { display: grid; grid-template-columns: 1fr 60px 70px 100px; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: center; }
+  .hire-row { display: grid; grid-template-columns: 1fr 60px 70px auto; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: center; justify-items: end; }
   @media (max-width: 480px) {
-    .hire-row { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hire-row { grid-template-columns: 1fr 1fr; gap: 12px; justify-items: stretch; }
+    .hire-row > div:nth-child(2) { text-align: left; } 
+    .hire-row > div:nth-child(3) { text-align: right; justify-self: end; }
     .hire-row > div:first-child { grid-column: 1 / -1; }
     .hire-row .hcount { text-align: left; }
-    .hire-row .hbtns { justify-content: flex-end; }
+    .hire-row .hbtns { flex-wrap: nowrap !important; justify-content: flex-end; grid-column: 1 / -1; width: 100%; white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .hire-row .hbtns input { flex-shrink: 0; }
   }
 
   .merc-board-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; }
@@ -551,6 +560,7 @@
     input[type=range] { height: 4px; }
     input[type=range]::-webkit-slider-thumb { width: 16px; height: 16px; }
   }
+  /* Mobile overflow padding fix */
 </style>
 <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -597,7 +607,7 @@
     <div class="nav-section">Social</div>
     <button class="nav-item" onclick="switchTab('rankings',this)"><span class="icon" style="color:#f8e71c">🏆</span>Rankings</button>
     <button class="nav-item" onclick="switchTab('worldmap',this)"><span class="icon" style="color:#50e3c2">🗺️</span>World Map</button>
-    <button class="nav-item" onclick="switchTab('bounties',this)"><span class="icon" style="color:var(--gold)">💰</span>Bounties</button>
+    <button class="nav-item" onclick="switchTab('bounties',this)"><span class="icon" style="color:var(--gold)">🪙</span>Bounties</button>
     <button class="nav-item" onclick="switchTab('messages',this)"><span class="icon" style="color:var(--purple)">✉️</span>Messages <span id="msg-badge" class="nav-badge" style="display:none"></span></button>
     <button class="nav-item" onclick="switchTab('alliances',this)"><span class="icon" style="color:#bd10e0">🤝</span>Alliances</button>
     <button class="nav-item" onclick="switchTab('globalchat',this)"><span class="icon" style="color:#4a90e2">💬</span>Chat <span id="chat-badge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">!</span></button>
@@ -748,15 +758,15 @@
         <div class="card" id="status-tax-card" style="margin-top:0; margin-bottom:16px; display:none">
         <div class="card-title">Tax rate</div>
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-          <input type="range" id="strip-tax-slider" min="1" max="100" step="1" value="42" oninput="updateTax(this.value)" onchange="lockTax()" style="flex:1">
-          <span style="font-size:22px;font-weight:700;color:var(--gold);min-width:48px" id="tax-disp">42%</span>
+          <input type="number" id="strip-tax-slider" min="1" max="100" step="1" value="42" style="flex:1;max-width:80px;text-align:right;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px">
+          <span style="font-size:22px;font-weight:700;color:var(--gold);min-width:48px" id="strip-tax-disp"></span>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
-          <button class="btn btn-gold" onclick="lockTax()" style="flex:1">🔒 Lock</button>
+          <button class="btn btn-gold" onclick="lockTax('strip-tax-slider')" style="flex:1">🔒 Lock</button>
           <button class="btn" style="background:var(--green);color:#fff;flex:1" onclick="setTax(42)">42%</button>
           <button class="btn btn-red" style="flex:1" onclick="setTax(1)">1%</button>
         </div>
-        <div style="font-size:12px;color:var(--text3);line-height:1.7">42% is the sweet spot — max gold without morale penalty. Above 50% citizens get angry. <strong style="color:var(--gold)">Drag the slider then press Lock to save.</strong></div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.7">42% is the sweet spot — max gold without morale penalty. Above 50% citizens get angry. <strong style="color:var(--gold)">Enter a rate then press Lock to save.</strong></div>
       </div>
       <div class="three-col" id="status-grid">
 
@@ -916,11 +926,14 @@
 
         <!-- Unit rows -->
         <style>
-          .hire-row .hname { font-size:13px; color:var(--text); font-weight:600; }
+          .hire-row .hname { font-size:13px; color:var(--text); font-weight:600; justify-self: start; }
+          .hire-row .hdesc { justify-self: start; }
+          .hire-row > div:first-child { width: 100%; }
           .hire-row .hdesc { font-size:11px; color:var(--text3); }
           .hire-row .hcount { font-size:13px; font-weight:600; text-align:right; color:var(--text); }
           .hire-row .hprice { font-size:12px; text-align:center; color:var(--gold); }
-          .hire-row .hbtns { display:flex; flex-direction:column; gap:4px; align-items:stretch; }
+          .hire-row .hbtns { display:flex; flex-direction:row; gap:4px; align-items:center; justify-content:flex-end; }
+          .hire-row input { max-width: 80px; }
           .hire-row input { width:100%; font-size:12px; padding: 4px 8px; border-radius: 6px; }
         </style>
 
@@ -928,135 +941,99 @@
           <div><div class="hname">⚔️ Fighters</div><div class="hdesc">Combat · defence</div></div>
           <div class="hcount" id="h-fighters">0</div>
           <div class="hprice" id="hp-fighters">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-fighters" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-fighters', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('fighters')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('fighters')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-fighters" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-fighters', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('fighters')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('fighters')">Fire</button>
           </div>
         </div>
         <div class="hire-row">
           <div><div class="hname">🏹 Rangers</div><div class="hdesc">Scout · ranged · explore</div></div>
           <div class="hcount" id="h-rangers">0</div>
           <div class="hprice" id="hp-rangers">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-rangers" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-rangers', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('rangers')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('rangers')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-rangers" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-rangers', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('rangers')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('rangers')">Fire</button>
           </div>
         </div>
         <div class="hire-row">
           <div><div class="hname">💚 Clerics</div><div class="hdesc">Heal · morale aura · shrine</div></div>
           <div class="hcount" id="h-clerics">0</div>
           <div class="hprice" id="hp-clerics">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-clerics" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-clerics', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('clerics')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('clerics')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-clerics" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-clerics', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('clerics')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('clerics')">Fire</button>
           </div>
         </div>
         <div class="hire-row">
           <div><div class="hname">✨ Mages</div><div class="hdesc">Spells · tower · library</div></div>
           <div class="hcount" id="h-mages">0</div>
           <div class="hprice" id="hp-mages">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-mages" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-mages', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('mages')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('mages')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-mages" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-mages', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('mages')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('mages')">Fire</button>
           </div>
         </div>
         <div class="hire-row">
           <div><div class="hname">🗝️ Thieves</div><div class="hdesc">Covert ops · loot · spy</div></div>
           <div class="hcount" id="h-thieves">0</div>
           <div class="hprice" id="hp-thieves">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-thieves" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-thieves', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('thieves')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('thieves')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-thieves" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-thieves', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('thieves')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('thieves')">Fire</button>
           </div>
         </div>
         <div class="hire-row">
           <div><div class="hname">🕵️ Ninjas</div><div class="hdesc">Assassinate · sabotage</div></div>
           <div class="hcount" id="h-ninjas">0</div>
           <div class="hprice" id="hp-ninjas">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-ninjas" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-ninjas', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('ninjas')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('ninjas')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-ninjas" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-ninjas', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('ninjas')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('ninjas')">Fire</button>
           </div>
         </div>
         <div class="hire-row">
           <div><div class="hname">📚 Researchers</div><div class="hdesc">Advance disciplines · school</div></div>
           <div class="hcount" id="h-researchers">0</div>
           <div class="hprice" id="hp-researchers">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-researchers" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-researchers', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('researchers')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('researchers')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-researchers" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-researchers', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('researchers')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('researchers')">Fire</button>
           </div>
         </div>
         <div class="hire-row">
           <div><div class="hname">📜 Scribes</div><div class="hdesc">Maps · blueprints · library</div></div>
           <div class="hcount" id="h-scribes">0</div>
           <div class="hprice" id="hp-scribes">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-scribes" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-scribes', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('scribes')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('scribes')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-scribes" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-scribes', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('scribes')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('scribes')">Fire</button>
           </div>
         </div>
         <div class="hire-row" style="border-bottom:none">
           <div><div class="hname">⚙️ Engineers</div><div class="hdesc">Build · war machines · smithy</div></div>
           <div class="hcount" id="h-engineers">0</div>
           <div class="hprice" id="hp-engineers">250 GC</div>
-          <div class="hbtns">
-            <div style="display:flex;align-items:center;margin-bottom:4px">
-              <input type="number" id="hire-engineers" min="0" value="0" placeholder="0" style="flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px;margin-left:4px" onclick="setMaxValue('hire-engineers', 'gold')">Max</button>
-            </div>
-            <div style="display:flex;gap:4px;justify-content:flex-end">
-              <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('engineers')">Hire</button>
-              <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('engineers')">Fire</button>
-            </div>
+          <div class="hbtns" style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" id="hire-engineers" min="0" value="0" style="text-align:right;width:60px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('hire-engineers', 'gold')">Max</button>
+            <button class="btn btn-gold" style="font-size:10px;padding:3px 8px" onclick="hire('engineers')">Hire</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="fire('engineers')">Fire</button>
           </div>
         </div>
       </div>
@@ -1267,11 +1244,11 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:14px;margin:12px 0">
-      <input type="range" id="tax-slider" min="1" max="100" step="1" value="42" oninput="updateTax(this.value)" onchange="lockTax()" style="flex:1;height:6px;cursor:pointer">
-      <span style="font-size:22px;font-weight:700;color:var(--gold);min-width:48px" id="tax-disp">42%</span>
+      <input type="number" id="tax-slider" min="1" max="100" step="1" value="42" style="flex:1;max-width:80px;text-align:right;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px">
+      <span style="font-size:22px;font-weight:700;color:var(--gold);min-width:48px" id="tax-disp"></span>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button class="btn btn-gold" onclick="lockTax()" style="flex:1;padding:8px">🔒 Lock changes</button>
+      <button class="btn btn-gold" onclick="lockTax('tax-slider')" style="flex:1;padding:8px">🔒 Lock changes</button>
       <button class="btn" onclick="setTax(42)" style="flex:1;font-size:12px">Set 42% (Sweet spot)</button>
     </div>
     <div style="font-size:12px;color:var(--text3);line-height:1.6">Collecting more than 50% causes civil unrest and morale decay. Net income is calculated per turn spent.</div>
@@ -1346,7 +1323,7 @@
               <div style="font-size:11px;color:var(--text3);margin-bottom:4px">I offer</div>
               <select id="trade-offer-item" style="width:100%;margin-bottom:6px"><option value="food">Food</option><option value="gold">Gold</option><option value="mana">Mana</option><option value="weapons">Weapons</option><option value="armor">Armor</option><option value="maps">Maps</option></select>
               <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="trade-offer-qty" min="1" value="0" style="width:100%;flex:1" placeholder="Quantity">
+              <input type="number"   id="trade-offer-qty" min="1" value="0" style="text-align:right;width:100%;flex:1"   placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('trade-offer-qty', 'gold')">Max</button>
             </div>
             </div>
@@ -1354,7 +1331,7 @@
               <div style="font-size:11px;color:var(--text3);margin-bottom:4px">I want</div>
               <select id="trade-request-item" style="width:100%;margin-bottom:6px"><option value="gold">Gold</option><option value="food">Food</option><option value="mana">Mana</option><option value="weapons">Weapons</option><option value="armor">Armor</option><option value="maps">Maps</option></select>
               <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="trade-request-qty" min="1" value="0" style="width:100%;flex:1" placeholder="Quantity">
+              <input type="number"   id="trade-request-qty" min="1" value="0" style="text-align:right;width:100%;flex:1"   placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('trade-request-qty', 10000)">Max</button>
             </div>
             </div>
@@ -1394,7 +1371,7 @@
         <select id="merc-unit"  style="font-size:12px"><option value="fighters">Fighters</option><option value="rangers">Rangers</option><option value="mages">Mages</option><option value="clerics">Clerics</option><option value="thieves">Thieves</option><option value="ninjas">Ninjas</option></select>
         <select id="merc-tier"  style="font-size:12px" onchange="updateMercPreview()"><option value="rabble">Rabble (Lv 5–10)</option><option value="sellsword">Sellsword (Lv 15–25)</option><option value="veteran">Veteran (Lv 30–45)</option><option value="elite">Elite (Lv 50–65)</option></select>
         <div style="display:flex;align-items:center;gap:4px">
-          <input type="number" id="merc-count" min="1" value="0" style="width:100%;flex:1" onchange="updateMercPreview()">
+          <input type="number"   id="merc-count" min="1" value="0" style="text-align:right;width:100%;flex:1" onchange="updateMercPreview()"  placeholder="Qty">
           <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('merc-count', 'gold')">Max</button>
         </div>
         <div style="font-size:11px;color:var(--text3)" id="merc-preview">50 GC · 10 turns</div>
@@ -1419,18 +1396,38 @@
           </div>
         </div>
 
-        <div id="build-rows" style="--build-cols:36px 1fr 60px 88px 52px">
-        <style>#build-rows .trow{display:grid;grid-template-columns:36px 1fr 60px 88px 52px;gap:0 8px;align-items:center}#build-rows .trow .name{font-size:13px}#build-rows .trow .count{text-align:right;font-weight:600;font-size:13px}#build-rows .trow input{width:100%!important}#build-rows .trow .desc{display:none}</style>
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 8px;display:grid;grid-template-columns:36px 1fr 60px 88px 52px;gap:0 8px">
-          <span></span><span></span><span style="text-align:right">Built</span><span style="text-align:center">Engineers</span><span></span>
-        </div>
+        <div id="build-rows" style="--build-cols:36px 1fr 60px 145px auto">
+        <style>
+#build-rows .trow { display: grid; grid-template-columns: 32px minmax(0,1fr) 50px 115px; gap: 0 4px; align-items: center; }
+@media(min-width:500px) { #build-rows .trow { grid-template-columns: 32px minmax(0,1fr) 85px 105px; gap: 0 8px; } }
+@media(min-width:1100px) { #build-rows .trow { grid-template-columns: 36px minmax(0,1fr) minmax(0,1fr) 85px 120px; } }
+#build-rows .trow .name { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#build-rows .trow .count { text-align:right; font-weight:600; font-size:13px; margin-right: 4px; overflow:hidden; text-overflow:ellipsis; }
+#build-rows .trow input { width:100%!important; min-width:40px!important; flex:1; font-size:13px; padding:6px 4px; }
+#build-rows .trow .desc { display:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media(min-width:1100px) { #build-rows .trow .desc { display:block; font-size:11px; color:var(--text3); } }
+</style>
+        <div id="build-header">
+  <style>
+    #build-header { font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 8px;display:grid;grid-template-columns: 32px minmax(0,1fr) 50px 115px; gap: 0 4px; align-items:center; }
+    @media(min-width:500px) { #build-header { grid-template-columns: 32px minmax(0,1fr) 85px 105px; gap: 0 8px; } }
+    @media(min-width:1100px) { #build-header { grid-template-columns: 36px minmax(0,1fr) minmax(0,1fr) 85px 120px; } }
+    #build-header .h-desc { display:none; }
+    @media(min-width:1100px) { #build-header .h-desc { display:block; } }
+  </style>
+  <span></span>
+  <span>Building</span>
+  <span class="h-desc">Bonus</span>
+  <span style="text-align:right">Built</span>
+  <span style="text-align:center">Engineers</span>
+</div>
 
         <div class="trow">
           <span class="bld-icon" style="background:#4a7c3f">🌾</span>
           <span class="name">Farms</span><span class="desc">Produces food each turn · 1 land</span>
           <span class="count" id="bld-farms">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-farm" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-farm" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-farm','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1439,7 +1436,7 @@
           <span class="name">Barracks</span><span class="desc">Reduces troop upkeep · 1 land</span>
           <span class="count" id="bld-barracks">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-barracks" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-barracks" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-barracks','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1449,7 +1446,7 @@
           <span id="tool-notice-walls"></span>
           <span class="count" id="bld-walls">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-walls" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-walls" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-walls','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1458,7 +1455,7 @@
           <span class="name">Outposts</span><span class="desc">Early attack warning · 1 land</span>
           <span class="count" id="bld-outposts">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-outpost" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-outpost" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-outpost','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1467,7 +1464,7 @@
           <span class="name">Guard towers</span><span class="desc">Reduces enemy covert success · 1 land</span>
           <span class="count" id="bld-guard_towers">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-tower" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-tower" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-tower','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1476,7 +1473,7 @@
           <span class="name">Schools</span><span class="desc">Boosts all research output · 2 land</span>
           <span class="count" id="bld-schools">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-school" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-school" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-school','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1485,7 +1482,7 @@
           <span class="name">Armories</span><span class="desc">Protects weapons from thieves · 1 land</span>
           <span class="count" id="bld-armories">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-armory" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-armory" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-armory','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1494,7 +1491,7 @@
           <span class="name">Housing</span><span class="desc">Houses 500 population each · 1 land</span>
           <span class="count" id="bld-housing">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-housing" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-housing" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-housing','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1503,7 +1500,7 @@
           <span class="name">Vaults</span><span class="desc">Protects gold from thieves · 1 land</span>
           <span class="count" id="bld-vaults">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-vault" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-vault" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-vault','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1512,7 +1509,7 @@
           <span class="name">Smithies</span><span class="desc">Speeds up construction and forging · 2 land</span>
           <span class="count" id="bld-smithies">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-smithy" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-smithy" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-smithy','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1521,7 +1518,7 @@
           <span class="name">Market places</span><span class="desc">Generates trade revenue · 2 land</span>
           <span class="count" id="bld-markets">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-market" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-market" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-market','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1530,7 +1527,7 @@
           <span class="name">Mage Towers</span><span class="desc">Houses mages for mana production · 5 land</span>
           <span class="count" id="bld-cathedrals">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-cathedral" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-cathedral" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-cathedral','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1539,7 +1536,7 @@
           <span class="name">Training fields</span><span class="desc">Advances military tactics each turn · 5 land</span>
           <span class="count" id="bld-training">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-training" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-training" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-training','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1548,7 +1545,7 @@
           <span class="name">Taverns</span><span class="desc">Boosts morale recovery each turn · 2 land</span>
           <span class="count" id="bld-colosseums">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-colosseum" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-colosseum" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-colosseum','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1557,7 +1554,7 @@
           <span class="name">Shrines</span><span class="desc">Houses clerics to boost morale and heal troops · 2 land</span>
           <span class="count" id="bld-shrines">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-shrine" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-shrine" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-shrine','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1566,7 +1563,7 @@
           <span class="name">Libraries</span><span class="desc">Houses scribes and mages · 2 land</span>
           <span class="count" id="bld-libraries">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-library" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-library" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-library','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1575,7 +1572,7 @@
           <span class="name">Taverns</span><span class="desc">Entertainment · mercenary board · 1 land</span>
           <span class="count" id="bld-taverns">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-tavern" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-tavern" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-tavern','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1584,7 +1581,7 @@
           <span class="name">Castles</span><span class="desc">Boosts food, economy, and defences · 10 land</span>
           <span class="count" id="bld-castles">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="ba-castle" min="0" value="0" oninput="updateBuildDisplay()" style="width:60px" placeholder="Eng">
+            <input type="number"   id="ba-castle" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
             <button class="btn" onclick="setMaxValue('ba-castle','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
@@ -1594,21 +1591,21 @@
           <span class="bld-icon" style="background:#5a3a1a">🪖</span>
           <span class="name">Warmachines</span><span class="desc">Heavy assault engines</span>
           <span class="count" id="bld-war_machines">0</span>
-          <input type="number" id="ba-wm" min="0" value="0" oninput="updateBuildDisplay()" style="width:80px" placeholder="Eng">
+          <input type="number"   id="ba-wm" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:80px"   placeholder="Qty">
           <button class="btn" onclick="setBuildMax('ba-wm','war_machine')" style="padding:5px 10px;font-size:11px">Max</button>
         </div>
         <div class="trow">
           <span class="bld-icon" style="background:#6a1a1a">🗡️</span>
           <span class="name">Weapons</span><span class="desc">Equips fighters for +25% attack</span>
           <span class="count" id="bld-weapons_stockpile">0</span>
-          <input type="number" id="ba-weapons" min="0" value="0" oninput="updateBuildDisplay()" style="width:80px" placeholder="Eng">
+          <input type="number"   id="ba-weapons" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:80px"   placeholder="Qty">
           <button class="btn" onclick="setBuildMax('ba-weapons','weapons')" style="padding:5px 10px;font-size:11px">Max</button>
         </div>
         <div class="trow" style="border-bottom:none">
           <span class="bld-icon" style="background:#1a3a6a">🔰</span>
           <span class="name">Armor</span><span class="desc">Equips fighters for +25% defence</span>
           <span class="count" id="bld-armor_stockpile">0</span>
-          <input type="number" id="ba-armor" min="0" value="0" oninput="updateBuildDisplay()" style="width:80px" placeholder="Eng">
+          <input type="number"   id="ba-armor" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:80px"   placeholder="Qty">
           <button class="btn" onclick="setBuildMax('ba-armor','armor')" style="padding:5px 10px;font-size:11px">Max</button>
         </div>
         </div><!-- end build-rows -->
@@ -1661,7 +1658,7 @@
               <div style="font-size:12px;color:var(--text3);margin-bottom:6px">🔨 Hammers — <strong style="color:var(--gold)">25 GC each</strong></div>
               <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Stored: <span id="smith-hammers-stored" style="color:var(--text)">0</span> / <span id="smith-hammers-cap">0</span> · Max afford: <span id="smith-hammers-afford" style="color:var(--gold)">0</span></div>
               <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
-                <input type="number" id="smith-buy-hammers" min="1" value="0" style="width:160px;text-align:center" placeholder="qty">
+                <input type="number"   id="smith-buy-hammers" min="1" value="0" style="width:160px;text-align:right"   placeholder="Qty">
                 <div style="display:flex;gap:8px;width:160px">
                   <button class="btn btn-gold" onclick="buySmithyTool('hammers')" style="flex:1;font-size:12px;padding:6px 12px">Buy</button>
                   <button class="btn" onclick="setSmithyMax('hammers')" style="flex:1;font-size:11px;padding:6px 8px">Max</button>
@@ -1672,7 +1669,7 @@
               <div style="font-size:12px;color:var(--text3);margin-bottom:6px">🏗️ Scaffolding — <strong style="color:var(--gold)">2,500 GC each</strong></div>
               <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Stored: <span id="smith-scaffolding-stored" style="color:var(--text)">0</span> / <span id="smith-scaffolding-cap">0</span> · Max afford: <span id="smith-scaffolding-afford" style="color:var(--gold)">0</span></div>
               <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
-                <input type="number" id="smith-buy-scaffolding" min="1" value="0" style="width:160px;text-align:center" placeholder="qty">
+                <input type="number"   id="smith-buy-scaffolding" min="1" value="0" style="width:160px;text-align:right"   placeholder="Qty">
                 <div style="display:flex;gap:8px;width:160px">
                   <button class="btn btn-gold" onclick="buySmithyTool('scaffolding')" style="flex:1;font-size:12px;padding:6px 12px">Buy</button>
                   <button class="btn" onclick="setSmithyMax('scaffolding')" style="flex:1;font-size:11px;padding:6px 8px">Max</button>
@@ -1708,7 +1705,7 @@
 
     <!-- NEWS -->
     <div id="news" class="panel">
-      <div class="card">
+      <div class="card" style="max-width:800px; margin: 0 auto">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div class="card-title" style="margin-bottom:0">📰 Kingdom news — Turn <span id="news-turn-num">0</span></div>
           <div style="display:flex;gap:8px">
@@ -1733,7 +1730,7 @@
     <!-- BOUNTIES -->
     <div id="bounties" class="panel">
       <div class="card">
-        <div class="card-title">💰 Bounty Board</div>
+        <div class="card-title">🪙 Bounty Board</div>
         <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px">
           Reward those who strike down your enemies. Place a gold bounty on any kingdom, and the first warrior to defeat them in battle will claim the prize.
         </div>
@@ -1757,7 +1754,7 @@
             </div>
             <div style="margin-bottom:16px">
               <label style="display:block;font-size:11px;color:var(--text3);margin-bottom:4px">REWARD (GOLD)</label>
-              <input type="number" id="bounty-amount" min="1000" step="1000" placeholder="Minimum 1,000" style="width:100%">
+              <input type="number"   id="bounty-amount" min="1000" step="1000"  style="text-align:right;width:100%"  placeholder="Qty">
             </div>
             <button class="btn btn-gold" style="width:100%" onclick="placeBounty()">Place Bounty</button>
           </div>
@@ -1767,7 +1764,7 @@
 
     <!-- MESSAGES -->
     <div id="messages" class="panel">
-      <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;height:calc(100vh - 120px)">
+      <div class="msg-layout" style="display:grid;grid-template-columns:300px 1fr;gap:16px;height:calc(100vh - 120px)">
         <!-- Conversations List -->
         <div class="card" style="margin-bottom:0;display:flex;flex-direction:column">
           <div class="card-title">Inbox</div>
@@ -2000,42 +1997,42 @@
         <div class="trow">
           <span class="name" style="font-size:12px">⚔️ Fighters <span id="atk-fighters-avail-w" style="color:var(--text3)"></span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="atk-fighters-w" min="0" value="0" style="width:80px" oninput="updateAtkEstimateW()">
+            <input type="number"   id="atk-fighters-w" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimateW()"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-fighters-w')">Max</button>
           </div>
         </div>
         <div class="trow">
           <span class="name" style="font-size:12px">🏹 Rangers <span id="atk-rangers-avail-w" style="color:var(--text3)"></span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="atk-rangers-w" min="0" value="0" style="width:80px" oninput="updateAtkEstimateW()">
+            <input type="number"   id="atk-rangers-w" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimateW()"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-rangers-w')">Max</button>
           </div>
         </div>
         <div class="trow">
           <span class="name" style="font-size:12px">✨ Mages <span id="atk-mages-avail-w" style="color:var(--text3)"></span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="atk-mages-w" min="0" value="0" style="width:80px" oninput="updateAtkEstimateW()">
+            <input type="number"   id="atk-mages-w" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimateW()"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-mages-w')">Max</button>
           </div>
         </div>
         <div class="trow">
           <span class="name" style="font-size:12px">⚙️ War machines <span id="atk-wm-avail-w" style="color:var(--text3)"></span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="atk-wm-w" min="0" value="0" style="width:80px" oninput="updateAtkEstimateW()">
+            <input type="number"   id="atk-wm-w" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimateW()"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-wm-w')">Max</button>
           </div>
         </div>
         <div class="trow" style="border-top:1px solid var(--border);padding-top:6px">
           <span class="name" style="font-size:12px">🕵️ Ninjas <span id="atk-ninjas-avail-w" style="color:var(--text3)"></span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="atk-ninjas-w" min="0" value="0" style="width:80px" oninput="updateAtkEstimateW()">
+            <input type="number"   id="atk-ninjas-w" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimateW()"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-ninjas-w')">Max</button>
           </div>
         </div>
         <div class="trow">
           <span class="name" style="font-size:12px">🗝️ Thieves <span id="atk-thieves-avail-w" style="color:var(--text3)"></span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="atk-thieves-w" min="0" value="0" style="width:80px" oninput="updateAtkEstimateW()">
+            <input type="number"   id="atk-thieves-w" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimateW()"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-thieves-w')">Max</button>
           </div>
         </div>
@@ -2118,7 +2115,7 @@
         <div class="trow">
           <span class="name" style="font-size:12px">Thieves</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="spy-units" min="0" value="0" style="width:80px">
+            <input type="number"   id="spy-units" min="0" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('spy-units')">Max</button>
           </div>
         </div>
@@ -2138,7 +2135,7 @@
         <div class="trow" style="margin-bottom:8px">
           <span class="name" style="font-size:12px">Thieves</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="loot-thieves" min="0" value="0" style="width:80px">
+            <input type="number"   id="loot-thieves" min="0" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('loot-thieves')">Max</button>
           </div>
         </div>
@@ -2157,7 +2154,7 @@
         <div class="trow">
           <span class="name" style="font-size:12px">Ninjas</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="assn-ninjas" min="0" value="0" style="width:80px">
+            <input type="number"   id="assn-ninjas" min="0" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('assn-ninjas')">Max</button>
           </div>
         </div>
@@ -2175,7 +2172,7 @@
         <div class="trow" style="margin-bottom:8px">
           <span class="name" style="font-size:12px">Ninjas</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="sab-ninjas" min="0" value="0" style="width:80px">
+            <input type="number"   id="sab-ninjas" min="0" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('sab-ninjas')">Max</button>
           </div>
         </div>
@@ -2217,42 +2214,42 @@
           <div class="trow">
             <span class="name" style="font-size:12px">⚔️ Fighters <span id="atk-fighters-avail" style="color:var(--text3)"></span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="atk-fighters" min="0" value="0" style="width:80px" oninput="updateAtkEstimate()">
+              <input type="number"   id="atk-fighters" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimate()"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-fighters')">Max</button>
             </div>
           </div>
           <div class="trow">
             <span class="name" style="font-size:12px">🏹 Rangers <span id="atk-rangers-avail" style="color:var(--text3)"></span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="atk-rangers" min="0" value="0" style="width:80px" oninput="updateAtkEstimate()">
+              <input type="number"   id="atk-rangers" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimate()"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-rangers')">Max</button>
             </div>
           </div>
           <div class="trow">
             <span class="name" style="font-size:12px">✨ Mages <span id="atk-mages-avail" style="color:var(--text3)"></span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="atk-mages" min="0" value="0" style="width:80px" oninput="updateAtkEstimate()">
+              <input type="number"   id="atk-mages" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimate()"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-mages')">Max</button>
             </div>
           </div>
           <div class="trow">
             <span class="name" style="font-size:12px">⚙️ War machines <span id="atk-wm-avail" style="color:var(--text3)"></span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="atk-wm" min="0" value="0" style="width:80px" oninput="updateAtkEstimate()">
+              <input type="number"   id="atk-wm" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimate()"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-wm')">Max</button>
             </div>
           </div>
           <div class="trow" style="padding-top:4px;border-top:1px solid var(--border)">
             <span class="name" style="font-size:12px">🕵️ Ninjas (optional) <span id="atk-ninjas-avail" style="color:var(--text3)"></span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="atk-ninjas" min="0" value="0" style="width:80px" oninput="updateAtkEstimate()">
+              <input type="number"   id="atk-ninjas" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimate()"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-ninjas')">Max</button>
             </div>
           </div>
           <div class="trow">
             <span class="name" style="font-size:12px">🗝️ Thieves (sabotage) <span id="atk-thieves-avail" style="color:var(--text3)"></span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="atk-thieves" min="0" value="0" style="width:80px" oninput="updateAtkEstimate()">
+              <input type="number"   id="atk-thieves" min="0" value="0" style="text-align:right;width:80px" oninput="updateAtkEstimate()"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('atk-thieves')">Max</button>
             </div>
           </div>
@@ -2362,7 +2359,7 @@
         <div class="op-row">
           <span style="font-size:12px;color:var(--text2);flex:1">Available: <strong style="color:var(--text)" id="spy-units-avail">0</strong></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="spy-units" min="0" value="0" style="width:80px">
+            <input type="number"   id="spy-units" min="0" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('spy-units')">Max</button>
           </div>
           <button class="btn" onclick="covertOp('spy')">Spy</button>
@@ -2385,7 +2382,7 @@
           <div style="display:flex;flex-direction:column;gap:4px">
             <span style="font-size:11px;color:var(--text3);text-align:right">Thieves: <span id="loot-thieves-avail" style="color:var(--text)">0</span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="loot-thieves" min="0" value="0" style="width:80px">
+              <input type="number"   id="loot-thieves" min="0" value="0" style="text-align:right;width:80px"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('loot-thieves')">Max</button>
             </div>
           </div>
@@ -2410,7 +2407,7 @@
           <div style="display:flex;flex-direction:column;gap:4px">
             <span style="font-size:11px;color:var(--text3);text-align:right">Ninjas: <span id="assn-ninjas-avail" style="color:var(--text)">0</span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="assn-ninjas" min="0" value="0" style="width:80px">
+              <input type="number"   id="assn-ninjas" min="0" value="0" style="text-align:right;width:80px"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('assn-ninjas')">Max</button>
             </div>
           </div>
@@ -2434,7 +2431,7 @@
           <div style="display:flex;flex-direction:column;gap:4px">
             <span style="font-size:11px;color:var(--text3);text-align:right">Ninjas: <span id="sab-ninjas-avail" style="color:var(--text)">0</span></span>
             <div style="display:flex;align-items:center;gap:4px">
-              <input type="number" id="sab-ninjas" min="0" value="0" style="width:80px">
+              <input type="number"   id="sab-ninjas" min="0" value="0" style="text-align:right;width:80px"  placeholder="Qty">
               <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('sab-ninjas')">Max</button>
             </div>
           </div>
@@ -2506,7 +2503,7 @@
       <span id="tr-level-fighters" class="count" style="min-width:70px">Lv 1</span>
       <span id="tr-xp-fighters" style="font-size:11px;color:var(--text3);min-width:80px">0 / 100 XP</span>
       <div style="display:flex;align-items:center;margin-bottom:4px">
-        <input type="number" id="ta-fighters" min="0" value="0" oninput="updateTrainingDisplay()" style="flex:1" placeholder="0">
+        <input type="number"   id="ta-fighters" min="0" value="0" oninput="updateTrainingDisplay()" style="text-align:right;flex:1"   placeholder="Qty">
         <button class="btn" onclick="setTrainingMax('fighters')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
       </div>
     </div>
@@ -2516,7 +2513,7 @@
       <span id="tr-level-rangers" class="count" style="min-width:70px">Lv 1</span>
       <span id="tr-xp-rangers" style="font-size:11px;color:var(--text3);min-width:80px">0 / 100 XP</span>
       <div style="display:flex;align-items:center;margin-bottom:4px">
-        <input type="number" id="ta-rangers" min="0" value="0" oninput="updateTrainingDisplay()" style="flex:1" placeholder="0">
+        <input type="number"   id="ta-rangers" min="0" value="0" oninput="updateTrainingDisplay()" style="text-align:right;flex:1"   placeholder="Qty">
         <button class="btn" onclick="setTrainingMax('rangers')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
       </div>
     </div>
@@ -2526,7 +2523,7 @@
       <span id="tr-level-clerics" class="count" style="min-width:70px">Lv 1</span>
       <span id="tr-xp-clerics" style="font-size:11px;color:var(--text3);min-width:80px">0 / 100 XP</span>
       <div style="display:flex;align-items:center;margin-bottom:4px">
-        <input type="number" id="ta-clerics" min="0" value="0" oninput="updateTrainingDisplay()" style="flex:1" placeholder="0">
+        <input type="number"   id="ta-clerics" min="0" value="0" oninput="updateTrainingDisplay()" style="text-align:right;flex:1"   placeholder="Qty">
         <button class="btn" onclick="setTrainingMax('clerics')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
       </div>
     </div>
@@ -2536,7 +2533,7 @@
       <span id="tr-level-mages" class="count" style="min-width:70px">Lv 1</span>
       <span id="tr-xp-mages" style="font-size:11px;color:var(--text3);min-width:80px">0 / 100 XP</span>
       <div style="display:flex;align-items:center;margin-bottom:4px">
-        <input type="number" id="ta-mages" min="0" value="0" oninput="updateTrainingDisplay()" style="flex:1" placeholder="0">
+        <input type="number"   id="ta-mages" min="0" value="0" oninput="updateTrainingDisplay()" style="text-align:right;flex:1"   placeholder="Qty">
         <button class="btn" onclick="setTrainingMax('mages')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
       </div>
     </div>
@@ -2546,7 +2543,7 @@
       <span id="tr-level-thieves" class="count" style="min-width:70px">Lv 1</span>
       <span id="tr-xp-thieves" style="font-size:11px;color:var(--text3);min-width:80px">0 / 100 XP</span>
       <div style="display:flex;align-items:center;margin-bottom:4px">
-        <input type="number" id="ta-thieves" min="0" value="0" oninput="updateTrainingDisplay()" style="flex:1" placeholder="0">
+        <input type="number"   id="ta-thieves" min="0" value="0" oninput="updateTrainingDisplay()" style="text-align:right;flex:1"   placeholder="Qty">
         <button class="btn" onclick="setTrainingMax('thieves')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
       </div>
     </div>
@@ -2556,7 +2553,7 @@
       <span id="tr-level-ninjas" class="count" style="min-width:70px">Lv 1</span>
       <span id="tr-xp-ninjas" style="font-size:11px;color:var(--text3);min-width:80px">0 / 100 XP</span>
       <div style="display:flex;align-items:center;margin-bottom:4px">
-        <input type="number" id="ta-ninjas" min="0" value="0" oninput="updateTrainingDisplay()" style="flex:1" placeholder="0">
+        <input type="number"   id="ta-ninjas" min="0" value="0" oninput="updateTrainingDisplay()" style="text-align:right;flex:1"   placeholder="Qty">
         <button class="btn" onclick="setTrainingMax('ninjas')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
       </div>
     </div>
@@ -2587,7 +2584,7 @@
           <span class="name">Rangers</span>
           <span style="font-size:12px;color:var(--text3);margin-right:8px">Available: <span id="exp-rangers-avail">0</span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="search-rangers" min="0" value="0" style="width:90px">
+            <input type="number"   id="search-rangers" min="0" value="0" style="text-align:right;width:90px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('search-rangers','rangers')">Max</button>
           </div>
         </div>
@@ -2619,7 +2616,7 @@
           <span class="name" style="font-size:12px">Rangers</span>
           <span style="font-size:11px;color:var(--text3);margin-right:6px">avail: <span id="scout-rangers-avail">0</span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="exp-scout-rangers" min="1" value="0" style="width:80px">
+            <input type="number"   id="exp-scout-rangers" min="1" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('exp-scout-rangers')">Max</button>
           </div>
         </div>
@@ -2637,7 +2634,7 @@
           <span class="name" style="font-size:12px">Rangers</span>
           <span style="font-size:11px;color:var(--text3);margin-right:6px">avail: <span id="deep-rangers-avail">0</span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="exp-deep-rangers" min="1" value="0" style="width:80px">
+            <input type="number"   id="exp-deep-rangers" min="1" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('exp-deep-rangers')">Max</button>
           </div>
         </div>
@@ -2655,7 +2652,7 @@
           <span class="name" style="font-size:12px">Rangers</span>
           <span style="font-size:11px;color:var(--text3);margin-right:6px">avail: <span id="dungeon-rangers-avail">0</span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="exp-dungeon-rangers" min="1" value="0" style="width:80px">
+            <input type="number"   id="exp-dungeon-rangers" min="1" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('exp-dungeon-rangers')">Max</button>
           </div>
         </div>
@@ -2663,7 +2660,7 @@
           <span class="name" style="font-size:12px">Fighters</span>
           <span style="font-size:11px;color:var(--text3);margin-right:6px">avail: <span id="dungeon-fighters-avail">0</span></span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="exp-dungeon-fighters" min="1" value="0" style="width:80px">
+            <input type="number"   id="exp-dungeon-fighters" min="1" value="0" style="text-align:right;width:80px"  placeholder="Qty">
             <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('exp-dungeon-fighters')">Max</button>
           </div>
         </div>
@@ -2688,8 +2685,8 @@
 
 <!-- ═══════════════════════════════════════════ ALLIANCES PANEL ══ -->
 <!-- GLOBAL CHAT -->
-<div id="globalchat" class="panel" style="display:none;padding:0;margin:0">
-  <div class="globalchat-container" style="display:flex;height:calc(100vh - 180px);min-height:300px">
+<div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box;">
+  <div class="globalchat-container card" style="display:flex;height:calc(100vh - 180px);min-height:300px;padding:0;overflow:hidden">
 
     <!-- Messages area -->
     <div style="flex:1;display:flex;flex-direction:column;min-width:0">
@@ -2739,7 +2736,7 @@
   </div>
 
   <!-- In alliance -->
-  <div id="ally-active" style="display:none">
+  <div id="ally-active" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box;">
     <div class="r-grid-sidebar">
 
       <div style="display:flex;flex-direction:column;gap:14px">
@@ -4335,9 +4332,9 @@ async function fire(unit) {
 
 function updateTax(v) {
   v = parseInt(v) || 0;
-  state.tax = v;
-  var t1 = document.getElementById('tax-slider'); if(t1) t1.value = v;
-  var t2 = document.getElementById('strip-tax-slider'); if(t2) t2.value = v;
+  // Do not set state.tax here so we don't treat it as saved.
+  var t1 = document.getElementById('tax-slider'); if(t1 && document.activeElement !== t1) t1.value = v;
+  var t2 = document.getElementById('strip-tax-slider'); if(t2 && document.activeElement !== t2) t2.value = v;
   var d1 = document.getElementById('tax-disp'); if(d1) d1.textContent = v + '%';
   var m1 = document.getElementById('m-tax'); if(m1) m1.textContent = v + '%';
   var s1 = document.getElementById('strip-tax'); if(s1) s1.textContent = v + '%';
@@ -4356,8 +4353,9 @@ function updateTax(v) {
   }
 }
 
-async function lockTax() {
-  var v = parseInt(state.tax) || 42;
+async function lockTax(inputId) {
+  var slider = document.getElementById(inputId || 'tax-slider');
+  var v = parseInt(slider ? slider.value : (state.tax || 42));
   var result = await apiCall('POST', '/api/kingdom/options', { tax: v });
   if (result.error) return toast(result.error, 'error');
   state.tax = v;
@@ -4440,22 +4438,7 @@ function syncUI() {
     var eMorale = Math.floor((baseMorale / entLevel) * 100 * (RACE_MORALE_BONUSES[state.race] || 1.0));
     moraleEl.textContent = eMorale;
   }
-  // Sync tax slider to saved state
-  var taxSliderSync = document.getElementById('tax-slider');
-  var stripTaxSlider = document.getElementById('strip-tax-slider');
-  var currentTax = (state.tax !== undefined) ? state.tax : 42;
-  if (taxSliderSync && parseInt(taxSliderSync.value) !== currentTax) {
-    taxSliderSync.value = currentTax;
-  }
-  if (stripTaxSlider && parseInt(stripTaxSlider.value) !== currentTax) {
-    stripTaxSlider.value = currentTax;
-  }
-  var taxDispSync = document.getElementById('tax-disp');
-  if (taxDispSync) taxDispSync.textContent = currentTax + '%';
-  var mtaxSync = document.getElementById('m-tax');
-  if (mtaxSync) mtaxSync.textContent = currentTax + '%';
-  var stripTaxText = document.getElementById('strip-tax');
-  if (stripTaxText) stripTaxText.textContent = currentTax + '%';
+  // Removed tax slider sync to allow free slider dragging without snapping back.
   var hsg = document.getElementById('hire-strip-gold');
   if (hsg) hsg.textContent = fmt(state.gold || 0);
   var hsp = document.getElementById('hire-strip-pop');
@@ -4741,7 +4724,7 @@ function updateTurnsDisplay() {
   <button class="bnav-item" onclick="switchTabMobile('warfare',this)"><span class="bicon" style="color:#d0021b">⚔️</span>Warfare</button>
   <div class="bnav-sep"></div>
   <button class="bnav-item" onclick="switchTabMobile('worldmap',this)"><span class="bicon" style="color:#22d3ee">🌎</span>Map</button>
-  <button class="bnav-item" onclick="switchTabMobile('bounties',this)"><span class="bicon" style="color:var(--gold)">💰</span>Bounties</button>
+  <button class="bnav-item" onclick="switchTabMobile('bounties',this)"><span class="bicon" style="color:var(--gold)">🪙</span>Bounties</button>
   <button class="bnav-item" onclick="switchTabMobile('messages',this)"><span class="bicon" style="color:var(--purple)">✉️</span>Msgs<span id="bnav-msg-badge" class="bnav-badge" style="display:none"></span></button>
   <button class="bnav-item" onclick="switchTabMobile('rankings',this)"><span class="bicon" style="color:#f8e71c">🏆</span>Ranks</button>
   <button class="bnav-item" onclick="switchTabMobile('alliances',this)"><span class="bicon" style="color:#bd10e0">🤝</span>Allies</button>
@@ -5826,7 +5809,7 @@ function renderRankingsPanel(rankings) {
         : '<div style="display:flex;gap:4px;justify-content:center">'
             + '<button class="btn" style="font-size:11px;padding:3px 8px" title="Kingdom Profile" onclick="openKingdomProfile(\'' + r.name.replace(/'/g,"\\'") + '\')">👤</button>'
             + '<button class="btn btn-purple" style="font-size:11px;padding:3px 8px" title="Send message" onclick="openDirectMessage(' + r.player_id + ',\'' + r.name.replace(/'/g,"\\'") + '\')">✉️</button>'
-            + '<button class="btn btn-gold" style="font-size:11px;padding:3px 8px" title="Place Bounty" onclick="openBountyAction(' + r.id + ',\'' + r.name.replace(/'/g,"\\'") + '\')">💰</button>'
+            + '<button class="btn btn-gold" style="font-size:11px;padding:3px 8px" title="Place Bounty" onclick="openBountyAction(' + r.id + ',\'' + r.name.replace(/'/g,"\\'") + '\')">🪙</button>'
             + '<button class="btn btn-red" style="font-size:11px;padding:3px 8px" onclick="targetFromRankings(' + r.id + ',\'attack\')">⚔️</button>'
             + '<button class="btn btn-purple" style="font-size:11px;padding:3px 8px" onclick="targetFromRankings(' + r.id + ',\'spells\')">✨</button>'
             + '<button class="btn" style="font-size:11px;padding:3px 8px" onclick="targetFromRankings(' + r.id + ',\'covert\')">🕵️</button>'
@@ -6804,8 +6787,8 @@ var SHRINE_UPGRADES_JS = {
 };
 var LIBRARY_UPGRADES_JS = {
   illuminated_manuscripts: { name:'Illuminated Manuscripts', cost:5000,  desc:'+25% scribe craft speed',   requires:null                      },
-  arcane_cataloguing:      { name:'Arcane Cataloguing',       cost:15000, desc:'+25% scroll craft speed',   requires:'illuminated_manuscripts'  },
-  grand_library:           { name:'Grand Library',            cost:50000, desc:'Library capacity ×2',       requires:'arcane_cataloguing'       },
+  master_draftsmen:        { name:'Master Draftsmen',        cost:15000, desc:'+25% scribe craft speed',   requires:'illuminated_manuscripts'  },
+  grand_library:           { name:'Grand Library',            cost:50000, desc:'Library capacity ×2',       requires:'master_draftsmen'       },
 };
 
 function showStudiesTab(id, btn) {
@@ -6999,6 +6982,52 @@ function showEconTab(id, btn) {
 }
 
 var econData = null;
+function updateTax(v) {
+  v = parseInt(v) || 0;
+  var d1 = document.getElementById('tax-disp'); if(d1) d1.textContent = v + '%';
+  var d2 = document.getElementById('strip-tax-disp'); if(d2) d2.textContent = v + '%';
+  var m1 = document.getElementById('m-tax'); if(m1) m1.textContent = v + '%';
+  var s1 = document.getElementById('strip-tax'); if(s1) s1.textContent = v + '%';
+  
+  // Calculate projected net income
+  var pop = (state.population || state.pop || 0);
+  var economyRating = state.res_economy || 100;
+  var income = Math.floor(pop * (v / 100) * (economyRating / 100));
+  var upkeep = Math.floor((state.fighters||0) * 0.5 + (state.mages||0) * 2);
+  
+  var ei = document.getElementById('econ-income'); if(ei) ei.textContent = '+' + fmt(income);
+  var eu = document.getElementById('econ-upkeep'); if(eu) eu.textContent = '-' + fmt(upkeep);
+  var en = document.getElementById('econ-net'); if(en) {
+    en.textContent = fmt(income - upkeep);
+    en.style.color = (income - upkeep) >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+}
+
+async function lockTax(inputId) {
+  var slider = document.getElementById(inputId || 'tax-slider');
+  var v = parseInt(slider ? slider.value : (state.tax || 42));
+  var result = await apiCall('POST', '/api/kingdom/options', { tax: v });
+  if (result.error) return toast(result.error, 'error');
+  state.tax = v;
+  
+  var t1 = document.getElementById('tax-slider'); if(t1 && document.activeElement !== t1) t1.value = v;
+  var t2 = document.getElementById('strip-tax-slider'); if(t2 && document.activeElement !== t2) t2.value = v;
+  
+  updateTax(v);
+  toast('Tax rate locked at ' + v + '%', v > 50 ? 'warn' : 'success');
+}
+
+async function setTax(v) {
+  var t1 = document.getElementById('tax-slider'); if(t1) t1.value = v;
+  var t2 = document.getElementById('strip-tax-slider'); if(t2) t2.value = v;
+  
+  var result = await apiCall('POST', '/api/kingdom/options', { tax: v });
+  if (result.error) return toast(result.error, 'error');
+  state.tax = v;
+  updateTax(v);
+  toast('Tax rate locked at ' + v + '%', v > 50 ? 'warn' : 'success');
+}
+
 async function loadEconomy() {
   var data = await apiCall('GET', '/api/kingdom/economy/overview');
   if (data.error) return toast(data.error, 'error');
@@ -7578,7 +7607,7 @@ async function openKingdomProfile(name) {
       + '</div>' : '')
     + (!isMe ? '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">'
       + '<button class="btn btn-purple" style="flex:1" onclick="openDirectMessage(' + data.player_id + ',\'' + data.name.replace(/'/g,"\\'") + '\');closeKingdomProfile()">✉️ Message</button>'
-      + '<button class="btn btn-gold" style="flex:1" onclick="switchTab(\'bounties\');selectBountyTarget(' + data.id + ',\'' + data.name.replace(/'/g,"\\'") + '\');closeKingdomProfile()">💰 Bounty</button>'
+      + '<button class="btn btn-gold" style="flex:1" onclick="switchTab(\'bounties\');selectBountyTarget(' + data.id + ',\'' + data.name.replace(/'/g,"\\'") + '\');closeKingdomProfile()">🪙 Bounty</button>'
       + '</div><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
       + '<button class="btn btn-red" style="flex:1" onclick="targetFromRankings(' + data.id + ',\'attack\');closeKingdomProfile()">⚔️ Attack</button>'
       + '<button class="btn btn-purple" style="flex:1" onclick="targetFromRankings(' + data.id + ',\'spells\');closeKingdomProfile()">✨ Spell</button>'
@@ -7751,9 +7780,9 @@ function renderMageTowerPanel() {
     + bQText
     + '</div>'
     + '<div class="actions" style="display:flex;gap:4px">'
-    + '<input type="number" id="tower-input-blank_scroll" min="1" placeholder="Qty" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px">'
+    + '<input type="number"   id="tower-input-blank_scroll" min="1"  style="text-align:right;width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px"  placeholder="Qty">'
     + '<button class="btn btn-max" onclick="document.getElementById(\'tower-input-blank_scroll\').value = 1000">Max</button>'
-    + '<button class="btn btn-gold" onclick="craftTowerItem(\'blank_scroll\')">Build</button>'
+    + '<button class="btn btn-gold" onclick="craftTowerItem(\'blank_scroll\')">Create</button>'
     + '</div></div>';
 
   var sb = state.res_spellbook || 0;
@@ -7775,7 +7804,7 @@ function renderMageTowerPanel() {
         + qText
         + '</div>'
         + '<div class="actions" style="display:flex;gap:4px">'
-        + '<input type="number" id="tower-input-' + s.id + '" min="1" placeholder="Qty" style="width:60px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px">'
+        + '<input type="number"   id="tower-input-' + s.id + '" min="1"  style="text-align:right;width:60px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px"  placeholder="Qty">'
         + '<button class="btn btn-max" onclick="document.getElementById(\'tower-input-' + s.id + '\').value = 1000">Max</button>'
         + '<button class="btn btn-purple" onclick="craftTowerItem(\'' + s.id + '\')">Write</button>'
         + '</div></div>';
@@ -7924,9 +7953,9 @@ function renderLibraryPanel() {
       + qText
       + '</div>'
       + '<div class="actions" style="display:flex;gap:4px">'
-      + '<input type="number" id="lib-input-' + item + '" min="1" placeholder="Qty" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px">'
+      + '<input type="number"   id="lib-input-' + item + '" min="1"  style="text-align:right;width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px"  placeholder="Qty">'
       + '<button class="btn btn-max" onclick="document.getElementById(\'lib-input-' + item + '\').value = 1000">Max</button>'
-      + '<button class="btn btn-gold" onclick="craftLibraryItem(\'' + item + '\')">Build</button>'
+      + '<button class="btn btn-gold" onclick="craftLibraryItem(\'' + item + '\')">Create</button>'
       + '</div></div>';
   });
   
@@ -8194,5 +8223,26 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- GLOBAL UI FIXES -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const applyQtys = () => {
+    document.querySelectorAll('input[type="number"]:not([data-qty-fixed])').forEach(el => {
+      // Don't override existing placeholders if they have semantic meaning other than empty/qty
+      if (!el.getAttribute('placeholder')) {
+        el.setAttribute('placeholder', 'Qty');
+      } else if (el.getAttribute('placeholder').toLowerCase() !== 'qty') {
+        el.setAttribute('placeholder', 'Qty');
+      }
+      
+      // Force right align for numeric inputs since style sheets might be overridden
+      el.style.textAlign = 'right';
+      el.setAttribute('data-qty-fixed', 'true');
+    });
+  };
+  applyQtys();
+  new MutationObserver(applyQtys).observe(document.body, { childList: true, subtree: true });
+});
+</script>
 </body>
 </html>

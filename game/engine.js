@@ -468,8 +468,8 @@ const SHRINE_UPGRADES = {
 };
 const LIBRARY_UPGRADES = {
   illuminated_manuscripts: { name:'Illuminated Manuscripts', cost:5000,  desc:'Scribes craft maps & blueprints 25% faster',   requires:null                      },
-  arcane_cataloguing:      { name:'Arcane Cataloguing',       cost:15000, desc:'Mages craft scrolls 25% faster',              requires:'illuminated_manuscripts'  },
-  grand_library:           { name:'Grand Library',            cost:50000, desc:'Library capacity ×2 (40 scribes/mages per library)', requires:'arcane_cataloguing' },
+  master_draftsmen:        { name:'Master Draftsmen',        cost:15000, desc:'Scribes craft maps & blueprints an additional 25% faster', requires:'illuminated_manuscripts'  },
+  grand_library:           { name:'Grand Library',            cost:50000, desc:'Library capacity ×2 (40 scribes per library)', requires:'master_draftsmen' },
 };
 const FARM_UPGRADES = {
   irrigated:  { name:'Irrigated Farm', cost:500,   yieldBonus:0.30, requires:null         },
@@ -2983,7 +2983,7 @@ function processLibrary(k, events) {
   let libUpgrades = {};
   try { libUpgrades = JSON.parse(k.library_upgrades || '{}'); } catch {}
   const capacityPerLib = libUpgrades.grand_library ? 40 : 20;
-  const scribeSpeedMult = libUpgrades.illuminated_manuscripts ? 1.25 : 1.0;
+  const scribeSpeedMult = (libUpgrades.illuminated_manuscripts ? 1.25 : 1.0) * (libUpgrades.master_draftsmen ? 1.25 : 1.0);
 
   const capacity        = libs * capacityPerLib;
   const effectiveScribes = Math.min(k.scribes || 0, capacity);

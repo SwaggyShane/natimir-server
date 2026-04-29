@@ -1194,5 +1194,26 @@ api('GET','/api/auth/me').then(function(me) {
   }
 });
 </script>
+<!-- GLOBAL UI FIXES -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const applyQtys = () => {
+    document.querySelectorAll('input[type="number"]:not([data-qty-fixed])').forEach(el => {
+      // Don't override existing placeholders if they have semantic meaning other than empty/qty
+      if (!el.getAttribute('placeholder')) {
+        el.setAttribute('placeholder', 'Qty');
+      } else if (el.getAttribute('placeholder').toLowerCase() !== 'qty') {
+        el.setAttribute('placeholder', 'Qty');
+      }
+      
+      // Force right align for numeric inputs since style sheets might be overridden
+      el.style.textAlign = 'right';
+      el.setAttribute('data-qty-fixed', 'true');
+    });
+  };
+  applyQtys();
+  new MutationObserver(applyQtys).observe(document.body, { childList: true, subtree: true });
+});
+</script>
 </body>
 </html>

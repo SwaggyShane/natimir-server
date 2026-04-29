@@ -100,7 +100,7 @@ async function initDb() {
       tower_progress     TEXT NOT NULL DEFAULT '{}',
       scrolls           TEXT NOT NULL DEFAULT '{}',
       maps              INTEGER NOT NULL DEFAULT 0,
-      blueprints_stored INTEGER NOT NULL DEFAULT 0,
+      blueprints_stored INTEGER NOT NULL DEFAULT 2,
       active_effects    TEXT NOT NULL DEFAULT '{}',
       created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
       updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
@@ -336,7 +336,7 @@ async function initDb() {
   if (!cols.includes('tower_progress'))      await addColumn('kingdoms', 'tower_progress',      "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('scrolls'))             await addColumn('kingdoms', 'scrolls',             "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('maps'))                await addColumn('kingdoms', 'maps',                'INTEGER NOT NULL DEFAULT 0');
-  if (!cols.includes('blueprints_stored'))   await addColumn('kingdoms', 'blueprints_stored',   'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('blueprints_stored'))   await addColumn('kingdoms', 'blueprints_stored',   'INTEGER NOT NULL DEFAULT 2');
   if (!cols.includes('active_effects'))      await addColumn('kingdoms', 'active_effects',      "TEXT NOT NULL DEFAULT '{}'");
 
   if (!cols.includes('bld_walls'))          await addColumn('kingdoms', 'bld_walls',          'INTEGER NOT NULL DEFAULT 0');
@@ -358,6 +358,9 @@ async function initDb() {
   if (!cols.includes('farm_upgrades'))       await addColumn('kingdoms', 'farm_upgrades',       "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('market_upgrades'))     await addColumn('kingdoms', 'market_upgrades',     "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('tavern_upgrades'))     await addColumn('kingdoms', 'tavern_upgrades',     "TEXT NOT NULL DEFAULT '{}'");
+
+  // Fix softlock: if a kingdom has no libraries and fewer than 2 blueprints, give them 2 blueprints
+  await _db.run("UPDATE kingdoms SET blueprints_stored = 2 WHERE bld_libraries = 0 AND blueprints_stored < 2");
   if (!cols.includes('food_shortage_turns')) await addColumn('kingdoms', 'food_shortage_turns', 'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('food_surplus_turns'))  await addColumn('kingdoms', 'food_surplus_turns',  'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('mercenaries'))         await addColumn('kingdoms', 'mercenaries',         "TEXT NOT NULL DEFAULT '[]'");
