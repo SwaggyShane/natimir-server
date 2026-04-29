@@ -70,12 +70,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 10px;
-    height: 56px;
+    padding: 0 8px;
+    height: 64px;
     background: rgba(10, 10, 11, 0.95);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
-    gap: 6px;
+    gap: 4px;
     flex-shrink: 0;
     position: sticky;
     top: 0;
@@ -180,35 +180,36 @@
 
   /* ── Topbar ── */
   .logo { 
-    font-size: 20px; 
+    font-size: 16px; 
     font-weight: 900; 
-    letter-spacing: 1px; 
+    letter-spacing: 0.5px; 
     color: #ffe4b5; 
-    text-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00, 0 0 30px #ff0000;
+    text-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00;
     white-space: nowrap; 
     display: flex; 
-    align-items: center; 
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start; 
+    gap: 0px;
     font-family: 'Cinzel', serif;
   }
   .logo span { 
-    display: none; 
-    font-size: 13px; 
+    display: block; 
+    font-size: 8px; 
     font-weight: 900; 
     color: #ff3131 !important; 
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     animation: pulse-red 2s infinite;
-    margin-left: 10px;
+    margin-top: -2px;
   }
   .logo-icon { width: 32px; height: 32px; background: var(--purple); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); border-radius: 8px; }
   .logo-icon-inner { width: 14px; height: 14px; border: 2px solid #fff; border-radius: 2px; transform: rotate(45deg); }
-  .topbar-stats { display: flex; gap: 8px; align-items: center; }
+  .topbar-stats { display: flex; gap: 6px; align-items: center; }
   .tstat { text-align: right; }
-  .tstat .val { font-size: 15px; font-weight: 600; color: var(--gold); }
-  .tstat .lbl { font-size: 10px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .tstat .val { font-size: 13px; font-weight: 600; color: var(--gold); }
+  .tstat .lbl { font-size: 8px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
   .tstat.hide-sm { display: none; }
-  .turn-btn { background: var(--purple); color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; -webkit-tap-highlight-color: transparent; box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
+  .turn-btn { background: var(--purple); color: #fff; border: none; border-radius: 10px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; -webkit-tap-highlight-color: transparent; box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
   .turn-btn:hover { background: var(--purple2); transform: translateY(-1px); box-shadow: 0 6px 15px rgba(99,102,241,0.3); }
   .turn-btn:active { transform: translateY(0); }
   .countdown { font-size: 11px; color: var(--text3); margin-top: 1px; }
@@ -491,18 +492,16 @@
     .sidebar { display: flex; flex-direction: column; gap: 4px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 12px; overflow-y: auto; }
     .main { padding: 24px; min-width: 0; }
     .bottom-nav { display: none; }
-    /* Restore two-col and three-col grids on desktop */
-    .exp-grid,
-    #library > div,
-    #shrine > div,
-    #mage_tower > div:first-of-type {
-      grid-template-columns: 1fr 1fr !important;
+    /* Logo desktop override */
+    .logo { 
+      font-size: 20px; 
+      flex-direction: row; 
+      align-items: center; 
+      gap: 12px; 
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00, 0 0 30px #ff0000;
     }
-    .trow { flex-wrap: nowrap; }
-    #exploration-log { max-height: 700px; }
-    .logo span { display: inline; }
-    .tstat.hide-sm { display: block; }
-    .topbar-stats { gap: 20px; }
+    .logo span { font-size: 13px; margin-left: 10px; margin-top: 0; letter-spacing: 2px; }
     .tstat .val { font-size: 15px; }
     .tstat .lbl { font-size: 11px; }
     .turn-btn { padding: 8px 18px; font-size: 13px; }
@@ -4456,7 +4455,7 @@ function switchTab(id, btn) {
   if (id === 'warfare') {
     loadWarfarePanel();
   }
-  if (id === 'defence') {
+  if (id === 'defense') {
     loadDefense();
   }
   if (id === 'studies') {
@@ -4545,7 +4544,7 @@ function updateTax(v) {
   var s1 = document.getElementById('strip-tax'); if(s1) s1.textContent = v + '%';
   
   // Calculate projected net income
-  var pop = state.pop || 0;
+  var pop = (state.population || state.pop || 0);
   var economyRating = state.res_economy || 100;
   var income = Math.floor(pop * (v / 100) * (economyRating / 100));
   var upkeep = Math.floor((state.fighters||0) * 0.5 + (state.mages||0) * 2);
@@ -4568,7 +4567,8 @@ async function lockTax() {
 }
 
 async function setTax(v) {
-  document.getElementById('tax-slider').value = v;
+  var slider = document.getElementById('tax-slider');
+  if (slider) slider.value = v;
   updateTax(v);
   var result = await apiCall('POST', '/api/kingdom/options', { tax: v });
   if (result.error) return toast(result.error, 'error');
@@ -4588,41 +4588,40 @@ async function takeTurn() {
   takingTurn = false;
   if (result.error) { if (btn) btn.style.opacity = '1'; return toast(result.error, 'error'); }
   applyServerUpdates(result.updates);
-  // turns_stored comes back both in updates and top-level — use whichever is present
   if (result.turns_stored !== undefined) state.turns_stored = result.turns_stored;
   syncUI();
   updateTurnsDisplay();
   document.getElementById('turn-num').textContent = state.turn;
   var newsTurn = document.getElementById('news-turn-num');
   if (newsTurn) newsTurn.textContent = state.turn;
-  // Append news events immediately
   if (result.events && result.events.length) {
     appendNewsItems(result.events);
   }
   if (btn) btn.style.opacity = (state.turns_stored || 0) > 0 ? '1' : '0.4';
   toast('Turn ' + state.turn + ' · ' + (state.turns_stored || 0) + ' turns left', 'success');
-  // Refresh expedition display after tick
   loadActiveExpeditions();
 }
 
 function syncUI() {
   document.getElementById('m-gold').textContent = trunc(state.gold || 0);
   document.getElementById('m-mana').textContent = trunc(state.mana || 0);
-  document.getElementById('m-pop').textContent  = trunc(state.pop  || 0);
+  document.getElementById('m-pop').textContent  = trunc(state.population || state.pop || 0);
   var HOUSING_CAP_BY_RACE = { dwarf:650, orc:600, human:500, dark_elf:450, high_elf:350, dire_wolf:700 };
   var capPerBuilding = HOUSING_CAP_BY_RACE[state.race] || 500;
   var housingCap = (state.bld_housing || 0) * capPerBuilding;
   var popCapEl = document.getElementById('m-pop-cap');
-  if (popCapEl) popCapEl.textContent = trunc(housingCap);
-  if (popCapEl && (state.pop || 0) > housingCap && housingCap > 0) {
-    popCapEl.style.color = 'var(--red)';
-  } else if (popCapEl) {
-    popCapEl.style.color = '';
+  if (popCapEl) {
+    popCapEl.textContent = trunc(housingCap);
+    if ((state.population || state.pop || 0) > housingCap && housingCap > 0) {
+      popCapEl.style.color = 'var(--red)';
+    } else {
+      popCapEl.style.color = '';
+    }
   }
   document.getElementById('m-land').textContent = trunc(state.land || 0);
   // Calculate used land from buildings
   var LAND_COST = {
-    bld_farms:1, bld_barracks:1, bld_outposts:1, bld_guard_towers:1, bld_armories:1, bld_vaults:1,
+    bld_farms:1, bld_barracs:1, bld_outposts:1, bld_guard_towers:1, bld_armories:1, bld_vaults:1,
     bld_schools:2, bld_smithies:2, bld_markets:2, bld_colosseums:2, bld_shrines:2, bld_libraries:2,
     bld_housing:1,
     bld_cathedrals:5, bld_training:5,
@@ -4645,7 +4644,7 @@ function syncUI() {
   // Sync tax slider to saved state
   var taxSliderSync = document.getElementById('tax-slider');
   var stripTaxSlider = document.getElementById('strip-tax-slider');
-  var currentTax = state.tax || 42;
+  var currentTax = (state.tax !== undefined) ? state.tax : 42;
   if (taxSliderSync && parseInt(taxSliderSync.value) !== currentTax) {
     taxSliderSync.value = currentTax;
   }
@@ -4661,7 +4660,7 @@ function syncUI() {
   var hsg = document.getElementById('hire-strip-gold');
   if (hsg) hsg.textContent = fmt(state.gold || 0);
   var hsp = document.getElementById('hire-strip-pop');
-  if (hsp) hsp.textContent = fmt(state.pop || 0);
+  if (hsp) hsp.textContent = fmt(state.population || state.pop || 0);
   var foodEl = document.getElementById('m-food');
   if (foodEl) foodEl.textContent = trunc(state.food || 0);
   var farmsEl = document.getElementById('m-farms');
@@ -4680,7 +4679,8 @@ function syncUI() {
     fbEl.textContent = (bal >= 0 ? '+' : '') + trunc(bal);
     fbEl.style.color = bal >= 0 ? 'var(--green)' : 'var(--red)';
   }
-  document.getElementById('hire-pop').textContent = fmt(state.pop || 0);
+  var hpEl = document.getElementById('hire-pop');
+  if (hpEl) hpEl.textContent = fmt(state.population || state.pop || 0);
   // Barracks and school capacity
   var barracksCap = (state.bld_barracks || 0) * 500;
   var BARRACKS_UNITS = ['fighters','rangers','clerics','thieves','ninjas'];
@@ -7193,8 +7193,24 @@ async function loadEconomy() {
 
 function renderUpgrades(category, defs, owned, containerId) {
   var el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = Object.entries(defs).map(function(e) {
+  if (!el) {
+    console.warn('renderUpgrades: Container not found: ' + containerId);
+    return;
+  }
+  if (!defs || typeof defs !== 'object') {
+    console.error('renderUpgrades: Invalid defs for ' + category);
+    el.innerHTML = '<div style="color:var(--red);font-size:12px">Error loading upgrade data</div>';
+    return;
+  }
+  console.log('Rendering upgrades for ' + category, { defs, owned });
+  
+  var entries = Object.entries(defs);
+  if (entries.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">No upgrades available in this category.</div>';
+    return;
+  }
+
+  el.innerHTML = entries.map(function(e) {
     var key = e[0]; var def = e[1];
     var have      = !!owned[key];
     var hasReq    = !def.requires || !!owned[def.requires];

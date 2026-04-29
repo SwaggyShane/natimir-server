@@ -13,6 +13,7 @@ export default [
       globals: {
         ...globals.node,
         ...globals.browser,
+        io: "readonly"
       },
     },
     rules: {
