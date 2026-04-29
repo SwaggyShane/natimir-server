@@ -7738,27 +7738,55 @@ function renderMageTowerPanel() {
   var alloc = state.mage_tower_allocation || {};
   if (typeof alloc === 'string') { try { alloc = JSON.parse(alloc); } catch(e){ alloc={}; } }
 
-  var sb = state.res_spellbook || 0;
   var html = '';
-  SCROLL_DEFS.forEach(function(s) {
-    if (sb < s.minSB) return;
-    var queued = alloc[s.id] || 0;
-    var qText = queued > 0 ? '<div style="color:var(--green);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:8px"><span>Queued: <strong>' + queued + '</strong></span><button class="btn" style="padding:2px 6px;font-size:11px;min-height:0;background:var(--red);color:#fff;border:none" onclick="clearTowerItem(\'' + s.id + '\')">Cancel</button></div>' : '';
-    html += '<div class="bld-row" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border2)">'
-      + '<div class="info">'
-      + '<div class="name">' + s.label + '</div>'
-      + '<div class="desc">Tier ' + s.tier + ' • ' + s.mages + ' mages • ' + s.turns + ' turns</div>'
-      + qText
-      + '</div>'
-      + '<div class="actions" style="display:flex;gap:4px">'
-      + '<input type="number" id="tower-input-' + s.id + '" min="1" placeholder="Qty" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px">'
-      + '<button class="btn btn-max" onclick="document.getElementById(\'tower-input-' + s.id + '\').value = 1000">Max</button>'
-      + '<button class="btn btn-gold" onclick="craftTowerItem(\'' + s.id + '\')">Build</button>'
-      + '</div></div>';
-  });
+  // 1. Blank Scroll
+  var bQueued = alloc['blank_scroll'] || 0;
+  var bQText = bQueued > 0 ? '<div style="color:var(--green);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:8px"><span>Queued: <strong>' + bQueued + '</strong></span><button class="btn" style="padding:2px 6px;font-size:11px;min-height:0;background:var(--red);color:#fff;border:none" onclick="clearTowerItem(\'blank_scroll\')">Cancel</button></div>' : '';
+  var bScrolls = (state.scrolls || {}).blank_scroll || 0;
+  
+  html += '<div class="bld-row" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border2)">'
+    + '<div class="info">'
+    + '<div class="name" style="color:var(--text)">Create a scroll <span style="font-size:11px;color:var(--text3);font-weight:normal">(Owned: ' + bScrolls + ')</span></div>'
+    + '<div class="desc">Base material • 5 mages • 5 turns</div>'
+    + bQText
+    + '</div>'
+    + '<div class="actions" style="display:flex;gap:4px">'
+    + '<input type="number" id="tower-input-blank_scroll" min="1" placeholder="Qty" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px">'
+    + '<button class="btn btn-max" onclick="document.getElementById(\'tower-input-blank_scroll\').value = 1000">Max</button>'
+    + '<button class="btn btn-gold" onclick="craftTowerItem(\'blank_scroll\')">Build</button>'
+    + '</div></div>';
+
+  var sb = state.res_spellbook || 0;
+  var availableSpells = SCROLL_DEFS.filter(function(s) { return sb >= s.minSB; });
+
+  if (availableSpells.length > 0) {
+    html += '<div style="margin-top:16px;margin-bottom:12px;font-weight:700;color:var(--purple);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Write Spell Scroll</div>';
+    html += '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:6px"><span style="font-size:16px">📜</span> Requires 1 Blank Scroll per spell</div>';
+    
+    html += '<div style="display:flex;flex-direction:column;gap:8px">';
+    availableSpells.forEach(function(s) {
+      var queued = alloc[s.id] || 0;
+      var qText = queued > 0 ? '<div style="color:var(--green);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:8px"><span>Queued: <strong>' + queued + '</strong></span><button class="btn" style="padding:2px 6px;font-size:11px;min-height:0;background:var(--red);color:#fff;border:none" onclick="clearTowerItem(\'' + s.id + '\')">Cancel</button></div>' : '';
+      
+      html += '<div class="bld-row" style="padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius)">'
+        + '<div class="info">'
+        + '<div class="name">' + s.label + '</div>'
+        + '<div class="desc">Tier ' + s.tier + ' • ' + s.mages + ' mages • ' + s.turns + ' turns</div>'
+        + qText
+        + '</div>'
+        + '<div class="actions" style="display:flex;gap:4px">'
+        + '<input type="number" id="tower-input-' + s.id + '" min="1" placeholder="Qty" style="width:60px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px">'
+        + '<button class="btn btn-max" onclick="document.getElementById(\'tower-input-' + s.id + '\').value = 1000">Max</button>'
+        + '<button class="btn btn-purple" onclick="craftTowerItem(\'' + s.id + '\')">Write</button>'
+        + '</div></div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div style="font-size:13px;color:var(--text3);margin-top:16px;">No spells available to scribe yet. Research Spellbook!</div>';
+  }
   
   var el = document.getElementById('st-tower-list');
-  if (el) el.innerHTML = html || '<div style="font-size:13px;color:var(--text3)">No scrolls available to craft yet. Research Spellbook!</div>';
+  if (el) el.innerHTML = html;
 
   // Scroll inventory
   var inv = document.getElementById('st-tower-scroll-inventory');
@@ -7769,10 +7797,12 @@ function renderMageTowerPanel() {
       inv.innerHTML = '<div style="font-size:13px;color:var(--text3)">No scrolls in your tower.</div>';
     } else {
       inv.innerHTML = scrollKeys.map(function(s) {
+        var label = s === 'blank_scroll' ? 'Blank Scroll' : s;
         var def = SCROLL_DEFS.find(function(d) { return d.id === s; });
-        var label = def ? def.label : s;
+        if (def) label = def.label;
+        var icon = s === 'blank_scroll' ? '📜 ' : '✨ ';
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">'
-          + '<span style="color:var(--text)">✨ ' + label + '</span>'
+          + '<span style="color:var(--text)">' + icon + label + '</span>'
           + '<span style="color:var(--gold);font-weight:600">×' + scrolls[s] + '</span>'
           + '</div>';
       }).join('');
@@ -7789,10 +7819,12 @@ function renderMageTowerPanel() {
       if (k.startsWith('scroll_')) {
         var spellId = k.replace('scroll_', '');
         var def = SCROLL_DEFS.find(function(d) { return d.id === spellId; });
-        var label = def ? def.label : spellId;
-        var turnsNeeded = def ? def.turns : 10;
+        var label = def ? def.label : (spellId === 'blank_scroll' ? 'Blank' : spellId);
+        var icon = spellId === 'blank_scroll' ? '📜 ' : '✨ ';
+        var color = spellId === 'blank_scroll' ? 'var(--text)' : 'var(--purple)';
+        var turnsNeeded = def ? def.turns : (spellId === 'blank_scroll' ? 5 : 10);
         var pct = Math.min(100, Math.floor((prog[k] / turnsNeeded) * 100));
-        items.push({ label: '✨ ' + label + ' scroll', pct: pct, color: 'var(--purple)' });
+        items.push({ label: icon + label + ' scroll', pct: pct, color: color });
       }
     });
     if (items.length === 0) {

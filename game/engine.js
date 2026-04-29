@@ -2017,6 +2017,7 @@ const SPELL_DEFS = {
 
 // Scroll crafting requirements: { mages needed, turns to complete }
 const SCROLL_REQUIREMENTS = {
+  blank_scroll: { mages: 5,   turns: 5  },
   spark:      { mages: 5,   turns: 5  },
   fog_of_war: { mages: 8,   turns: 8  },
   mend:       { mages: 8,   turns: 10 },
@@ -2888,13 +2889,21 @@ function processMageTower(k, events) {
       const newProg = (progress[progKey] || 0) + workDone;
 
       if (newProg >= req.turns) {
+         if (task !== 'blank_scroll') {
+           if ((scrolls.blank_scroll || 0) < 1) {
+             progress[progKey] = Math.min(newProg, req.turns - 0.01);
+             return; // stall
+           }
+           scrolls.blank_scroll -= 1;
+         }
          progress[progKey] = 0;
          const helfBonus = racialUnitBonus(k, 'mages');
          const scrollsProduced = helfBonus.doubleScrolls ? 2 : 1;
          scrolls[task] = (scrolls[task] || 0) + scrollsProduced;
          updates.scrolls = JSON.stringify(scrolls);
+         const displayTask = task === 'blank_scroll' ? 'Blank' : task.replace(/_/g,' ');
          const bonusMsg = helfBonus.doubleScrolls ? ' (High Elf mastery — 2 scrolls produced!)' : '';
-         events.push({ type: 'system', message: `✨ A ${task.replace(/_/g,' ')} scroll has been completed in the Mage Tower.${bonusMsg}` });
+         events.push({ type: 'system', message: `✨ A ${displayTask} scroll has been completed in the Mage Tower.${bonusMsg}` });
          
          alloc[task] -= 1;
          if (alloc[task] <= 0) delete alloc[task];
