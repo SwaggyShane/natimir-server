@@ -63,11 +63,8 @@ function manaPerTurn(k) {
     high_elf: 8, dark_elf: 6, human: 3, dwarf: 2, orc: 2, dire_wolf: 1,
   }[k.race] || 3;
   const towerMana   = (k.bld_cathedrals || 0) * 5;
-  let towerAlloc = {};
-  try { towerAlloc = JSON.parse(k.mage_tower_allocation || '{}'); } catch { towerAlloc = {}; }
-  const magesInTower  = Math.min(Number(towerAlloc.mages) || 0, k.mages || 0);
   const capacity      = (k.bld_cathedrals || 0) * 20;
-  const effectiveMages = Math.min(magesInTower, capacity);
+  const effectiveMages = Math.min(k.mages || 0, capacity);
   const mageMana       = Math.floor(effectiveMages / 5);
 
   // Tower upgrades
@@ -1503,7 +1500,8 @@ function processBuildQueue(k, events) {
   const smithyBonus  = 1 + (Math.floor((k.bld_smithies||0) / 15) * 0.02);
   const raceConstr   = raceBonus(k, 'construction');
   const engLevelMult = unitLevelMult(k, 'engineers');
-  const baseToolMult = hammerBonus * smithyBonus * raceConstr * engLevelMult;
+  const resConstr    = (k.res_construction || 100) / 100;
+  const baseToolMult = hammerBonus * smithyBonus * raceConstr * engLevelMult * resConstr;
 
   // Consumable tool pools — tracked across the building loop this turn
   let blueprintsLeft  = k.blueprints_stored || 0;
@@ -2870,15 +2868,56 @@ async function resolveExpeditions(db, k, engine) {
   return expeditionEvents;
 }
 
-// ── Mage Tower — research allocation from mages ──────────────────────────────
+// ── Mage Tower — scroll crafting and mana production ──────────────────────────
 function processMageTower(k, events) {
   const updates = {};
   const towers = k.bld_cathedrals || 0;
   if (towers === 0) return updates;
 
-  // Mage towers are for mana production only — research is done by researchers
-  // manaPerTurn() already handles the mage allocation mana bonus
-  // Nothing additional to do here — mana is added in processTurn step 2
+  let alloc = {};
+  try { alloc = JSON.parse(k.mage_tower_allocation || '{}'); } catch { alloc = {}; }
+  let progress = {};
+  try { progress = JSON.parse(k.tower_progress || '{}'); } catch { progress = {}; }
+  let scrolls = {};
+  try { scrolls = JSON.parse(k.scrolls || '{}'); } catch { scrolls = {}; }
+
+  const capacity = towers * 20;
+  const effectiveMages = Math.min(k.mages || 0, capacity);
+  const mageLvlMult = unitLevelMult(k, 'mages');
+
+  // Scrolls logic moved here from Library
+  const scrollCraft = alloc.scroll_craft || null;
+  if (effectiveMages > 0 && scrollCraft && SCROLL_REQUIREMENTS[scrollCraft]) {
+    const req = SCROLL_REQUIREMENTS[scrollCraft];
+    const effectiveMagesForScroll = Math.min(effectiveMages, req.mages);
+
+    // Speed bonus from Tower upgrades? Ley Line Tap mention?
+    let towerUpgrades = {};
+    try { towerUpgrades = JSON.parse(k.tower_upgrades || '{}'); } catch {}
+    const towerSpeedMult = towerUpgrades.ley_line_tap ? 1.25 : 1.0;
+
+    const workDone = (effectiveMagesForScroll >= req.mages ? 1 : effectiveMagesForScroll / req.mages) * mageLvlMult * towerSpeedMult;
+    const progKey = 'scroll_' + scrollCraft;
+    const newProg = (progress[progKey] || 0) + workDone;
+
+    if (newProg >= req.turns) {
+      progress[progKey] = 0;
+      // High Elf racial bonus: level 5+ mages produce 2 scrolls
+      const helfBonus = racialUnitBonus(k, 'mages');
+      const scrollsProduced = helfBonus.doubleScrolls ? 2 : 1;
+      scrolls[scrollCraft] = (scrolls[scrollCraft] || 0) + scrollsProduced;
+      updates.scrolls = JSON.stringify(scrolls);
+      const bonusMsg = helfBonus.doubleScrolls ? ' (High Elf mastery — 2 scrolls produced!)' : '';
+      events.push({ type: 'system', message: `✨ A ${scrollCraft.replace(/_/g,' ')} scroll has been completed in the Mage Tower.${bonusMsg}` });
+      // Mage XP for scroll completion
+      const mXp = awardTroopXp({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'mages', 20);
+      updates.troop_levels = mXp.troop_levels;
+    } else {
+      progress[progKey] = newProg;
+    }
+  }
+
+  updates.tower_progress = JSON.stringify(progress);
   return updates;
 }
 
@@ -2888,14 +2927,11 @@ function processShrine(k, events) {
   const shrines = k.bld_shrines || 0;
   if (shrines === 0) return updates;
 
-  let shrineAlloc = {};
-  try { shrineAlloc = JSON.parse(k.shrine_allocation || '{}'); } catch { shrineAlloc = {}; }
   let shrineUpgrades = {};
   try { shrineUpgrades = JSON.parse(k.shrine_upgrades || '{}'); } catch {}
 
-  const clericsInShrine = Math.min(Number(shrineAlloc.clerics) || 0, k.clerics || 0);
   const capacity        = shrines * 15;
-  const effectiveClerics = Math.min(clericsInShrine, capacity);
+  const effectiveClerics = Math.min(k.clerics || 0, capacity);
 
   const groveMult  = shrineUpgrades.sacred_grove ? 1.15 : 1.0;
   const moraleGain = Math.max(1, Math.floor((effectiveClerics / 10) * groveMult));
@@ -2931,37 +2967,18 @@ function processLibrary(k, events) {
   try { alloc = JSON.parse(k.library_allocation || '{}'); } catch { alloc = {}; }
   let progress = {};
   try { progress = JSON.parse(k.library_progress || '{}'); } catch { progress = {}; }
-  let scrolls = {};
-  try { scrolls = JSON.parse(k.scrolls || '{}'); } catch { scrolls = {}; }
-
-  const magesInLib   = Math.min(k.mages   || 0, Number(alloc.mages)   || 0);
-  const scribesInLib = Math.min(k.scribes || 0, Number(alloc.scribes) || 0);
 
   // Library upgrades
   let libUpgrades = {};
   try { libUpgrades = JSON.parse(k.library_upgrades || '{}'); } catch {}
   const capacityPerLib = libUpgrades.grand_library ? 40 : 20;
   const scribeSpeedMult = libUpgrades.illuminated_manuscripts ? 1.25 : 1.0;
-  const scrollSpeedMult = libUpgrades.arcane_cataloguing      ? 1.25 : 1.0;
 
   const capacity        = libs * capacityPerLib;
-  const effectiveMages   = Math.min(magesInLib,   capacity);
-  const effectiveScribes = Math.min(scribesInLib, capacity);
+  const effectiveScribes = Math.min(k.scribes || 0, capacity);
 
   // Level multipliers
-  const mageLvlMult   = unitLevelMult(k, 'mages');
   const scribeLvlMult = unitLevelMult(k, 'scribes');
-
-  // Mages produce mana (scaled by level)
-  if (effectiveMages > 0) {
-    const manaGain = Math.floor((effectiveMages / 10) * mageLvlMult);
-    if (manaGain > 0) {
-      updates.mana = (k.mana || 0) + manaGain;
-      // Passive mage XP for mana production
-      const mXp = awardTroopXp({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'mages', 2);
-      updates.troop_levels = mXp.troop_levels;
-    }
-  }
 
   // Scribes craft maps/blueprints (scaled by level)
   const scribeQueue = alloc.scribe_craft || null;
@@ -2975,41 +2992,16 @@ function processLibrary(k, events) {
       progress[progressKey] = 0;
       if (scribeQueue === 'map') {
         updates.maps = (k.maps || 0) + 1;
-        events.push({ type: 'system', message: `📜 Your scribes completed a map — you can now interact with other kingdoms.` });
+        events.push({ type: 'system', message: `📜 Your scribes completed a map in the Library — you can now interact with other kingdoms.` });
       } else {
         updates.blueprints_stored = (k.blueprints_stored || 0) + 1;
-        events.push({ type: 'system', message: `📐 Your scribes completed a blueprint — construction speed bonus applied.` });
+        events.push({ type: 'system', message: `📐 Your scribes completed a blueprint in the Library — construction speed bonus applied.` });
       }
       // Scribe XP for completing an item
       const sXp = awardTroopXp({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'scribes', 15);
       updates.troop_levels = sXp.troop_levels;
     } else {
       progress[progressKey] = newProg;
-    }
-  }
-
-  // Mages craft scrolls (scaled by level)
-  const scrollCraft = alloc.scroll_craft || null;
-  if (effectiveMages > 0 && scrollCraft && SCROLL_REQUIREMENTS[scrollCraft]) {
-    const req = SCROLL_REQUIREMENTS[scrollCraft];
-    const effectiveMagesForScroll = Math.min(effectiveMages, req.mages);
-    const workDone = (effectiveMagesForScroll >= req.mages ? 1 : effectiveMagesForScroll / req.mages) * mageLvlMult * scrollSpeedMult;
-    const progKey = 'scroll_' + scrollCraft;
-    const newProg = (progress[progKey] || 0) + workDone;
-    if (newProg >= req.turns) {
-      progress[progKey] = 0;
-      // High Elf racial bonus: level 5+ mages produce 2 scrolls
-      const helfBonus = racialUnitBonus(k, 'mages');
-      const scrollsProduced = helfBonus.doubleScrolls ? 2 : 1;
-      scrolls[scrollCraft] = (scrolls[scrollCraft] || 0) + scrollsProduced;
-      updates.scrolls = JSON.stringify(scrolls);
-      const bonusMsg = helfBonus.doubleScrolls ? ' (High Elf mastery — 2 scrolls produced!)' : '';
-      events.push({ type: 'system', message: `✨ A ${scrollCraft.replace(/_/g,' ')} scroll has been completed.${bonusMsg}` });
-      // Mage XP for scroll completion
-      const mXp2 = awardTroopXp({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'mages', 20);
-      updates.troop_levels = mXp2.troop_levels;
-    } else {
-      progress[progKey] = newProg;
     }
   }
 

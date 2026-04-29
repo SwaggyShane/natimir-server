@@ -17,6 +17,7 @@ module.exports = function(db) {
     try { k.shrine_allocation      = JSON.parse(k.shrine_allocation      || '{}'); } catch { k.shrine_allocation      = {}; }
     try { k.library_allocation     = JSON.parse(k.library_allocation     || '{}'); } catch { k.library_allocation     = {}; }
     try { k.library_progress       = JSON.parse(k.library_progress       || '{}'); } catch { k.library_progress       = {}; }
+    try { k.tower_progress         = JSON.parse(k.tower_progress         || '{}'); } catch { k.tower_progress         = {}; }
     try { k.scrolls                = JSON.parse(k.scrolls                || '{}'); } catch { k.scrolls                = {}; }
     try { k.active_effects         = JSON.parse(k.active_effects         || '{}'); } catch { k.active_effects         = {}; }
     try { k.discovered_kingdoms    = JSON.parse(k.discovered_kingdoms    || '{}'); } catch { k.discovered_kingdoms    = {}; }
@@ -167,7 +168,7 @@ module.exports = function(db) {
 
     // Refresh fields that resolveExpeditions may have updated via SQL
     const refreshed = await db.get(
-      'SELECT rangers, fighters, gold, mana, land, scrolls, maps, blueprints_stored, troop_levels, library_progress, racial_bonuses_unlocked FROM kingdoms WHERE id = ?',
+      'SELECT rangers, fighters, gold, mana, land, scrolls, maps, blueprints_stored, troop_levels, library_progress, tower_progress, racial_bonuses_unlocked FROM kingdoms WHERE id = ?',
       [k.id]
     );
     if (refreshed) Object.assign(updates, refreshed);
@@ -440,15 +441,12 @@ module.exports = function(db) {
   router.post('/mage-tower-allocation', requireAuth, async (req, res) => {
     const { allocation } = req.body;
     if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
-    const k = await db.get('SELECT id, bld_cathedrals, mages FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    const k = await db.get('SELECT id, bld_cathedrals FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
     if ((k.bld_cathedrals || 0) === 0) return res.status(400).json({ error: 'You need at least 1 Mage Tower first' });
-    const magesAlloc = Math.min(Number(allocation.mages) || 0, k.mages || 0);
-    const researchMages = Math.min(Number(allocation.research_mages) || 0, k.mages || 0);
+
     const save = {
-      mages:                Math.min(magesAlloc + researchMages, k.mages || 0),
-      research_mages:       researchMages,
-      research_discipline:  allocation.research_discipline || null,
+      scroll_craft: allocation.scroll_craft || null
     };
     await db.run('UPDATE kingdoms SET mage_tower_allocation = ? WHERE id = ?', [JSON.stringify(save), k.id]);
     res.json({ ok: true, allocation: save });
@@ -835,15 +833,11 @@ module.exports = function(db) {
   router.post('/library-allocation', requireAuth, async (req, res) => {
     const { allocation } = req.body;
     if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
-    const k = await db.get('SELECT id, bld_libraries, mages, scribes FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    const k = await db.get('SELECT id, bld_libraries FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
     if ((k.bld_libraries || 0) === 0) return res.status(400).json({ error: 'You need at least 1 library first' });
-    const magesAlloc   = Math.min(Number(allocation.mages)   || 0, k.mages   || 0);
-    const scribesAlloc = Math.min(Number(allocation.scribes) || 0, k.scribes || 0);
+    
     const save = {
-      mages:        magesAlloc,
-      scribes:      scribesAlloc,
-      scroll_craft: allocation.scroll_craft || null,
       scribe_craft: allocation.scribe_craft || null,
     };
     await db.run('UPDATE kingdoms SET library_allocation = ? WHERE id = ?', [JSON.stringify(save), k.id]);
@@ -1373,7 +1367,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'tax','tax_rate',
     'build_queue','build_progress','build_allocation',
     'research_allocation','training_allocation',
-    'library_allocation','library_progress',
+    'library_allocation','library_progress','tower_progress',
     'mage_tower_allocation','shrine_allocation',
     'updated_at',
   ]);

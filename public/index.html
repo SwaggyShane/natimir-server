@@ -187,20 +187,30 @@
     text-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00;
     white-space: nowrap; 
     display: flex; 
-    flex-direction: column;
-    align-items: flex-start; 
-    gap: 0px;
+    flex-direction: row;
+    align-items: center; 
+    gap: 8px;
     font-family: 'Cinzel', serif;
   }
   .logo span { 
     display: block; 
-    font-size: 8px; 
+    font-size: 10px; 
     font-weight: 900; 
     color: #ff3131 !important; 
     letter-spacing: 1px;
     text-transform: uppercase;
     animation: pulse-red 2s infinite;
-    margin-top: -2px;
+    margin-top: 0px;
+  }
+  @media (max-width: 480px) {
+    .logo { font-size: 13px; gap: 4px; }
+    .logo span { font-size: 8px; }
+  }
+  @media (max-width: 380px) {
+    .logo span { display: none; }
+  }
+  @media (max-width: 500px) {
+    .hide-xs { display: none; }
   }
   .logo-icon { width: 32px; height: 32px; background: var(--purple); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); border-radius: 8px; }
   .logo-icon-inner { width: 14px; height: 14px; border: 2px solid #fff; border-radius: 2px; transform: rotate(45deg); }
@@ -558,9 +568,9 @@
       <div style="display:flex;align-items:center;gap:10px">
         <div style="text-align:right">
           <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:13px;color:var(--text2)">Turns:</span>
+            <span style="font-size:13px;color:var(--text2)" class="hide-xs">Turns:</span>
             <span id="turns-stored-disp" style="font-size:15px;font-weight:700;color:var(--gold)">400</span>
-            <span style="font-size:12px;color:var(--text3)">/400</span>
+            <span style="font-size:12px;color:var(--text3)" class="hide-xs">/400</span>
           </div>
           <div class="countdown">+7 in <span id="regen-countdown">25:00</span></div>
         </div>
@@ -738,7 +748,7 @@
         <div class="card" id="status-tax-card" style="margin-top:0; margin-bottom:16px; display:none">
         <div class="card-title">Tax rate</div>
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-          <input type="range" id="strip-tax-slider" min="1" max="100" step="1" value="42" oninput="updateTax(this.value)" style="flex:1">
+          <input type="range" id="strip-tax-slider" min="1" max="100" step="1" value="42" oninput="updateTax(this.value)" onchange="lockTax()" style="flex:1">
           <span style="font-size:22px;font-weight:700;color:var(--gold);min-width:48px" id="tax-disp">42%</span>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -1069,16 +1079,43 @@
 
       <!-- TOWER TAB -->
       <div id="stab-tower">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div class="card" style="margin:0">
-            <div class="card-title" style="margin-bottom:10px">Mage Tower overview</div>
-            <div class="trow"><span class="name">Towers</span><span class="count" id="st-towers">0</span></div>
-            <div class="trow"><span class="name">Mana/turn</span><span class="count" id="st-mana-turn" style="color:var(--purple)">0</span></div>
-            <div class="trow"><span class="name">Mages in tower</span><span class="count" id="st-mages-tower">0</span></div>
+        <div class="r-grid-2">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card" style="margin:0">
+              <div class="card-title">Tower Operations</div>
+              <div class="trow"><span class="name">Towers</span><span class="count" id="st-towers">0</span></div>
+              <div class="trow"><span class="name">Mana/turn</span><span class="count" id="st-mana-turn" style="color:var(--purple)">0</span></div>
+              <div class="trow"><span class="name">Mages (Current/Cap)</span><span class="count"><span id="st-mages-tower">0</span> / <span id="st-tower-cap">0</span></span></div>
+              
+              <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Craft Scroll</div>
+                <select id="st-tower-scroll-craft" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-size:13px;margin-bottom:10px">
+                  <option value="">— none —</option>
+                </select>
+                <button class="btn btn-gold" style="width:100%" onclick="saveMageTowerAllocation()">Save crafting task</button>
+              </div>
+            </div>
+
+            <div class="card" style="margin:0">
+              <div class="card-title">Scroll inventory</div>
+              <div id="st-tower-scroll-inventory" style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:13px;color:var(--text3)">No scrolls in your tower.</div>
+              </div>
+            </div>
           </div>
-          <div class="card" style="margin:0">
-            <div class="card-title" style="margin-bottom:10px">Tower upgrades</div>
-            <div id="tower-upgrade-list"></div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card" style="margin:0">
+              <div class="card-title">Crafting progress</div>
+              <div id="st-tower-craft-progress" style="display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:13px;color:var(--text3)">No scrolls being crafted.</div>
+              </div>
+            </div>
+            
+            <div class="card" style="margin:0">
+              <div class="card-title">Tower upgrades</div>
+              <div id="tower-upgrade-list"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1138,169 +1175,89 @@
 
       <!-- SHRINE TAB -->
       <div id="stab-shrine" style="display:none">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div class="card" style="margin:0">
-            <div class="card-title" style="margin-bottom:10px">Shrine overview</div>
-            <div class="trow"><span class="name">Shrines</span><span class="count" id="st-shrines">0</span></div>
-            <div class="trow"><span class="name">Clerics in shrine</span><span class="count" id="st-clerics-shrine">0</span></div>
-            <div class="trow"><span class="name">Morale gain/turn</span><span class="count" id="st-morale-gain" style="color:var(--green)">0</span></div>
-            <div class="trow"><span class="name">Divine Sanctuary</span><span class="count" id="st-sanctuary">—</span></div>
-            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">Cleric allocation</div>
-              <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Available: <span id="st-clerics-avail" style="color:var(--text)">0</span> · Cap: <span id="st-shrine-cap" style="color:var(--gold)">0</span></div>
-              <div style="display:flex;align-items:center;gap:4px">
-                <input type="number" id="st-shrine-clerics" min="0" value="0" style="width:100%;margin-bottom:6px;flex:1" placeholder="Clerics to assign">
-                <button class="btn" style="font-size:10px;padding:3px 6px;margin-bottom:6px" onclick="setMaxValue('st-shrine-clerics','clerics')">Max</button>
+        <div class="r-grid-2">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card" style="margin:0">
+              <div class="card-title">Shrine Operations</div>
+              <div class="trow"><span class="name">Shrines</span><span class="count" id="st-shrines">0</span></div>
+              <div class="trow"><span class="name">Clerics (Current/Cap)</span><span class="count"><span id="st-clerics-shrine">0</span> / <span id="st-shrine-cap">0</span></span></div>
+              <div class="trow"><span class="name">Morale gain/turn</span><span class="count" id="st-morale-gain" style="color:var(--green)">0</span></div>
+              <div class="trow"><span class="name">Divine Sanctuary</span><span class="count" id="st-sanctuary">—</span></div>
+              <div style="margin-top:12px;font-size:12px;color:var(--text3);line-height:1.5">
+                Clerics auto-populate Shrines up to capacity to boost morale and heal battle injuries.
               </div>
-              <button class="btn btn-green" style="width:100%" onclick="saveStudiesShrineClerics()">Save allocation</button>
+            </div>
+            <div class="card" style="margin:0">
+               <div class="card-title">Shrine upgrades</div>
+               <div id="shrine-upgrade-list"></div>
             </div>
           </div>
           <div class="card" style="margin:0">
-            <div class="card-title" style="margin-bottom:10px">Shrine upgrades</div>
-            <div id="shrine-upgrade-list"></div>
+            <div class="card-title">Shrine effects</div>
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--text2);line-height:1.7">
+              <div>🙏 <strong style="color:var(--text)">Morale boost</strong> — each 10 clerics adds +1 morale per turn, stacking with entertainment research and taverns.</div>
+              <div>💊 <strong style="color:var(--text)">Battle healing</strong> — after any combat, clerics in shrines automatically restore a portion of injured troops before the next turn.</div>
+              <div>✨ <strong style="color:var(--text)">Blessing passive</strong> — high cleric counts (100+) grant a small permanent morale floor, preventing morale from dropping below 50.</div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- LIBRARY TAB -->
       <div id="stab-slibrary" style="display:none">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div class="card" style="margin:0">
-            <div class="card-title" style="margin-bottom:10px">Library overview</div>
-            <div class="trow"><span class="name">Libraries</span><span class="count" id="st-libraries">0</span></div>
-            <div class="trow"><span class="name">Capacity</span><span class="count" id="st-lib-cap">0</span></div>
-            <div class="trow"><span class="name">Scribes in library</span><span class="count" id="st-scribes-lib">0</span></div>
-            <div class="trow"><span class="name">Mages in library</span><span class="count" id="st-mages-lib">0</span></div>
+        <div class="r-grid-2">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card" style="margin:0">
+              <div class="card-title">Library Operations</div>
+              <div class="trow"><span class="name">Libraries</span><span class="count" id="st-libraries">0</span></div>
+              <div class="trow"><span class="name">Scribes (Current/Cap)</span><span class="count"><span id="st-scribes-lib">0</span> / <span id="st-lib-cap">0</span></span></div>
+              
+              <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Work Task</div>
+                <select id="st-lib-scribe-craft" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-size:13px;margin-bottom:10px">
+                  <option value="">— none —</option>
+                  <option value="map">Map (for world interaction)</option>
+                  <option value="blueprint">Blueprint (+10% build speed)</option>
+                </select>
+                <button class="btn btn-gold" style="width:100%" onclick="saveLibraryAllocation()">Save work task</button>
+              </div>
+            </div>
+
+            <div class="card" style="margin:0">
+              <div class="card-title">Maps &amp; Blueprints</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center">
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+                  <div style="font-size:20px;margin-bottom:2px">🗺️</div>
+                  <div style="font-size:20px;font-weight:700;color:var(--gold)" id="st-lib-maps">0</div>
+                  <div style="font-size:10px;color:var(--text3)">Maps</div>
+                </div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+                  <div style="font-size:20px;margin-bottom:2px">📐</div>
+                  <div style="font-size:20px;font-weight:700;color:var(--amber)" id="st-lib-blueprints">0</div>
+                  <div style="font-size:10px;color:var(--text3)">Blueprints</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="card" style="margin:0">
-            <div class="card-title" style="margin-bottom:10px">Library upgrades</div>
-            <div id="library-upgrade-list"></div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card" style="margin:0">
+              <div class="card-title">Crafting progress</div>
+              <div id="st-lib-craft-progress" style="display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:13px;color:var(--text3)">Nothing being crafted.</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin:0">
+              <div class="card-title">Library upgrades</div>
+              <div id="library-upgrade-list"></div>
+            </div>
           </div>
         </div>
       </div>
     </div><!-- end studies panel -->
 
-    <div id="mage_tower" class="panel">
-
-      <!-- No mage tower warning -->
-      <div id="tower-no-tower" style="display:none;background:rgba(124,106,245,.08);border:1px solid var(--purple);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--purple);margin-bottom:16px">
-        🗼 You have no Mage Towers. Build one in the <strong>Build</strong> tab — 100 engineers, 150 turns. Mage Towers unlock mana production and research via mages.
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <!-- Mage allocation -->
-        <div class="card">
-          <div class="card-title">Mage allocation — <span style="font-size:12px;color:var(--text3);font-weight:400">20 mages per tower · <span id="tower-count">0</span> towers · capacity: <span id="tower-capacity">0</span></span></div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Mages in towers produce mana each turn. 1 mana per 5 mages. Research is handled in the <strong>School</strong> tab.</div>
-          <div class="trow" style="margin-bottom:14px">
-            <span class="name">Mages for mana</span>
-            <span style="font-size:11px;color:var(--text3)">avail: <span id="tower-mages-avail">0</span></span>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-              <input type="number" id="tower-mages" min="0" value="0" style="width:80px;flex:1">
-              <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('tower-mages','mages')">Max</button>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-gold" style="flex:1" onclick="saveMageTowerAllocation()">Save allocation</button>
-            <button class="btn btn-red" onclick="releaseAllTowerMages()">Release all</button>
-          </div>
-          <div style="margin-top:10px;font-size:12px;color:var(--text3)">
-            Mana production: <span id="tower-mana-rate" style="color:var(--purple);font-weight:600">0</span>/turn
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- SCHOOL -->
-    <div id="school" class="panel" style="display:none">
-      <div id="school-no-school" style="display:none;background:rgba(91,156,245,.08);border:1px solid var(--blue);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--blue);margin-bottom:16px">
-        📚 You have no Schools. Build one in the <strong>Build</strong> tab — 75 turns @ 100 engineers. Each school houses 100 researchers and boosts all research output.
-      </div>
-      <div class="card" style="margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-          <div style="font-size:13px;color:var(--text2)">Schools: <span id="school-count" style="color:var(--text);font-weight:600">0</span></div>
-          <div style="font-size:13px;color:var(--text2)">Researcher capacity: <span id="school-capacity" style="color:var(--gold);font-weight:600">0</span></div>
-          <div style="font-size:13px;color:var(--text2)">Researchers: <span id="r-total-avail" style="color:var(--text);font-weight:600">0</span> / <span id="r-total-assigned" style="color:var(--gold)">0</span> assigned</div>
-        </div>
-      </div>
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-          <div>
-            <div class="card-title" style="margin-bottom:2px">Researcher Allocation</div>
-            <div style="font-size:12px;color:var(--text3)">Unassigned: <span id="r-total-unassigned" style="color:var(--green)">0</span></div>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-purple" onclick="distributeEvenly()" style="white-space:nowrap">Distribute evenly</button>
-            <button class="btn btn-gold" onclick="saveResearchAllocation()" style="white-space:nowrap">Save allocation</button>
-            <button class="btn btn-red" onclick="releaseAllResearchers()" style="white-space:nowrap">Release all</button>
-          </div>
-        </div>
-        <div id="research-no-researchers" style="display:none;background:rgba(232,184,75,.08);border:1px solid var(--gold);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--gold);margin-bottom:12px">
-          ⚠️ You have no researchers. Go to <strong>Hire</strong> and hire researchers first — then come back to allocate them.
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Economy</span><span class="desc">Gold per turn</span>
-          <div class="prog-wrap"><div class="prog-bar eco" id="pb-eco" style="width:0%"></div></div>
-          <input type="number" id="ra-economy" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-economy', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Weapons</span><span class="desc">Attack damage</span>
-          <div class="prog-wrap"><div class="prog-bar wep" id="pb-wep" style="width:0%"></div></div>
-          <input type="number" id="ra-weapons" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-weapons', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Armor</span><span class="desc">Defense rating</span>
-          <div class="prog-wrap"><div class="prog-bar arm" id="pb-arm" style="width:0%"></div></div>
-          <input type="number" id="ra-armor" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-armor', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Military tactics</span><span class="desc">Troop effectiveness</span>
-          <div class="prog-wrap"><div class="prog-bar mil" id="pb-mil" style="width:0%"></div></div>
-          <input type="number" id="ra-military" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-military', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Spellbook</span><span class="desc">Spell power</span>
-          <div class="prog-wrap"><div class="prog-bar spell" id="pb-spell" style="width:0%"></div></div>
-          <input type="number" id="ra-spellbook" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-spellbook', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Attack magic</span><span class="desc">Spell damage</span>
-          <div class="prog-wrap"><div class="prog-bar" style="width:0%;background:var(--red)" id="pb-atk"></div></div>
-          <input type="number" id="ra-attack_magic" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-attack_magic', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Defense magic</span><span class="desc">Spell protection</span>
-          <div class="prog-wrap"><div class="prog-bar arm" id="pb-def" style="width:0%"></div></div>
-          <input type="number" id="ra-defense_magic" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-defense_magic', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Entertainment</span><span class="desc">Morale &amp; pop</span>
-          <div class="prog-wrap"><div class="prog-bar" style="width:0%;background:var(--green)" id="pb-ent"></div></div>
-          <input type="number" id="ra-entertainment" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-entertainment', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow">
-          <span class="name" style="min-width:140px">Construction</span><span class="desc">Build speed</span>
-          <div class="prog-wrap"><div class="prog-bar" style="width:0%;background:var(--amber)" id="pb-con"></div></div>
-          <input type="number" id="ra-construction" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-construction', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-        <div class="trow" style="border-bottom:none">
-          <span class="name" style="min-width:140px">War machines</span><span class="desc">WM power</span>
-          <div class="prog-wrap"><div class="prog-bar" style="width:0%;background:var(--text3)" id="pb-wm"></div></div>
-          <input type="number" id="ra-war_machines" min="0" value="0" oninput="updateAllocationDisplay()" style="width:70px">
-          <button class="btn" onclick="setMaxValue('ra-war_machines', 'avail_units')" style="padding:4px 8px;font-size:10px;margin-left:4px">Max</button>
-        </div>
-      </div>
-    </div>
+    <!-- Status Bar -->
 
     <!-- BUILD -->
     <!-- ECONOMY PANEL -->
@@ -1320,7 +1277,7 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:14px;margin:12px 0">
-      <input type="range" id="tax-slider" min="1" max="100" step="1" value="42" oninput="updateTax(this.value)" style="flex:1;height:6px;cursor:pointer">
+      <input type="range" id="tax-slider" min="1" max="100" step="1" value="42" oninput="updateTax(this.value)" onchange="lockTax()" style="flex:1;height:6px;cursor:pointer">
       <span style="font-size:22px;font-weight:700;color:var(--gold);min-width:48px" id="tax-disp">42%</span>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -2857,42 +2814,6 @@
 
 </div>
 
-<!-- SHRINE -->
-<div id="shrine" class="panel" style="display:none">
-  <div id="shrine-no-shrine" style="display:none;background:rgba(76,175,130,.08);border:1px solid var(--green);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--green);margin-bottom:16px">
-    ⛩️ You have no Shrines. Build one in the <strong>Build</strong> tab — 50 turns @ 100 engineers. Shrines let clerics boost morale and heal injured troops.
-  </div>
-  <div class="r-grid-2">
-    <div class="card">
-      <div class="card-title">Cleric allocation — <span style="font-size:12px;color:var(--text3);font-weight:400">15 clerics per shrine · <span id="shrine-count">0</span> shrines</span></div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Clerics in shrines boost morale each turn (+1 per 10 clerics) and heal troops returning from battle.</div>
-      <div class="trow" style="margin-bottom:14px">
-        <span class="name">Clerics in shrine</span>
-        <span style="font-size:11px;color:var(--text3)">avail: <span id="shrine-clerics-avail">0</span></span>
-        <div style="display:flex;align-items:center;gap:4px">
-          <input type="number" id="shrine-clerics" min="0" value="0" style="width:80px">
-          <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('shrine-clerics','clerics')">Max</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-gold" style="flex:1" onclick="saveShrineAllocation()">Save allocation</button>
-        <button class="btn btn-red" onclick="releaseAllShrineClericsFn()">Release all</button>
-      </div>
-      <div style="margin-top:10px;font-size:12px;color:var(--text3)">
-        Morale boost: +<span id="shrine-morale-rate" style="color:var(--green);font-weight:600">0</span>/turn
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Shrine effects</div>
-      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--text2);line-height:1.7">
-        <div>🙏 <strong style="color:var(--text)">Morale boost</strong> — each 10 clerics adds +1 morale per turn, stacking with entertainment research and taverns.</div>
-        <div>💊 <strong style="color:var(--text)">Battle healing</strong> — after any combat, clerics in shrines automatically restore a portion of injured troops before the next turn.</div>
-        <div>✨ <strong style="color:var(--text)">Blessing passive</strong> — high cleric counts (100+) grant a small permanent morale floor, preventing morale from dropping below 50.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- WAR LOG -->
 <div id="war_panel" class="panel" style="display:none">
   <div class="card">
@@ -2998,103 +2919,6 @@
 </div>
 
 <!-- LIBRARY -->
-<div id="library" class="panel" style="display:none">
-
-  <!-- No library warning -->
-  <div id="lib-no-library" style="display:none;background:rgba(232,184,75,.08);border:1px solid var(--gold);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--gold);margin-bottom:16px">
-    📖 You have no libraries. Build one in the <strong>Build</strong> tab — 100 engineers, 100 turns. Libraries are required for scrolls, maps, and blueprints.
-  </div>
-
-  <div class="r-grid-2">
-
-    <!-- Allocation -->
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="card">
-        <div class="card-title">Library allocation</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Each library holds 20 mages or scribes. Mages produce mana and craft scrolls. Scribes craft maps and blueprints.</div>
-
-        <div class="trow" style="margin-bottom:10px">
-          <span class="name">Mages in library</span>
-          <span style="font-size:11px;color:var(--text3)">avail: <span id="lib-mages-avail">0</span></span>
-          <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="lib-mages" min="0" value="0" style="width:80px">
-            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('lib-mages','mages')">Max</button>
-          </div>
-        </div>
-        <div class="trow" style="margin-bottom:14px">
-          <span class="name">Scribes in library</span>
-          <span style="font-size:11px;color:var(--text3)">avail: <span id="lib-scribes-avail">0</span></span>
-          <div style="display:flex;align-items:center;gap:4px">
-            <input type="number" id="lib-scribes" min="0" value="0" style="width:80px">
-            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('lib-scribes','scribes')">Max</button>
-          </div>
-        </div>
-
-        <div style="margin-bottom:10px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Mages craft scroll</div>
-          <select id="lib-scroll-craft" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-size:13px">
-            <option value="">— none —</option>
-          </select>
-        </div>
-        <div style="margin-bottom:14px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Scribes craft</div>
-          <select id="lib-scribe-craft" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-size:13px">
-            <option value="">— none —</option>
-            <option value="map">Map (needed to interact with other kingdoms)</option>
-            <option value="blueprint">Blueprint (+10% construction speed)</option>
-          </select>
-        </div>
-
-        <button class="btn btn-gold" style="width:100%" onclick="saveLibraryAllocation()">Save allocation</button>
-      </div>
-
-      <!-- Mana production -->
-      <div class="card">
-        <div class="card-title">Mana production</div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.7">
-          Mages in the library produce <strong>1 mana per 10 mages</strong> per turn, passively — no action needed.<br>
-          Current production: <span id="lib-mana-rate" style="color:var(--purple);font-weight:600">0</span> mana/turn
-        </div>
-      </div>
-    </div>
-
-    <!-- Scroll inventory & progress -->
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="card">
-        <div class="card-title">Scroll inventory</div>
-        <div id="lib-scroll-inventory" style="display:flex;flex-direction:column;gap:6px">
-          <div style="font-size:13px;color:var(--text3)">No scrolls in your library.</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Crafting progress</div>
-        <div id="lib-craft-progress" style="display:flex;flex-direction:column;gap:8px">
-          <div style="font-size:13px;color:var(--text3)">Nothing being crafted.</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Maps &amp; blueprints</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center">
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px">
-            <div style="font-size:22px;margin-bottom:4px">🗺️</div>
-            <div style="font-size:24px;font-weight:700;color:var(--gold)" id="lib-maps">0</div>
-            <div style="font-size:11px;color:var(--text3)">Maps</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:4px">Required to interact with other kingdoms</div>
-          </div>
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px">
-            <div style="font-size:22px;margin-bottom:4px">📐</div>
-            <div style="font-size:24px;font-weight:700;color:var(--amber)" id="lib-blueprints">0</div>
-            <div style="font-size:11px;color:var(--text3)">Blueprints</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:4px">+10% construction speed each</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
     <!-- Status Bar -->
     <footer class="status-bar">
       <div style="display:flex;align-items:center;gap:24px">
@@ -4432,6 +4256,14 @@ function switchTab(id, btn) {
   if (id === 'training') {
     loadTrainingAllocation();
   }
+  if (id === 'studies') {
+    loadStudies();
+  }
+  if (id === 'exploration') {
+    loadExploration();
+    updateExpeditionAvailability();
+    loadActiveExpeditions();
+  }
   if (id === 'attack' || id === 'spells' || id === 'covert' || id === 'warfare') {
     if (!targets.length) loadRankings(true);
     var mapWarn = document.getElementById('atk-map-warn');
@@ -4458,9 +4290,6 @@ function switchTab(id, btn) {
   if (id === 'defense') {
     loadDefense();
   }
-  if (id === 'studies') {
-    loadStudies();
-  }
   if (id === 'economy') {
     loadEconomy();
   }
@@ -4476,27 +4305,7 @@ function switchTab(id, btn) {
     var spellMapWarn = document.getElementById('spell-map-warn');
     if (spellMapWarn) spellMapWarn.style.display = (state.maps || 0) < 1 ? 'block' : 'none';
   }
-  if (id === 'exploration') {
-    updateExpeditionAvailability();
-    loadActiveExpeditions();
-  }
-  if (id === 'library') {
-    renderLibraryPanel();
-  }
-  if (id === 'research' || id === 'mage_tower') {
-    updateAllocationDisplay();
-    loadAllocationFromState();
-    renderMageTowerPanel();
-  }
-  if (id === 'school') {
-    renderSchoolPanel();
-    updateAllocationDisplay();
-    loadAllocationFromState();
-  }
   if (id === 'war_panel') { loadWarLog(); }
-  if (id === 'shrine') {
-    renderShrinePanel();
-  }
   if (id === 'build') {
     loadBuildAllocation();
     updateSmithyDisplay();
@@ -4621,7 +4430,7 @@ function syncUI() {
   document.getElementById('m-land').textContent = trunc(state.land || 0);
   // Calculate used land from buildings
   var LAND_COST = {
-    bld_farms:1, bld_barracs:1, bld_outposts:1, bld_guard_towers:1, bld_armories:1, bld_vaults:1,
+    bld_farms:1, bld_barracks:1, bld_outposts:1, bld_guard_towers:1, bld_armories:1, bld_vaults:1,
     bld_schools:2, bld_smithies:2, bld_markets:2, bld_colosseums:2, bld_shrines:2, bld_libraries:2,
     bld_housing:1,
     bld_cathedrals:5, bld_training:5,
@@ -4984,6 +4793,10 @@ function clearToken() {
   try { localStorage.removeItem('narmir_token'); } catch(e) {}
 }
 
+function debugLog(msg) {
+  if (window.DEBUG) console.log('[DEBUG]', msg);
+}
+
 async function apiCall(method, path, body) {
   try {
     var headers = { 'Content-Type': 'application/json' };
@@ -5321,6 +5134,7 @@ async function loadKingdom() {
     shrine_allocation:     kingdom.shrine_allocation     || {},
     library_allocation: kingdom.library_allocation || {},
     library_progress:   kingdom.library_progress   || {},
+    tower_progress:     kingdom.tower_progress     || {},
     scrolls:            kingdom.scrolls            || {},
     maps:               kingdom.maps               || 0,
     blueprints_stored:  kingdom.blueprints_stored  || 0,
@@ -5437,7 +5251,6 @@ async function loadKingdom() {
   loadActiveExpeditions();
   renderLibraryPanel();
   renderMageTowerPanel();
-  renderSchoolPanel();
   renderShrinePanel();
   initSocket();
 }
@@ -6147,6 +5960,8 @@ function applyServerUpdates(u) {
   if (u.land        !== undefined) state.land          = u.land;
   if (u.morale      !== undefined) state.morale        = u.morale;
   if (u.food        !== undefined) state.food          = u.food;
+  if (u.tax         !== undefined) state.tax           = u.tax;
+  if (u.name        !== undefined) state.name          = u.name;
   if (u.turn        !== undefined) state.turn          = u.turn;
   if (u.turns_stored!== undefined) state.turns_stored = u.turns_stored;
   if (u.fighters    !== undefined) state.fighters      = u.fighters;
@@ -7010,6 +6825,61 @@ function showStudiesTab(id, btn) {
   if (btn) btn.classList.add('active');
 }
 
+async function loadExploration() {
+  updateExpeditionAvailability();
+  loadActiveExpeditions();
+}
+
+function updateExpeditionAvailability() {
+  var rangers = state.rangers || 0;
+  var maps    = state.maps    || 0;
+  
+  var r1 = document.getElementById('ex-btn-scout');
+  var r2 = document.getElementById('ex-btn-expl');
+  var r3 = document.getElementById('ex-btn-far');
+  
+  if (r1) r1.disabled = rangers < 5  || maps < 1;
+  if (r2) r2.disabled = rangers < 25 || maps < 5;
+  if (r3) r3.disabled = rangers < 100 || maps < 15;
+}
+
+async function loadActiveExpeditions() {
+  var result = await apiCall('GET', '/api/kingdom/expeditions');
+  if (result.error) return;
+  var container = document.getElementById('active-expeditions');
+  if (!container) return;
+  
+  var active = result.expeditions || [];
+  if (active.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:20px">No active expeditions</div>';
+    return;
+  }
+  
+  container.innerHTML = active.map(function(ex) {
+    var turnsLeft = ex.return_turn - (state.turn||0);
+    var pct = Math.max(0, Math.min(100, Math.floor(((ex.total_turns - turnsLeft) / ex.total_turns) * 100)));
+    var typeLabel = { scout:'Scouting', explore:'Exploration', far:'Far Voyage' }[ex.type] || 'Expedition';
+    
+    return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
+      + '<span style="font-size:13px;font-weight:600;color:var(--text)">' + typeLabel + '</span>'
+      + '<span style="font-size:11px;color:var(--text3)">' + Math.max(0, turnsLeft) + ' turns left</span>'
+      + '</div>'
+      + '<div style="height:6px;background:var(--bg4);border-radius:3px;margin-bottom:4px">'
+      + '<div style="height:6px;width:' + pct + '%;background:var(--blue);border-radius:3px"></div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function startExpedition(type) {
+  var result = await apiCall('POST', '/api/kingdom/expeditions', { type });
+  if (result.error) return toast(result.error, 'error');
+  toast('Expedition started!', 'success');
+  loadActiveExpeditions();
+  loadState();
+}
+
 async function loadStudies() {
   var data = await apiCall('GET', '/api/kingdom/studies/overview');
   if (data.error) return toast(data.error, 'error');
@@ -7018,11 +6888,14 @@ async function loadStudies() {
   var el = function(id){ return document.getElementById(id); };
 
   // Tower
-  if (el('st-towers'))     el('st-towers').textContent     = fmt(state.bld_cathedrals||0);
-  if (el('st-mana-turn'))  el('st-mana-turn').textContent  = '+' + fmt(data.mana_per_turn||0);
-  var towerAlloc = {};
-  try { towerAlloc = JSON.parse(state.mage_tower_allocation||'{}'); } catch {}
-  if (el('st-mages-tower')) el('st-mages-tower').textContent = fmt(Math.min(state.mages||0, Number(towerAlloc.mages)||0));
+  var towers = state.bld_cathedrals || 0;
+  var towerCap = towers * 20;
+  var towerMages = Math.min(state.mages || 0, towerCap);
+  if (el('st-towers'))     el('st-towers').textContent     = fmt(towers);
+  if (el('st-tower-cap'))  el('st-tower-cap').textContent  = fmt(towerCap);
+  if (el('st-mana-turn'))  el('st-mana-turn').textContent  = '+' + fmt(Math.floor(towerMages / 5));
+  if (el('st-mages-tower')) el('st-mages-tower').textContent = fmt(towerMages);
+  renderMageTowerPanel();
 
   // School
   if (el('st-schools'))    el('st-schools').textContent    = fmt(state.bld_schools||0);
@@ -7039,45 +6912,40 @@ async function loadStudies() {
   updateFocusPreview();
 
   // Shrine
-  if (el('st-shrines'))    el('st-shrines').textContent    = fmt(state.bld_shrines||0);
-  var shrineAlloc2 = {};
-  try { shrineAlloc2 = typeof state.shrine_allocation==='string' ? JSON.parse(state.shrine_allocation||'{}') : (state.shrine_allocation||{}); } catch {}
-  var clericsShrine = Math.min(state.clerics||0, Number(shrineAlloc2.clerics)||0);
-  if (el('st-clerics-shrine')) el('st-clerics-shrine').textContent = fmt(clericsShrine);
+  var shrines = state.bld_shrines || 0;
+  var shrineCap = shrines * 15;
+  var shrineClerics = Math.min(state.clerics || 0, shrineCap);
+  if (el('st-shrines'))      el('st-shrines').textContent = fmt(shrines);
+  if (el('st-shrine-cap'))   el('st-shrine-cap').textContent = fmt(shrineCap);
+  if (el('st-clerics-shrine')) el('st-clerics-shrine').textContent = fmt(shrineClerics);
   var sacredMult = (data.shrine_upgrades||{}).sacred_grove ? 1.15 : 1.0;
-  var moraleGain = Math.max(1, Math.floor((clericsShrine/10)*sacredMult));
-  if (el('st-morale-gain')) el('st-morale-gain').textContent = clericsShrine > 0 ? '+' + moraleGain : '0';
-  if (el('st-clerics-avail'))  el('st-clerics-avail').textContent  = fmt(state.clerics||0);
-  if (el('st-shrine-cap'))     el('st-shrine-cap').textContent     = fmt((state.bld_shrines||0)*15);
-  if (el('st-shrine-clerics')) el('st-shrine-clerics').value       = clericsShrine;
-  var sanct = (data.shrine_upgrades||{}).divine_sanctuary;
+  var moraleGain = Math.floor((shrineClerics / 10) * sacredMult);
+  if (el('st-morale-gain'))  el('st-morale-gain').textContent = shrineClerics > 0 ? '+' + moraleGain : '0';
   if (el('st-sanctuary')) {
+    var sanct = !!(data.shrine_upgrades||{}).divine_sanctuary;
     var lastUsed = data.divine_sanctuary_used || 0;
     var turnsAgo = (state.turn||0) - lastUsed;
     el('st-sanctuary').textContent = sanct ? (turnsAgo >= 20 ? 'Ready' : 'Recharges in ' + (20-turnsAgo) + ' turns') : 'Not purchased';
     el('st-sanctuary').style.color = sanct && turnsAgo >= 20 ? 'var(--green)' : 'var(--text3)';
   }
+  renderShrinePanel();
 
   // Library
-  var libCap = (state.bld_libraries||0) * ((data.library_upgrades||{}).grand_library ? 40 : 20);
-  if (el('st-libraries'))  el('st-libraries').textContent  = fmt(state.bld_libraries||0);
-  if (el('st-lib-cap'))    el('st-lib-cap').textContent    = fmt(libCap);
-  var libAlloc = {};
-  try { libAlloc = JSON.parse(state.library_allocation||'{}'); } catch {}
-  if (el('st-scribes-lib')) el('st-scribes-lib').textContent = fmt(Math.min(state.scribes||0, Number(libAlloc.scribes)||0));
-  if (el('st-mages-lib'))   el('st-mages-lib').textContent   = fmt(Math.min(state.mages||0,   Number(libAlloc.mages)||0));
-
-  // Sync library/tavern counts from API data (might be more accurate than state)
-  if (data.bld_libraries && state.bld_libraries !== data.bld_libraries) state.bld_libraries = data.bld_libraries;
-  if (data.bld_taverns   && state.bld_taverns   !== data.bld_taverns)   state.bld_taverns   = data.bld_taverns;
-  if (el('st-libraries')) el('st-libraries').textContent = fmt(data.bld_libraries||state.bld_libraries||0);
-  if (el('st-lib-cap'))   el('st-lib-cap').textContent   = fmt((data.bld_libraries||state.bld_libraries||0) * ((data.library_upgrades||{}).grand_library ? 40 : 20));
+  var libs = data.bld_libraries || state.bld_libraries || 0;
+  var libUpgrades = data.library_upgrades || {};
+  var capPerLib = libUpgrades.grand_library ? 40 : 20;
+  var libCap = libs * capPerLib;
+  var libScribes = Math.min(state.scribes || 0, libCap);
+  if (el('st-libraries'))   el('st-libraries').textContent = fmt(libs);
+  if (el('st-lib-cap'))     el('st-lib-cap').textContent = fmt(libCap);
+  if (el('st-scribes-lib')) el('st-scribes-lib').textContent = fmt(libScribes);
+  renderLibraryPanel();
 
   // Upgrade lists
   renderUpgrades('tower',   TOWER_UPGRADES_JS,   data.tower_upgrades||{},   'tower-upgrade-list');
   renderUpgrades('school',  SCHOOL_UPGRADES_JS,  data.school_upgrades||{},  'school-upgrade-list');
   renderUpgrades('shrine',  SHRINE_UPGRADES_JS,  data.shrine_upgrades||{},  'shrine-upgrade-list');
-  renderUpgrades('library', LIBRARY_UPGRADES_JS, data.library_upgrades||{}, 'library-upgrade-list');
+  renderUpgrades('slibrary', LIBRARY_UPGRADES_JS, data.library_upgrades||{}, 'library-upgrade-list');
 }
 
 function updateFocusPreview() {
@@ -7099,16 +6967,6 @@ async function saveResearchFocus() {
 }
 
 var econData = {};
-
-async function saveStudiesShrineClerics() {
-  var clerics = parseInt(document.getElementById('st-shrine-clerics')?.value) || 0;
-  if (clerics > (state.clerics||0)) return toast('Not enough clerics', 'error');
-  var result = await apiCall('POST', '/api/kingdom/shrine-allocation', { allocation: { clerics } });
-  if (result.error) return toast(result.error, 'error');
-  state.shrine_allocation = result.allocation || { clerics };
-  toast('Shrine allocation saved — ' + clerics + ' clerics assigned', 'success');
-  loadStudies();
-}
 
 var COMMODITY_VALUES = { food:2, gold:1, mana:4, weapons:6, armor:8, maps:50, scrolls:200, blueprints:150 };
 var COMMODITY_RACE_DISCOUNT = {
@@ -7150,9 +7008,11 @@ function showEconTab(id, btn) {
   if (id === 'markets') loadTradeOffers();
 }
 
+var econData = null;
 async function loadEconomy() {
   var data = await apiCall('GET', '/api/kingdom/economy/overview');
   if (data.error) return toast(data.error, 'error');
+  console.log('loadEconomy data:', data);
   econData = data;
 
   // Farms
@@ -7795,6 +7655,47 @@ function troopXpForLevelJS(level) {
   return level * 5000;
 }
 
+async function loadTrainingAllocation() {
+  var result = await apiCall('GET', '/api/kingdom/training-allocation');
+  if (result.error) return;
+  var alloc = result.allocation || {};
+  TROOP_TYPES.forEach(function(u) {
+    var el = document.getElementById('ta-' + u);
+    if (el) el.value = alloc[u] || 0;
+  });
+  updateTrainingDisplay();
+  updateTroopLevelDisplay();
+  renderRacialBadge();
+}
+
+async function saveTrainingAllocation() {
+  var alloc = {};
+  TROOP_TYPES.forEach(function(u) {
+    alloc[u] = parseInt(document.getElementById('ta-' + u)?.value) || 0;
+  });
+  var result = await apiCall('POST', '/api/kingdom/training-allocation', { allocation: alloc });
+  if (result.error) return toast(result.error, 'error');
+  toast('Training allocation saved', 'success');
+  loadTrainingAllocation();
+}
+
+function updateTroopLevelDisplay() {
+  TROOP_TYPES.forEach(function(unit) {
+    var data = getTroopLevel(unit);
+    var levelEl = document.getElementById('tr-level-' + unit);
+    var xpEl    = document.getElementById('tr-xp-' + unit);
+    var barEl   = document.getElementById('tr-bar-' + unit);
+    if (levelEl) levelEl.textContent = 'Lv ' + data.level;
+    var xpNeeded = troopXpForLevelJS(data.level + 1) - troopXpForLevelJS(data.level);
+    var xpInLevel = data.xp - troopXpForLevelJS(data.level);
+    if (xpEl) xpEl.textContent = fmt(Math.max(0, xpInLevel)) + ' / ' + fmt(xpNeeded) + ' XP';
+    if (barEl) {
+      var pct = Math.min(100, Math.floor((xpInLevel / xpNeeded) * 100));
+      barEl.style.width = pct + '%';
+    }
+  });
+}
+
 function getTroopLevel(unit) {
   var levels = state.troop_levels || {};
   return levels[unit] || { level: 1, xp: 0 };
@@ -7834,7 +7735,8 @@ function setTrainingMax(unit) {
 
 function distributeTrainingEvenly() {
   var capacity = (state.bld_training || 0) * 50;
-  var each = Math.floor(capacity / TROOP_TYPES.length);
+  var count = TROOP_TYPES.length;
+  var each = Math.floor(capacity / count);
   TROOP_TYPES.forEach(function(u) {
     var el = document.getElementById('ta-' + u);
     if (el) el.value = Math.min(each, state[u] || 0);
@@ -7842,86 +7744,87 @@ function distributeTrainingEvenly() {
   updateTrainingDisplay();
 }
 
-function loadTrainingAllocation() {
-  var alloc = state.training_allocation || {};
-  TROOP_TYPES.forEach(function(u) {
-    var el = document.getElementById('ta-' + u);
-    if (el) el.value = alloc[u] || 0;
-  });
-  updateTrainingDisplay();
-  updateTroopLevelDisplay();
-  updateRaceBonusDisplay();
-}
+function renderMageTowerPanel() {
+  var alloc = state.mage_tower_allocation || {};
 
-function updateTroopLevelDisplay() {
-  TROOP_TYPES.forEach(function(u) {
-    var data = getTroopLevel(u);
-    var level = data.level || 1;
-    var xp = data.xp || 0;
-    var nextXp = troopXpForLevelJS(level + 1) - troopXpForLevelJS(level);
-    var pct = nextXp > 0 ? Math.min(100, Math.floor(xp / nextXp * 100)) : 100;
+  // Scroll craft dropdown
+  var scrollSel = document.getElementById('st-tower-scroll-craft');
+  if (scrollSel) {
+    var sb = state.res_spellbook || 0;
+    var tierLabels = { 1:'Tier 1', 2:'Tier 2', 3:'Tier 3', 4:'Tier 4' };
+    var currentTier = 0;
+    scrollSel.innerHTML = '<option value="">— none —</option>';
+    SCROLL_DEFS.forEach(function(s) {
+      if (sb < s.minSB) return;
+      if (s.tier !== currentTier) {
+        var og = document.createElement('optgroup');
+        og.label = tierLabels[s.tier] + ' — SB ' + s.minSB + '+';
+        scrollSel.appendChild(og);
+        currentTier = s.tier;
+      }
+      var opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.label + ' (' + s.mages + ' mages · ' + s.turns + ' turns)';
+      if (alloc.scroll_craft === s.id) opt.selected = true;
+      scrollSel.appendChild(opt);
+    });
+  }
 
-    var levelEl = document.getElementById('tr-level-' + u);
-    var xpEl    = document.getElementById('tr-xp-' + u);
-    var barEl   = document.getElementById('tr-bar-' + u);
-    if (levelEl) levelEl.textContent = 'Lv ' + level;
-    if (xpEl)    xpEl.textContent    = fmt(xp) + ' / ' + fmt(nextXp) + ' XP';
-    if (barEl)   barEl.style.width   = pct + '%';
-  });
-}
+  // Scroll inventory
+  var inv = document.getElementById('st-tower-scroll-inventory');
+  if (inv) {
+    var scrolls = state.scrolls || {};
+    var scrollKeys = Object.keys(scrolls).filter(function(s) { return scrolls[s] > 0; });
+    if (scrollKeys.length === 0) {
+      inv.innerHTML = '<div style="font-size:13px;color:var(--text3)">No scrolls in your tower.</div>';
+    } else {
+      inv.innerHTML = scrollKeys.map(function(s) {
+        var def = SCROLL_DEFS.find(function(d) { return d.id === s; });
+        var label = def ? def.label : s;
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">'
+          + '<span style="color:var(--text)">✨ ' + label + '</span>'
+          + '<span style="color:var(--gold);font-weight:600">×' + scrolls[s] + '</span>'
+          + '</div>';
+      }).join('');
+    }
+  }
 
-function updateRaceBonusDisplay() {
-  var el = document.getElementById('tr-race-bonus');
-  if (!el) return;
-  var race = state.race || 'human';
-  var bonuses = TROOP_RACE_BONUS_JS[race] || {};
-  var TROOP_LABELS = { fighters:'Fighters', rangers:'Rangers', clerics:'Clerics', mages:'Mages', thieves:'Thieves', ninjas:'Ninjas' };
-  var lines = TROOP_TYPES.map(function(u) {
-    var b = bonuses[u] || 1.0;
-    var bStr = b > 1 ? '<span style="color:var(--green)">+' + Math.round((b-1)*100) + '% training speed</span>' : '<span style="color:var(--text3)">No bonus</span>';
-    var exceedsNote = b >= 1.5 ? ' <span style="color:var(--purple);font-size:11px">(can exceed Level 100)</span>' : '';
-    return '<div style="display:flex;justify-content:space-between;padding:3px 0"><span>' + TROOP_LABELS[u] + '</span><span>' + bStr + exceedsNote + '</span></div>';
-  }).join('');
-  el.innerHTML = lines;
-}
-
-async function saveTrainingAllocation() {
-  var allocation = {};
-  var capacity = (state.bld_training || 0) * 50;
-  var total = 0;
-  TROOP_TYPES.forEach(function(u) {
-    var val = parseInt(document.getElementById('ta-' + u)?.value) || 0;
-    allocation[u] = val;
-    total += val;
-  });
-  if (total > capacity) return toast('Assigned ' + fmt(total) + ' but capacity is only ' + fmt(capacity), 'error');
-  if (capacity === 0) return toast('Build training fields first', 'error');
-  var result = await apiCall('POST', '/api/kingdom/training-allocation', { allocation: allocation });
-  if (result.error) return toast(result.error, 'error');
-  state.training_allocation = allocation;
-  toast('Training allocation saved — troops train each turn', 'success');
-}
-
-// Visible debug helper for mobile
-function debugLog(msg) { /* disabled */ }
-
-// ── School ────────────────────────────────────────────────────────────────────
-
-function renderSchoolPanel() {
-  var schools = state.bld_schools || 0;
-  var warn = document.getElementById('school-no-school');
-  if (warn) warn.style.display = schools === 0 ? 'block' : 'none';
-  var cntEl = document.getElementById('school-count'); if (cntEl) cntEl.textContent = schools;
-  var capEl = document.getElementById('school-capacity'); if (capEl) capEl.textContent = fmt(schools * 100);
-  updateAllocationDisplay();
-  loadAllocationFromState();
-  renderRacialBadge();
+  // Scroll crafting progress
+  var prog = state.tower_progress || {};
+  var craftEl = document.getElementById('st-tower-craft-progress');
+  if (craftEl) {
+    var items = [];
+    Object.keys(prog).forEach(function(k) {
+      if (!prog[k] || prog[k] <= 0) return;
+      if (k.startsWith('scroll_')) {
+        var spellId = k.replace('scroll_', '');
+        var def = SCROLL_DEFS.find(function(d) { return d.id === spellId; });
+        var label = def ? def.label : spellId;
+        var turnsNeeded = def ? def.turns : 10;
+        var pct = Math.min(100, Math.floor((prog[k] / turnsNeeded) * 100));
+        items.push({ label: '✨ ' + label + ' scroll', pct: pct, color: 'var(--purple)' });
+      }
+    });
+    if (items.length === 0) {
+      craftEl.innerHTML = '<div style="font-size:13px;color:var(--text3)">No scrolls being crafted.</div>';
+    } else {
+      craftEl.innerHTML = items.map(function(item) {
+        return '<div style="margin-bottom:8px">'
+          + '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'
+          + '<span style="color:var(--text)">' + item.label + '</span>'
+          + '<span style="color:var(--text3)">' + item.pct + '%</span>'
+          + '</div>'
+          + '<div style="height:5px;background:var(--bg4);border-radius:3px">'
+          + '<div style="height:5px;width:' + item.pct + '%;background:' + item.color + ';border-radius:3px;transition:width .3s"></div>'
+          + '</div></div>';
+      }).join('');
+    }
+  }
 }
 
 var RACIAL_UNIT_MAP = { dwarf:'engineers', high_elf:'mages', orc:'fighters', dark_elf:'ninjas', dire_wolf:'rangers', human:'clerics' };
 var RACIAL_BADGE_TEXT = {
-  dwarf:     '⚒️ Dwarven Mastery — War machines need only 1 engineer to crew',
-  high_elf:  '✨ Elven Mastery — Scrolls produce 2 per craft',
+  high_elf:  '🌿 Silverwood Mastery — Level 5+ mages produce 2 scrolls per craft',
   orc:       '⚔️ Orcish War Culture — Passively trains 1 fighter per 10 each turn',
   dark_elf:  '🕵️ Shadow Mastery — Assassinations leave no trace',
   dire_wolf: '🐺 Pack Mastery — Expeditions return 1 turn early',
@@ -7943,100 +7846,6 @@ function renderRacialBadge() {
   }
 }
 
-// ── Mage Tower ────────────────────────────────────────────────────────────────
-
-function renderMageTowerPanel() {
-  var towers = state.bld_cathedrals || 0;
-  var warn = document.getElementById('tower-no-tower');
-  if (warn) warn.style.display = towers === 0 ? 'block' : 'none';
-
-  var cap = towers * 20;
-  var capEl = document.getElementById('tower-capacity'); if (capEl) capEl.textContent = fmt(cap);
-  var cntEl = document.getElementById('tower-count');    if (cntEl) cntEl.textContent = towers;
-  var availEl = document.getElementById('tower-mages-avail'); if (availEl) availEl.textContent = fmt(state.mages || 0);
-
-  var alloc = state.mage_tower_allocation || {};
-  var tmEl = document.getElementById('tower-mages');
-  if (tmEl) tmEl.value = alloc.mages || 0;
-
-  var magesInTower = Math.min(Number(alloc.mages) || 0, state.mages || 0);
-  var effectiveMages = Math.min(magesInTower, cap);
-  var manaRate = Math.floor(effectiveMages / 5);
-  var manaRateEl = document.getElementById('tower-mana-rate');
-  if (manaRateEl) manaRateEl.textContent = fmt(manaRate);
-
-  updateAllocationDisplay();
-  loadAllocationFromState();
-}
-
-async function saveMageTowerAllocation() {
-  var towers = state.bld_cathedrals || 0;
-  if (towers === 0) return toast('Build a Mage Tower first', 'error');
-  var mages = parseInt(document.getElementById('tower-mages')?.value) || 0;
-  if (mages > (state.mages || 0)) return toast('Not enough mages', 'error');
-  var result = await apiCall('POST', '/api/kingdom/mage-tower-allocation', {
-    allocation: { mages, research_mages: 0, research_discipline: null }
-  });
-  if (result.error) return toast(result.error, 'error');
-  state.mage_tower_allocation = result.allocation;
-  renderMageTowerPanel();
-  toast('Mage Tower allocation saved', 'success');
-}
-
-async function releaseAllTowerMages() {
-  var tmEl = document.getElementById('tower-mages');
-  if (tmEl) tmEl.value = 0;
-  var result = await apiCall('POST', '/api/kingdom/mage-tower-allocation', {
-    allocation: { mages: 0, research_mages: 0, research_discipline: null }
-  });
-  if (result.error) return toast(result.error, 'error');
-  state.mage_tower_allocation = {};
-  renderMageTowerPanel();
-  toast('All mages released from tower', 'success');
-}
-
-// ── Shrine ────────────────────────────────────────────────────────────────────
-
-function renderShrinePanel() {
-  var shrines = state.bld_shrines || 0;
-  var warn = document.getElementById('shrine-no-shrine');
-  if (warn) warn.style.display = shrines === 0 ? 'block' : 'none';
-  var cntEl = document.getElementById('shrine-count'); if (cntEl) cntEl.textContent = shrines;
-  var availEl = document.getElementById('shrine-clerics-avail'); if (availEl) availEl.textContent = fmt(state.clerics || 0);
-
-  var alloc = state.shrine_allocation || {};
-  var clericsEl = document.getElementById('shrine-clerics');
-  if (clericsEl) clericsEl.value = alloc.clerics || 0;
-
-  var moraleRate = Math.floor(Math.min(Number(alloc.clerics) || 0, shrines * 15) / 10);
-  var moraleEl = document.getElementById('shrine-morale-rate');
-  if (moraleEl) moraleEl.textContent = fmt(moraleRate);
-}
-
-async function saveShrineAllocation() {
-  var shrines = state.bld_shrines || 0;
-  if (shrines === 0) return toast('Build a Shrine first', 'error');
-  var clerics = parseInt(document.getElementById('shrine-clerics')?.value) || 0;
-  if (clerics > (state.clerics || 0)) return toast('Not enough clerics', 'error');
-  var result = await apiCall('POST', '/api/kingdom/shrine-allocation', { allocation: { clerics } });
-  if (result.error) return toast(result.error, 'error');
-  state.shrine_allocation = result.allocation;
-  renderShrinePanel();
-  toast('Shrine allocation saved', 'success');
-}
-
-async function releaseAllShrineClericsFn() {
-  var el = document.getElementById('shrine-clerics');
-  if (el) el.value = 0;
-  var result = await apiCall('POST', '/api/kingdom/shrine-allocation', { allocation: { clerics: 0 } });
-  if (result.error) return toast(result.error, 'error');
-  state.shrine_allocation = {};
-  renderShrinePanel();
-  toast('All clerics released from shrine', 'success');
-}
-
-// ── Library ───────────────────────────────────────────────────────────────────
-
 var SCROLL_DEFS = [
   { id:'spark',      tier:1, minSB:100,  mages:5,   turns:5,   label:'Spark'      },
   { id:'fog_of_war', tier:1, minSB:150,  mages:8,   turns:8,   label:'Fog of War' },
@@ -8055,99 +7864,43 @@ var SCROLL_DEFS = [
   { id:'shield',     tier:3, minSB:1500, mages:40,  turns:60,  label:'Shield'     },
   { id:'armageddon', tier:4, minSB:2000, mages:100, turns:200, label:'Armageddon' },
 ];
-var spells = SCROLL_DEFS; // alias used by spell panel
+
+async function saveMageTowerAllocation() {
+  var towers = state.bld_cathedrals || 0;
+  if (towers === 0) return toast('Build a Mage Tower first', 'error');
+  var scrollCraft = document.getElementById('st-tower-scroll-craft')?.value || null;
+  var result = await apiCall('POST', '/api/kingdom/mage-tower-allocation', {
+    allocation: { scroll_craft: scrollCraft }
+  });
+  if (result.error) return toast(result.error, 'error');
+  state.mage_tower_allocation = result.allocation;
+  loadStudies();
+  toast('Mage Tower crafting task saved', 'success');
+}
 
 function renderLibraryPanel() {
-  var libs = state.bld_libraries || 0;
-  var noLibWarn = document.getElementById('lib-no-library');
-  if (noLibWarn) noLibWarn.style.display = libs === 0 ? 'block' : 'none';
-
-  // Availability
-  var magesAvail = document.getElementById('lib-mages-avail');
-  var scribesAvail = document.getElementById('lib-scribes-avail');
-  if (magesAvail) magesAvail.textContent = fmt(state.mages || 0);
-  if (scribesAvail) scribesAvail.textContent = fmt(state.scribes || 0);
-
-  // Populate saved allocation
   var alloc = state.library_allocation || {};
-  var libMages = document.getElementById('lib-mages');
-  var libScribes = document.getElementById('lib-scribes');
-  if (libMages) libMages.value = alloc.mages || 0;
-  if (libScribes) libScribes.value = alloc.scribes || 0;
-
-  // Mana rate
-  var magesInLib = Math.min(Number(alloc.mages) || 0, state.mages || 0);
-  var manaRate = document.getElementById('lib-mana-rate');
-  if (manaRate) manaRate.textContent = fmt(Math.floor(magesInLib / 10));
-
-  // Populate scroll craft dropdown — only show scrolls with enough spellbook
-  var scrollSel = document.getElementById('lib-scroll-craft');
-  if (scrollSel) {
-    var sb = state.res_spellbook || 0;
-    var tierLabels = { 1:'Tier 1', 2:'Tier 2', 3:'Tier 3', 4:'Tier 4' };
-    var currentTier = 0;
-    scrollSel.innerHTML = '<option value="">— none —</option>';
-    SCROLL_DEFS.forEach(function(s) {
-      if (sb < s.minSB) return; // locked
-      if (s.tier !== currentTier) {
-        var og = document.createElement('optgroup');
-        og.label = tierLabels[s.tier] + ' — Spellbook ' + s.minSB + '+';
-        scrollSel.appendChild(og);
-        currentTier = s.tier;
-      }
-      var opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = s.label + ' (' + s.mages + ' mages · ' + s.turns + ' turns)';
-      if (alloc.scroll_craft === s.id) opt.selected = true;
-      scrollSel.appendChild(opt);
-    });
-  }
-
-  var scribeSel = document.getElementById('lib-scribe-craft');
+  var scribeSel = document.getElementById('st-lib-scribe-craft');
   if (scribeSel && alloc.scribe_craft) {
     for (var i = 0; i < scribeSel.options.length; i++) {
       if (scribeSel.options[i].value === alloc.scribe_craft) { scribeSel.selectedIndex = i; break; }
     }
+  } else if (scribeSel) {
+    scribeSel.selectedIndex = 0;
   }
 
-  // Scroll inventory
-  var inv = document.getElementById('lib-scroll-inventory');
-  if (inv) {
-    var scrolls = state.scrolls || {};
-    var scrollKeys = Object.keys(scrolls).filter(function(s) { return scrolls[s] > 0; });
-    if (scrollKeys.length === 0) {
-      inv.innerHTML = '<div style="font-size:13px;color:var(--text3)">No scrolls in your library.</div>';
-    } else {
-      inv.innerHTML = scrollKeys.map(function(s) {
-        var def = SCROLL_DEFS.find(function(d) { return d.id === s; });
-        var label = def ? def.label : s;
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">'
-          + '<span style="color:var(--text)">✨ ' + label + '</span>'
-          + '<span style="color:var(--gold);font-weight:600">×' + scrolls[s] + '</span>'
-          + '</div>';
-      }).join('');
-    }
-  }
-
-  // Crafting progress
   var prog = state.library_progress || {};
-  var craftEl = document.getElementById('lib-craft-progress');
+  var craftEl = document.getElementById('st-lib-craft-progress');
   if (craftEl) {
     var items = [];
     Object.keys(prog).forEach(function(k) {
       if (!prog[k] || prog[k] <= 0) return;
-      if (k.startsWith('scroll_')) {
-        var spellId = k.replace('scroll_', '');
-        var def = SCROLL_DEFS.find(function(d) { return d.id === spellId; });
-        var label = def ? def.label : spellId;
-        var pct = Math.min(100, Math.floor((prog[k] / (def ? def.turns : 10)) * 100));
-        items.push({ label: '✨ ' + label + ' scroll', pct: pct, color: 'var(--purple)' });
-      } else if (k === 'scribe_map') {
-        var pct2 = Math.min(100, Math.floor((prog[k] / 10) * 100));
-        items.push({ label: '🗺️ Map', pct: pct2, color: 'var(--green)' });
+      if (k === 'scribe_map') {
+        var pct = Math.min(100, Math.floor((prog[k] / 10) * 100));
+        items.push({ label: '🗺️ Map', pct: pct, color: 'var(--green)' });
       } else if (k === 'scribe_blueprint') {
-        var pct3 = Math.min(100, Math.floor((prog[k] / 20) * 100));
-        items.push({ label: '📐 Blueprint', pct: pct3, color: 'var(--amber)' });
+        var pct2 = Math.min(100, Math.floor((prog[k] / 20) * 100));
+        items.push({ label: '📐 Blueprint', pct: pct2, color: 'var(--amber)' });
       }
     });
     if (items.length === 0) {
@@ -8165,30 +7918,43 @@ function renderLibraryPanel() {
       }).join('');
     }
   }
-
-  // Maps & blueprints counts
-  var mapsEl = document.getElementById('lib-maps');
-  var bpEl = document.getElementById('lib-blueprints');
-  if (mapsEl) mapsEl.textContent = fmt(state.maps || 0);
-  if (bpEl) bpEl.textContent = fmt(state.blueprints_stored || 0);
 }
 
 async function saveLibraryAllocation() {
   var libs = state.bld_libraries || 0;
   if (libs === 0) return toast('Build a library first', 'error');
-  var mages   = parseInt(document.getElementById('lib-mages')?.value)   || 0;
-  var scribes = parseInt(document.getElementById('lib-scribes')?.value) || 0;
-  if (mages   > (state.mages   || 0)) return toast('Not enough mages',   'error');
-  if (scribes > (state.scribes || 0)) return toast('Not enough scribes', 'error');
-  var scrollCraft  = document.getElementById('lib-scroll-craft')?.value  || null;
-  var scribeCraft  = document.getElementById('lib-scribe-craft')?.value  || null;
+  var scribeCraft = document.getElementById('st-lib-scribe-craft')?.value || null;
   var result = await apiCall('POST', '/api/kingdom/library-allocation', {
-    allocation: { mages, scribes, scroll_craft: scrollCraft || null, scribe_craft: scribeCraft || null }
+    allocation: { scribe_craft: scribeCraft || null }
   });
   if (result.error) return toast(result.error, 'error');
   state.library_allocation = result.allocation;
-  renderLibraryPanel();
-  toast('Library allocation saved', 'success');
+  loadStudies();
+  toast('Library work task saved', 'success');
+}
+
+function renderShrinePanel() {
+  var shrines = state.bld_shrines || 0;
+  var cap = shrines * 15;
+  var clerics = Math.min(state.clerics || 0, cap);
+  var el = function(id){ return document.getElementById(id); };
+  if (el('st-shrine-cap'))   el('st-shrine-cap').textContent = fmt(cap);
+  if (el('st-shrines'))      el('st-shrines').textContent = fmt(shrines);
+  if (el('st-clerics-shrine')) el('st-clerics-shrine').textContent = fmt(clerics);
+  
+  var sacredMult = ((studiesData||{}).shrine_upgrades||{}).sacred_grove ? 1.15 : 1.0;
+  var moraleGain = Math.floor((clerics / 10) * sacredMult);
+  if (el('st-morale-gain'))  el('st-morale-gain').textContent = clerics > 0 ? '+' + moraleGain : '0';
+}
+
+async function saveShrineAllocation() {
+  var clerics = parseInt(document.getElementById('st-shrine-clerics')?.value) || 0;
+  if (clerics > (state.clerics || 0)) return toast('Not enough clerics', 'error');
+  var result = await apiCall('POST', '/api/kingdom/shrine-allocation', { allocation: { clerics } });
+  if (result.error) return toast(result.error, 'error');
+  state.shrine_allocation = result.allocation;
+  loadStudies();
+  toast('Shrine allocation saved', 'success');
 }
 
 function xpForLevelJS(level) {

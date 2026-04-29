@@ -112,7 +112,7 @@ async function runAiKingdom(db, engine, playerId) {
     'bld_shrines','bld_libraries',
     'build_allocation','build_progress','research_allocation','mage_tower_allocation',
     'build_queue','xp','level','troop_levels','maps','scrolls','active_effects',
-    'library_progress','library_allocation',
+    'library_progress','tower_progress','library_allocation',
   ]);
 
   async function applyK(kingdom, updates) {

@@ -97,6 +97,7 @@ async function initDb() {
       bld_libraries     INTEGER NOT NULL DEFAULT 0,
       library_allocation TEXT NOT NULL DEFAULT '{}',
       library_progress   TEXT NOT NULL DEFAULT '{}',
+      tower_progress     TEXT NOT NULL DEFAULT '{}',
       scrolls           TEXT NOT NULL DEFAULT '{}',
       maps              INTEGER NOT NULL DEFAULT 0,
       blueprints_stored INTEGER NOT NULL DEFAULT 0,
@@ -332,6 +333,7 @@ async function initDb() {
   if (!cols.includes('bld_libraries'))       await addColumn('kingdoms', 'bld_libraries',       'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('library_allocation'))  await addColumn('kingdoms', 'library_allocation',  "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('library_progress'))    await addColumn('kingdoms', 'library_progress',    "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('tower_progress'))      await addColumn('kingdoms', 'tower_progress',      "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('scrolls'))             await addColumn('kingdoms', 'scrolls',             "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('maps'))                await addColumn('kingdoms', 'maps',                'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('blueprints_stored'))   await addColumn('kingdoms', 'blueprints_stored',   'INTEGER NOT NULL DEFAULT 0');
