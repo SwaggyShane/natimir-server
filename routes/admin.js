@@ -192,7 +192,7 @@ module.exports = function(db, io) {
       Object.entries(fields)
         .filter(([k, v]) => ALLOWED.has(k) && v !== '' && v !== null && v !== undefined)
         .map(([k, v]) => [k, Number(v)])
-        .filter(([k, v]) => !isNaN(v))
+        .filter(([_k, v]) => !isNaN(v))
     );
 
     if (Object.keys(safe).length === 0) return res.status(400).json({ error: 'No valid fields to update' });

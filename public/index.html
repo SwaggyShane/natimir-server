@@ -1088,11 +1088,7 @@
               <div class="trow"><span class="name">Mages (Current/Cap)</span><span class="count"><span id="st-mages-tower">0</span> / <span id="st-tower-cap">0</span></span></div>
               
               <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-                <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Craft Scroll</div>
-                <select id="st-tower-scroll-craft" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-size:13px;margin-bottom:10px">
-                  <option value="">— none —</option>
-                </select>
-                <button class="btn btn-gold" style="width:100%" onclick="saveMageTowerAllocation()">Save crafting task</button>
+                <div id="st-tower-list"></div>
               </div>
             </div>
 
@@ -1213,13 +1209,7 @@
               <div class="trow"><span class="name">Scribes (Current/Cap)</span><span class="count"><span id="st-scribes-lib">0</span> / <span id="st-lib-cap">0</span></span></div>
               
               <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-                <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Work Task</div>
-                <select id="st-lib-scribe-craft" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-size:13px;margin-bottom:10px">
-                  <option value="">— none —</option>
-                  <option value="map">Map (for world interaction)</option>
-                  <option value="blueprint">Blueprint (+10% build speed)</option>
-                </select>
-                <button class="btn btn-gold" style="width:100%" onclick="saveLibraryAllocation()">Save work task</button>
+                <div id="st-lib-list"></div>
               </div>
             </div>
 
@@ -7746,29 +7736,29 @@ function distributeTrainingEvenly() {
 
 function renderMageTowerPanel() {
   var alloc = state.mage_tower_allocation || {};
+  if (typeof alloc === 'string') { try { alloc = JSON.parse(alloc); } catch(e){ alloc={}; } }
 
-  // Scroll craft dropdown
-  var scrollSel = document.getElementById('st-tower-scroll-craft');
-  if (scrollSel) {
-    var sb = state.res_spellbook || 0;
-    var tierLabels = { 1:'Tier 1', 2:'Tier 2', 3:'Tier 3', 4:'Tier 4' };
-    var currentTier = 0;
-    scrollSel.innerHTML = '<option value="">— none —</option>';
-    SCROLL_DEFS.forEach(function(s) {
-      if (sb < s.minSB) return;
-      if (s.tier !== currentTier) {
-        var og = document.createElement('optgroup');
-        og.label = tierLabels[s.tier] + ' — SB ' + s.minSB + '+';
-        scrollSel.appendChild(og);
-        currentTier = s.tier;
-      }
-      var opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = s.label + ' (' + s.mages + ' mages · ' + s.turns + ' turns)';
-      if (alloc.scroll_craft === s.id) opt.selected = true;
-      scrollSel.appendChild(opt);
-    });
-  }
+  var sb = state.res_spellbook || 0;
+  var html = '';
+  SCROLL_DEFS.forEach(function(s) {
+    if (sb < s.minSB) return;
+    var queued = alloc[s.id] || 0;
+    var qText = queued > 0 ? '<div style="color:var(--green);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:8px"><span>Queued: <strong>' + queued + '</strong></span><button class="btn" style="padding:2px 6px;font-size:11px;min-height:0;background:var(--red);color:#fff;border:none" onclick="clearTowerItem(\'' + s.id + '\')">Cancel</button></div>' : '';
+    html += '<div class="bld-row" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border2)">'
+      + '<div class="info">'
+      + '<div class="name">' + s.label + '</div>'
+      + '<div class="desc">Tier ' + s.tier + ' • ' + s.mages + ' mages • ' + s.turns + ' turns</div>'
+      + qText
+      + '</div>'
+      + '<div class="actions" style="display:flex;gap:4px">'
+      + '<input type="number" id="tower-input-' + s.id + '" min="1" placeholder="Qty" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px">'
+      + '<button class="btn btn-max" onclick="document.getElementById(\'tower-input-' + s.id + '\').value = 1000">Max</button>'
+      + '<button class="btn btn-gold" onclick="craftTowerItem(\'' + s.id + '\')">Build</button>'
+      + '</div></div>';
+  });
+  
+  var el = document.getElementById('st-tower-list');
+  if (el) el.innerHTML = html || '<div style="font-size:13px;color:var(--text3)">No scrolls available to craft yet. Research Spellbook!</div>';
 
   // Scroll inventory
   var inv = document.getElementById('st-tower-scroll-inventory');
@@ -7865,29 +7855,51 @@ var SCROLL_DEFS = [
   { id:'armageddon', tier:4, minSB:2000, mages:100, turns:200, label:'Armageddon' },
 ];
 
-async function saveMageTowerAllocation() {
+async function craftTowerItem(id) {
   var towers = state.bld_cathedrals || 0;
   if (towers === 0) return toast('Build a Mage Tower first', 'error');
-  var scrollCraft = document.getElementById('st-tower-scroll-craft')?.value || null;
-  var result = await apiCall('POST', '/api/kingdom/mage-tower-allocation', {
-    allocation: { scroll_craft: scrollCraft }
-  });
+  var qty = parseInt(document.getElementById('tower-input-' + id)?.value) || 0;
+  if (qty <= 0) return toast('Enter a quantity to craft', 'error');
+  var result = await apiCall('POST', '/api/kingdom/tower-craft', { item: id, qty: qty });
   if (result.error) return toast(result.error, 'error');
   state.mage_tower_allocation = result.allocation;
   loadStudies();
-  toast('Mage Tower crafting task saved', 'success');
+  toast('Added to Mage Tower queue', 'success');
+}
+
+async function clearTowerItem(id) {
+  var result = await apiCall('POST', '/api/kingdom/tower-cancel', { item: id });
+  if (result.error) return toast(result.error, 'error');
+  state.mage_tower_allocation = result.allocation;
+  loadStudies();
+  toast('Removed from Mage Tower queue', 'success');
 }
 
 function renderLibraryPanel() {
   var alloc = state.library_allocation || {};
-  var scribeSel = document.getElementById('st-lib-scribe-craft');
-  if (scribeSel && alloc.scribe_craft) {
-    for (var i = 0; i < scribeSel.options.length; i++) {
-      if (scribeSel.options[i].value === alloc.scribe_craft) { scribeSel.selectedIndex = i; break; }
-    }
-  } else if (scribeSel) {
-    scribeSel.selectedIndex = 0;
-  }
+  if (typeof alloc === 'string') { try { alloc = JSON.parse(alloc); } catch(e){ alloc={}; } }
+
+  var html = '';
+  ['map', 'blueprint'].forEach(function(item) {
+    var currInv = item === 'map' ? (state.maps||0) : (state.blueprints_stored||0);
+    var info = item === 'map' ? 'World exploration • 20 scribes • 20 turns' : 'Construction bonus • 30 scribes • 30 turns';
+    var queued = alloc[item] || 0;
+    var qText = queued > 0 ? '<div style="color:var(--green);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:8px"><span>Queued: <strong>' + queued + '</strong></span><button class="btn" style="padding:2px 6px;font-size:11px;min-height:0;background:var(--red);color:#fff;border:none" onclick="clearLibraryItem(\'' + item + '\')">Cancel</button></div>' : '';
+    html += '<div class="bld-row" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border2)">'
+      + '<div class="info">'
+      + '<div class="name" style="text-transform:capitalize">' + item + '  <span style="font-size:11px;color:var(--text3);font-weight:normal">(Owned: ' + currInv + ')</span></div>'
+      + '<div class="desc">' + info + '</div>'
+      + qText
+      + '</div>'
+      + '<div class="actions" style="display:flex;gap:4px">'
+      + '<input type="number" id="lib-input-' + item + '" min="1" placeholder="Qty" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px;font-size:13px">'
+      + '<button class="btn btn-max" onclick="document.getElementById(\'lib-input-' + item + '\').value = 1000">Max</button>'
+      + '<button class="btn btn-gold" onclick="craftLibraryItem(\'' + item + '\')">Build</button>'
+      + '</div></div>';
+  });
+  
+  var el = document.getElementById('st-lib-list');
+  if (el) el.innerHTML = html;
 
   var prog = state.library_progress || {};
   var craftEl = document.getElementById('st-lib-craft-progress');
@@ -7896,15 +7908,15 @@ function renderLibraryPanel() {
     Object.keys(prog).forEach(function(k) {
       if (!prog[k] || prog[k] <= 0) return;
       if (k === 'scribe_map') {
-        var pct = Math.min(100, Math.floor((prog[k] / 10) * 100));
+        var pct = Math.min(100, Math.floor((prog[k] / 20) * 100));
         items.push({ label: '🗺️ Map', pct: pct, color: 'var(--green)' });
       } else if (k === 'scribe_blueprint') {
-        var pct2 = Math.min(100, Math.floor((prog[k] / 20) * 100));
+        var pct2 = Math.min(100, Math.floor((prog[k] / 30) * 100));
         items.push({ label: '📐 Blueprint', pct: pct2, color: 'var(--amber)' });
       }
     });
     if (items.length === 0) {
-      craftEl.innerHTML = '<div style="font-size:13px;color:var(--text3)">Nothing being crafted.</div>';
+      craftEl.innerHTML = '<div style="font-size:13px;color:var(--text3)">Library is idle.</div>';
     } else {
       craftEl.innerHTML = items.map(function(item) {
         return '<div style="margin-bottom:8px">'
@@ -7920,17 +7932,24 @@ function renderLibraryPanel() {
   }
 }
 
-async function saveLibraryAllocation() {
+async function craftLibraryItem(id) {
   var libs = state.bld_libraries || 0;
   if (libs === 0) return toast('Build a library first', 'error');
-  var scribeCraft = document.getElementById('st-lib-scribe-craft')?.value || null;
-  var result = await apiCall('POST', '/api/kingdom/library-allocation', {
-    allocation: { scribe_craft: scribeCraft || null }
-  });
+  var qty = parseInt(document.getElementById('lib-input-' + id)?.value) || 0;
+  if (qty <= 0) return toast('Enter a quantity to craft', 'error');
+  var result = await apiCall('POST', '/api/kingdom/library-craft', { item: id, qty: qty });
   if (result.error) return toast(result.error, 'error');
   state.library_allocation = result.allocation;
   loadStudies();
-  toast('Library work task saved', 'success');
+  toast('Added to Library queue', 'success');
+}
+
+async function clearLibraryItem(id) {
+  var result = await apiCall('POST', '/api/kingdom/library-cancel', { item: id });
+  if (result.error) return toast(result.error, 'error');
+  state.library_allocation = result.allocation;
+  loadStudies();
+  toast('Removed from Library queue', 'success');
 }
 
 function renderShrinePanel() {

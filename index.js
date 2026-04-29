@@ -11,7 +11,12 @@ const { requireAuth } = require('./routes/middleware');
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server, { cors: { origin: '*', credentials: true } });
+const io     = new Server(server, { 
+  cors: { 
+    origin: process.env.NODE_ENV === 'production' ? (process.env.CORS_ORIGIN || false) : '*', 
+    credentials: true 
+  } 
+});
 
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
@@ -59,7 +64,6 @@ const AI_KINGDOMS = [
 ];
 
 async function seedAiKingdoms(db) {
-  const engine = require('./game/engine');
   let seeded = 0;
   for (const ai of AI_KINGDOMS) {
     const existing = await db.get('SELECT id FROM players WHERE username = ?', [ai.username]);

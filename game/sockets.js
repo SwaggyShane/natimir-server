@@ -1,7 +1,8 @@
 const jwt    = require('jsonwebtoken');
 const engine = require('./engine');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'narmir-dev-secret-change-in-prod';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 const onlinePlayers = new Map(); // playerId → { socketId, username, race, isMod, isAdmin, kingdomName }
 
 module.exports = function(io, db) {
@@ -58,16 +59,24 @@ module.exports = function(io, db) {
       if (attacker.id === defender.id) return ack?.({ error: 'Cannot attack yourself' });
       const result = engine.resolveMilitaryAttack(attacker, defender, Number(fighters), Number(mages) || 0);
       if (result.error) return ack?.({ error: result.error });
-      result.attackerUpdates.turns_stored = attacker.turns_stored - 1;
-      await applyUpdates(db, attacker.id, result.attackerUpdates);
-      await applyUpdates(db, defender.id, result.defenderUpdates);
-      await db.run('INSERT INTO combat_log (attacker_id, defender_id, type, attacker_won, land_transferred, detail) VALUES (?,?,?,?,?,?)',
-        [attacker.id, defender.id, 'military', result.win?1:0, result.report.landTransferred, JSON.stringify(result.report)]);
-      await insertNews(db, attacker.id, 'attack', result.atkEvent);
-      await insertNews(db, defender.id, 'attack', result.defEvent);
-      const defInfo = onlinePlayers.get(defender.player_id);
-      if (defInfo) io.to(defInfo.socketId).emit('event:attack_received', { from: attacker.name, message: result.defEvent, report: result.report });
-      ack?.({ ok: true, report: result.report, turns_stored: result.attackerUpdates.turns_stored });
+      try {
+        await db.run('BEGIN TRANSACTION');
+        result.attackerUpdates.turns_stored = attacker.turns_stored - 1;
+        await applyUpdates(db, attacker.id, result.attackerUpdates);
+        await applyUpdates(db, defender.id, result.defenderUpdates);
+        await db.run('INSERT INTO combat_log (attacker_id, defender_id, type, attacker_won, land_transferred, detail) VALUES (?,?,?,?,?,?)',
+          [attacker.id, defender.id, 'military', result.win?1:0, result.report.landTransferred, JSON.stringify(result.report)]);
+        await insertNews(db, attacker.id, 'attack', result.atkEvent);
+        await insertNews(db, defender.id, 'attack', result.defEvent);
+        await db.run('COMMIT');
+        const defInfo = onlinePlayers.get(defender.player_id);
+        if (defInfo) io.to(defInfo.socketId).emit('event:attack_received', { from: attacker.name, message: result.defEvent, report: result.report });
+        ack?.({ ok: true, report: result.report, turns_stored: result.attackerUpdates.turns_stored });
+      } catch (e) {
+        await db.run('ROLLBACK').catch(()=>{});
+        console.error(e);
+        ack?.({ error: 'Database error' });
+      }
     });
 
     // ── SPELL ────────────────────────────────────────────────────────────────
@@ -78,15 +87,22 @@ module.exports = function(io, db) {
       if (!target) return ack?.({ error: 'Target not found' });
       const result = engine.castSpell(caster, target, data.spellId, Boolean(data.obscure));
       if (result.error) return ack?.({ error: result.error });
-      result.casterUpdates.turns_stored = caster.turns_stored - 1;
-      await applyUpdates(db, caster.id, result.casterUpdates);
-      if (result.targetUpdates && Object.keys(result.targetUpdates).length)
-        await applyUpdates(db, target.id, result.targetUpdates);
-      if (result.casterEvent) await insertNews(db, caster.id, 'spell', result.casterEvent);
-      if (result.targetEvent) await insertNews(db, target.id, 'spell', result.targetEvent);
-      const tgtInfo = onlinePlayers.get(target.player_id);
-      if (tgtInfo && result.targetEvent) io.to(tgtInfo.socketId).emit('event:spell_received', { from: data.obscure?null:caster.name, spellId: data.spellId, message: result.targetEvent });
-      ack?.({ ok: true, report: result.report, turns_stored: result.casterUpdates.turns_stored });
+      try {
+        await db.run('BEGIN TRANSACTION');
+        result.casterUpdates.turns_stored = caster.turns_stored - 1;
+        await applyUpdates(db, caster.id, result.casterUpdates);
+        if (result.targetUpdates && Object.keys(result.targetUpdates).length)
+          await applyUpdates(db, target.id, result.targetUpdates);
+        if (result.casterEvent) await insertNews(db, caster.id, 'spell', result.casterEvent);
+        if (result.targetEvent) await insertNews(db, target.id, 'spell', result.targetEvent);
+        await db.run('COMMIT');
+        const tgtInfo = onlinePlayers.get(target.player_id);
+        if (tgtInfo && result.targetEvent) io.to(tgtInfo.socketId).emit('event:spell_received', { from: data.obscure?null:caster.name, spellId: data.spellId, message: result.targetEvent });
+        ack?.({ ok: true, report: result.report, turns_stored: result.casterUpdates.turns_stored });
+      } catch (e) {
+        await db.run('ROLLBACK').catch(()=>{});
+        ack?.({ error: 'Database error' });
+      }
     });
 
     // ── COVERT ───────────────────────────────────────────────────────────────
@@ -95,12 +111,19 @@ module.exports = function(io, db) {
       const target = await db.get('SELECT * FROM kingdoms WHERE id = ?', [data.targetId]);
       if (!target) return ack?.({ error: 'Target not found' });
       const result = engine.covertSpy(spy, target, Number(data.units)||100);
-      const upd = result.spyUpdates||{}; const xp = engine.awardXp(spy,'covert',1);
-      upd.xp = xp.xp; upd.level = xp.level;
-      if (Object.keys(upd).length) await applyUpdates(db, spy.id, upd);
-      await insertNews(db, spy.id, 'covert', result.spyEvent);
-      if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
-      ack?.({ ok:true, success:result.success, report:result.report||null });
+      try {
+        await db.run('BEGIN TRANSACTION');
+        const upd = result.spyUpdates||{}; const xp = engine.awardXp(spy,'covert',1);
+        upd.xp = xp.xp; upd.level = xp.level;
+        if (Object.keys(upd).length) await applyUpdates(db, spy.id, upd);
+        await insertNews(db, spy.id, 'covert', result.spyEvent);
+        if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
+        await db.run('COMMIT');
+        ack?.({ ok:true, success:result.success, report:result.report||null });
+      } catch (e) {
+        await db.run('ROLLBACK').catch(()=>{});
+        ack?.({ error: 'Database error' });
+      }
     });
 
     socket.on('action:loot', async (data, ack) => {
@@ -109,13 +132,20 @@ module.exports = function(io, db) {
       if (!target) return ack?.({ error: 'Target not found' });
       const result = engine.covertLoot(thief, target, data.lootType, Number(data.thieves)||100);
       if (result.error) return ack?.({ error: result.error });
-      const upd = result.thiefUpdates||{}; const xp = engine.awardXp(thief,'covert',1);
-      upd.xp = xp.xp; upd.level = xp.level;
-      if (Object.keys(upd).length) await applyUpdates(db, thief.id, upd);
-      if (result.success && result.targetUpdates) await applyUpdates(db, target.id, result.targetUpdates);
-      await insertNews(db, thief.id, 'covert', result.thiefEvent||result.event);
-      if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
-      ack?.({ ok:true, success:result.success, stolen:result.stolen });
+      try {
+        await db.run('BEGIN TRANSACTION');
+        const upd = result.thiefUpdates||{}; const xp = engine.awardXp(thief,'covert',1);
+        upd.xp = xp.xp; upd.level = xp.level;
+        if (Object.keys(upd).length) await applyUpdates(db, thief.id, upd);
+        if (result.success && result.targetUpdates) await applyUpdates(db, target.id, result.targetUpdates);
+        await insertNews(db, thief.id, 'covert', result.thiefEvent||result.event);
+        if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
+        await db.run('COMMIT');
+        ack?.({ ok:true, success:result.success, stolen:result.stolen });
+      } catch (e) {
+        await db.run('ROLLBACK').catch(()=>{});
+        ack?.({ error: 'Database error' });
+      }
     });
 
     socket.on('action:assassinate', async (data, ack) => {
@@ -124,13 +154,20 @@ module.exports = function(io, db) {
       if (!target) return ack?.({ error: 'Target not found' });
       const result = engine.covertAssassinate(assassin, target, Number(data.ninjas)||50, data.unitType);
       if (result.error) return ack?.({ error: result.error });
-      const upd = result.assassinUpdates||{}; const xp = engine.awardXp(assassin,'covert',1);
-      upd.xp = xp.xp; upd.level = xp.level;
-      if (Object.keys(upd).length) await applyUpdates(db, assassin.id, upd);
-      if (result.success && result.targetUpdates) await applyUpdates(db, target.id, result.targetUpdates);
-      await insertNews(db, assassin.id, 'covert', result.assassinEvent||result.event);
-      if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
-      ack?.({ ok:true, success:result.success, killed:result.killed });
+      try {
+        await db.run('BEGIN TRANSACTION');
+        const upd = result.assassinUpdates||{}; const xp = engine.awardXp(assassin,'covert',1);
+        upd.xp = xp.xp; upd.level = xp.level;
+        if (Object.keys(upd).length) await applyUpdates(db, assassin.id, upd);
+        if (result.success && result.targetUpdates) await applyUpdates(db, target.id, result.targetUpdates);
+        await insertNews(db, assassin.id, 'covert', result.assassinEvent||result.event);
+        if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
+        await db.run('COMMIT');
+        ack?.({ ok:true, success:result.success, killed:result.killed });
+      } catch (e) {
+        await db.run('ROLLBACK').catch(()=>{});
+        ack?.({ error: 'Database error' });
+      }
     });
 
     // ── GLOBAL CHAT ──────────────────────────────────────────────────────────
@@ -298,8 +335,37 @@ function broadcastOnlineList(io) {
 }
 
 async function applyUpdates(db, kingdomId, updates) {
+  if (!updates || Object.keys(updates).length === 0) return;
+  const VALID_COLS = new Set([
+    'gold','mana','land','population','morale','food','turn','turns_stored',
+    'fighters','rangers','clerics','mages','thieves','ninjas',
+    'researchers','engineers','scribes',
+    'war_machines','weapons_stockpile','armor_stockpile',
+    'res_economy','res_weapons','res_armor','res_military','res_spellbook',
+    'res_attack_magic','res_defense_magic','res_entertainment',
+    'res_construction','res_war_machines',
+    'bld_farms','bld_barracks','bld_markets','bld_cathedrals','bld_training',
+    'bld_colosseums','bld_castles','bld_vaults','bld_smithies','bld_armories',
+    'bld_guard_towers','bld_outposts','bld_schools','bld_libraries',
+    'bld_mage_towers','bld_shrines','bld_housing','bld_taverns',
+    'tools_hammers','tools_scaffolding','tools_blueprints','blueprints_stored',
+    'hammer_turns_used','smithy_allocation','racial_bonuses_unlocked',
+    'last_event_at','active_event','discovered_kingdoms','location_maps_wip',
+    'bld_walls','wall_upgrades','tower_def_upgrades','outpost_upgrades','defense_upgrades',
+    'tower_upgrades','school_upgrades','shrine_upgrades','library_upgrades',
+    'research_focus','divine_sanctuary_used',
+    'farm_upgrades','market_upgrades','tavern_upgrades',
+    'food_shortage_turns','food_surplus_turns','mercenaries',
+    'maps','scrolls','active_effects',
+    'xp','level','troop_levels',
+    'tax','tax_rate',
+    'build_queue','build_progress','build_allocation',
+    'research_allocation','training_allocation',
+    'library_allocation','library_progress','tower_progress',
+    'mage_tower_allocation','shrine_allocation'
+  ]);
   const safe = Object.fromEntries(
-    Object.entries(updates).filter(([k, v]) => v !== undefined)
+    Object.entries(updates).filter(([k, v]) => v !== undefined && VALID_COLS.has(k))
   );
   if (!safe || !Object.keys(safe).length) return;
   const cols = Object.keys(safe).map(k=>`${k} = ?`).join(', ');

@@ -27,7 +27,6 @@ function assignRegion(race) {
 }
 
 const UNIT_COST = 250;
-const MAX_RESEARCHERS = 1_000_000;
 const MAX_RESEARCH = 1000; // percent cap for most disciplines
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -170,9 +169,6 @@ function effectiveTroopLevel(k, unit) {
   const data = troopLevels[unit] || { level: 1 };
   const raceBonus = TROOP_RACE_BONUS[k.race]?.[unit] || 1.0;
   // Race bonus multiplies above level 100 — a Dark Elf ninja at level 100 acts as level 180
-  const effectiveLevel = data.level < 100
-    ? data.level
-    : Math.floor(100 + (data.level - 100) * raceBonus);
   return Math.max(1, Math.floor(data.level * (data.level >= 100 ? raceBonus : 1 + (raceBonus - 1) * data.level / 100)));
 }
 
@@ -293,7 +289,6 @@ function defenseRating(k) {
   const towers  = k.bld_guard_towers  || 0;
   const outpost = k.bld_outposts      || 0;
   const wm      = k.war_machines      || 0;
-  const castle  = k.bld_castles       || 0;
   let defUpgrades = {};
   try { defUpgrades = JSON.parse(k.defense_upgrades||'{}'); } catch {}
   if (defUpgrades.citadel) return '🏰 Citadel';
@@ -315,7 +310,6 @@ function wallDefensePower(k) {
   let wallUpgrades = {};
   try { wallUpgrades = JSON.parse(k.wall_upgrades||'{}'); } catch {}
   const reinMult   = wallUpgrades.reinforced    ? 1.25 : 1.0;
-  const fortMult   = wallUpgrades.fortress_walls? 1.50 : 1.0; // on WM power — applied in combat
 
   // Base: each wall = 100 defense power (scaled by race + upgrades)
   const wmOnWalls  = Math.min(k.war_machines||0, walls);
@@ -890,8 +884,6 @@ function processTurn(k) {
   const raceResearch = raceBonus(k, 'research');
   const raceMagic    = raceBonus(k, 'magic');
   const researchers  = k.researchers || 0;
-  let allocation = {};
-  try { allocation = typeof k.research_allocation === 'string' ? JSON.parse(k.research_allocation || '{}') : (k.research_allocation || {}); } catch { allocation = {}; }
 
   if (researchers > 0) {
     const ALL_DISCIPLINES = [
@@ -1509,11 +1501,6 @@ function processBuildQueue(k, events) {
   let blueprintsUsed  = 0;
   let scaffoldingUsed = 0;
 
-  // Smithy caps
-  const smithies     = k.bld_smithies || 0;
-  const blueprintCap = smithies * 25;
-  const scaffoldCap  = smithies * 10;
-
   // Get engineer allocation
   let allocation = {};
   try { allocation = JSON.parse(k.build_allocation || '{}'); } catch { allocation = {}; }
@@ -1714,7 +1701,7 @@ function moraleMult(morale) {
   return Math.min(1.20, 1.00 + ((morale - 100) / 100) * 0.10); // 1.00–1.20 (capped at 1.20)
 }
 
-function resolveMilitaryAttack(attacker, defender, sentUnits, db_unused) {
+function resolveMilitaryAttack(attacker, defender, sentUnits) {
   const attackerUpdates = {};
   const defenderUpdates = {};
   // sentUnits: { fighters, rangers, mages, warMachines, ninjas, thieves }
@@ -2230,7 +2217,6 @@ function castSpell(caster, target, spellId, obscure) {
     targetUpdates.active_effects = JSON.stringify(targetEffects);
   }
 
-  const source = obscure ? 'An unknown sorcerer' : caster.name;
   const targetEvent = obscure
     ? `⚡ A mysterious ${spellId.replace(/_/g,' ')} spell struck your kingdom — ${damageDesc}.`
     : `⚡ ${caster.name} cast ${spellId.replace(/_/g,' ')} on your kingdom — ${damageDesc}.`;
@@ -2514,15 +2500,7 @@ function junkPrize() {
   return JUNK_PRIZES[Math.floor(Math.random() * JUNK_PRIZES.length)];
 }
 
-const RARITY = {
-  common:    { label: 'Common',    color: '#9a9bb5' },
-  uncommon:  { label: 'Uncommon',  color: '#4caf82' },
-  rare:      { label: 'Rare',      color: '#7c6af5' },
-  epic:      { label: 'Epic',      color: '#e8b84b' },
-  legendary: { label: 'Legendary', color: '#e05c5c' },
-};
-
-function expeditionRewards(type, rangers, fighters, k, db) {
+function expeditionRewards(type, rangers, fighters, k) {
   const tacBonus = 1 + ((k.res_military || 0) / 2000);
 
   // Race exploration bonus — affects all reward quantities
@@ -2881,39 +2859,56 @@ function processMageTower(k, events) {
   let scrolls = {};
   try { scrolls = JSON.parse(k.scrolls || '{}'); } catch { scrolls = {}; }
 
+  // Fallback for old schema
+  if (alloc.scroll_craft) {
+     alloc[alloc.scroll_craft] = alloc.scroll_target || 999;
+     delete alloc.scroll_craft;
+     delete alloc.scroll_target;
+  }
+
   const capacity = towers * 20;
   const effectiveMages = Math.min(k.mages || 0, capacity);
   const mageLvlMult = unitLevelMult(k, 'mages');
 
-  // Scrolls logic moved here from Library
-  const scrollCraft = alloc.scroll_craft || null;
-  if (effectiveMages > 0 && scrollCraft && SCROLL_REQUIREMENTS[scrollCraft]) {
-    const req = SCROLL_REQUIREMENTS[scrollCraft];
-    const effectiveMagesForScroll = Math.min(effectiveMages, req.mages);
+  let towerUpgrades = {};
+  try { towerUpgrades = JSON.parse(k.tower_upgrades || '{}'); } catch {}
+  const towerSpeedMult = towerUpgrades.ley_line_tap ? 1.25 : 1.0;
 
-    // Speed bonus from Tower upgrades? Ley Line Tap mention?
-    let towerUpgrades = {};
-    try { towerUpgrades = JSON.parse(k.tower_upgrades || '{}'); } catch {}
-    const towerSpeedMult = towerUpgrades.ley_line_tap ? 1.25 : 1.0;
+  let activeTasks = Object.keys(alloc).filter(t => alloc[t] > 0 && SCROLL_REQUIREMENTS[t]);
 
-    const workDone = (effectiveMagesForScroll >= req.mages ? 1 : effectiveMagesForScroll / req.mages) * mageLvlMult * towerSpeedMult;
-    const progKey = 'scroll_' + scrollCraft;
-    const newProg = (progress[progKey] || 0) + workDone;
+  if (effectiveMages > 0 && activeTasks.length > 0) {
+    let magesPerTask = effectiveMages / activeTasks.length;
+    let completedAny = false;
 
-    if (newProg >= req.turns) {
-      progress[progKey] = 0;
-      // High Elf racial bonus: level 5+ mages produce 2 scrolls
-      const helfBonus = racialUnitBonus(k, 'mages');
-      const scrollsProduced = helfBonus.doubleScrolls ? 2 : 1;
-      scrolls[scrollCraft] = (scrolls[scrollCraft] || 0) + scrollsProduced;
-      updates.scrolls = JSON.stringify(scrolls);
-      const bonusMsg = helfBonus.doubleScrolls ? ' (High Elf mastery — 2 scrolls produced!)' : '';
-      events.push({ type: 'system', message: `✨ A ${scrollCraft.replace(/_/g,' ')} scroll has been completed in the Mage Tower.${bonusMsg}` });
-      // Mage XP for scroll completion
-      const mXp = awardTroopXp({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'mages', 20);
-      updates.troop_levels = mXp.troop_levels;
-    } else {
-      progress[progKey] = newProg;
+    activeTasks.forEach(task => {
+      const req = SCROLL_REQUIREMENTS[task];
+      const effective = Math.min(magesPerTask, req.mages);
+      const progKey = 'scroll_' + task;
+      const workDone = (effective >= req.mages ? 1 : effective / req.mages) * mageLvlMult * towerSpeedMult;
+      const newProg = (progress[progKey] || 0) + workDone;
+
+      if (newProg >= req.turns) {
+         progress[progKey] = 0;
+         const helfBonus = racialUnitBonus(k, 'mages');
+         const scrollsProduced = helfBonus.doubleScrolls ? 2 : 1;
+         scrolls[task] = (scrolls[task] || 0) + scrollsProduced;
+         updates.scrolls = JSON.stringify(scrolls);
+         const bonusMsg = helfBonus.doubleScrolls ? ' (High Elf mastery — 2 scrolls produced!)' : '';
+         events.push({ type: 'system', message: `✨ A ${task.replace(/_/g,' ')} scroll has been completed in the Mage Tower.${bonusMsg}` });
+         
+         alloc[task] -= 1;
+         if (alloc[task] <= 0) delete alloc[task];
+         completedAny = true;
+
+         const mXp = awardTroopXp({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'mages', 20);
+         updates.troop_levels = mXp.troop_levels;
+      } else {
+         progress[progKey] = newProg;
+      }
+    });
+
+    if (completedAny) {
+      updates.mage_tower_allocation = JSON.stringify(alloc);
     }
   }
 
@@ -2968,6 +2963,13 @@ function processLibrary(k, events) {
   let progress = {};
   try { progress = JSON.parse(k.library_progress || '{}'); } catch { progress = {}; }
 
+  // Fallback for old schema
+  if (alloc.scribe_craft) {
+     alloc[alloc.scribe_craft] = alloc.scribe_target || 999;
+     delete alloc.scribe_craft;
+     delete alloc.scribe_target;
+  }
+
   // Library upgrades
   let libUpgrades = {};
   try { libUpgrades = JSON.parse(k.library_upgrades || '{}'); } catch {}
@@ -2980,28 +2982,43 @@ function processLibrary(k, events) {
   // Level multipliers
   const scribeLvlMult = unitLevelMult(k, 'scribes');
 
-  // Scribes craft maps/blueprints (scaled by level)
-  const scribeQueue = alloc.scribe_craft || null;
-  if (effectiveScribes > 0 && scribeQueue && SCRIBE_ITEMS[scribeQueue]) {
-    const req = SCRIBE_ITEMS[scribeQueue];
-    const effective = Math.min(effectiveScribes, req.scribes);
-    const progressKey = 'scribe_' + scribeQueue;
-    const workDone = (effective >= req.scribes ? 1 : effective / req.scribes) * scribeLvlMult * scribeSpeedMult;
-    const newProg = (progress[progressKey] || 0) + workDone;
-    if (newProg >= req.turns) {
-      progress[progressKey] = 0;
-      if (scribeQueue === 'map') {
-        updates.maps = (k.maps || 0) + 1;
-        events.push({ type: 'system', message: `📜 Your scribes completed a map in the Library — you can now interact with other kingdoms.` });
+  let activeTasks = Object.keys(alloc).filter(t => alloc[t] > 0 && SCRIBE_ITEMS[t]);
+
+  if (effectiveScribes > 0 && activeTasks.length > 0) {
+    let scribesPerTask = effectiveScribes / activeTasks.length;
+    let completedAny = false;
+
+    activeTasks.forEach(task => {
+      const req = SCRIBE_ITEMS[task];
+      const effective = Math.min(scribesPerTask, req.scribes);
+      const progressKey = 'scribe_' + task;
+      const workDone = (effective >= req.scribes ? 1 : effective / req.scribes) * scribeLvlMult * scribeSpeedMult;
+      const newProg = (progress[progressKey] || 0) + workDone;
+
+      if (newProg >= req.turns) {
+        progress[progressKey] = 0;
+        if (task === 'map') {
+          updates.maps = (k.maps || 0) + 1;
+          events.push({ type: 'system', message: `📜 Your scribes completed a map in the Library — you can now interact with other kingdoms.` });
+        } else {
+          updates.blueprints_stored = (k.blueprints_stored || 0) + 1;
+          events.push({ type: 'system', message: `📐 Your scribes completed a blueprint in the Library — construction speed bonus applied.` });
+        }
+        
+        alloc[task] -= 1;
+        if (alloc[task] <= 0) delete alloc[task];
+        completedAny = true;
+
+        // Scribe XP for completing an item
+        const sXp = awardTroopXp({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'scribes', 15);
+        updates.troop_levels = sXp.troop_levels;
       } else {
-        updates.blueprints_stored = (k.blueprints_stored || 0) + 1;
-        events.push({ type: 'system', message: `📐 Your scribes completed a blueprint in the Library — construction speed bonus applied.` });
+        progress[progressKey] = newProg;
       }
-      // Scribe XP for completing an item
-      const sXp = awardTroopXp({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'scribes', 15);
-      updates.troop_levels = sXp.troop_levels;
-    } else {
-      progress[progressKey] = newProg;
+    });
+
+    if (completedAny) {
+      updates.library_allocation = JSON.stringify(alloc);
     }
   }
 

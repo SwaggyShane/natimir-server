@@ -48,8 +48,7 @@ module.exports = function(db) {
     const k = await db.get('SELECT id, discovered_kingdoms FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
     
-    let discovered = {};
-    try { discovered = JSON.parse(k.discovered_kingdoms || '{}'); } catch {}
+    try { JSON.parse(k.discovered_kingdoms || '{}'); } catch {}
     
     const rows = await db.all(`
       SELECT k.id, k.name, k.race, k.land, k.turn, k.population,
@@ -333,7 +332,8 @@ module.exports = function(db) {
     res.json({ ok:true, bought, cost:actualCost, scaffolding_stored:newScaff, gold:(k.gold||0)-actualCost });
   });
 
-  router.post('/smithy-allocation', requireAuth, async (req, res) => {
+  router.post('/smithy-allocation', requireAuth, async (_req, res) => {
+    res.json({ ok:true });
   });
   router.post('/search', requireAuth, async (req, res) => {
     const { type, rangers } = req.body;
@@ -373,7 +373,6 @@ module.exports = function(db) {
       } else if (type === 'targets') {
         const scouts = Math.max(1, r);
         const baseFound = Math.floor(scouts * 0.005) + 1; // scaled down slightly
-        const searchRange = 5 + Math.floor(Math.log10(scouts) * 2);
         
         // Find random kingdoms I haven't discovered yet
         let disc = {};
@@ -438,18 +437,34 @@ module.exports = function(db) {
   });
 
   // ── Mage tower allocation ────────────────────────────────────────────────────
-  router.post('/mage-tower-allocation', requireAuth, async (req, res) => {
-    const { allocation } = req.body;
-    if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
-    const k = await db.get('SELECT id, bld_cathedrals FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+  router.post('/tower-craft', requireAuth, async (req, res) => {
+    const { item, qty } = req.body;
+    if (!item || qty <= 0) return res.status(400).json({ error: 'Invalid input' });
+    const k = await db.get('SELECT id, bld_cathedrals, mage_tower_allocation FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
     if ((k.bld_cathedrals || 0) === 0) return res.status(400).json({ error: 'You need at least 1 Mage Tower first' });
 
-    const save = {
-      scroll_craft: allocation.scroll_craft || null
-    };
-    await db.run('UPDATE kingdoms SET mage_tower_allocation = ? WHERE id = ?', [JSON.stringify(save), k.id]);
-    res.json({ ok: true, allocation: save });
+    let alloc = {};
+    try { alloc = JSON.parse(k.mage_tower_allocation || '{}'); } catch {}
+    if (alloc.scroll_craft) { alloc[alloc.scroll_craft] = alloc.scroll_target || 999; delete alloc.scroll_craft; delete alloc.scroll_target; }
+    
+    alloc[item] = (alloc[item] || 0) + Number(qty);
+    await db.run('UPDATE kingdoms SET mage_tower_allocation = ? WHERE id = ?', [JSON.stringify(alloc), k.id]);
+    res.json({ ok: true, allocation: JSON.stringify(alloc) });
+  });
+
+  router.post('/tower-cancel', requireAuth, async (req, res) => {
+    const { item } = req.body;
+    const k = await db.get('SELECT id, mage_tower_allocation FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+
+    let alloc = {};
+    try { alloc = JSON.parse(k.mage_tower_allocation || '{}'); } catch {}
+    if (alloc.scroll_craft) { alloc[alloc.scroll_craft] = alloc.scroll_target || 999; delete alloc.scroll_craft; delete alloc.scroll_target; }
+    
+    delete alloc[item];
+    await db.run('UPDATE kingdoms SET mage_tower_allocation = ? WHERE id = ?', [JSON.stringify(alloc), k.id]);
+    res.json({ ok: true, allocation: JSON.stringify(alloc) });
   });
 
   // ── Shrine allocation ─────────────────────────────────────────────────────────
@@ -489,8 +504,7 @@ module.exports = function(db) {
     if ((target.turn || 0) < 400) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 400` });
 
     // Location system — must have mapped this kingdom (warn but don't block during transition)
-    let attackerDisc = {};
-    try { attackerDisc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
+    try { JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
     // Defender auto-stores attacker's location on being attacked
     let defDisc = {};
     try { defDisc = JSON.parse(target.discovered_kingdoms||'{}'); } catch {}
@@ -830,18 +844,34 @@ module.exports = function(db) {
   });
 
   // ── Library allocation ────────────────────────────────────────────────────────
-  router.post('/library-allocation', requireAuth, async (req, res) => {
-    const { allocation } = req.body;
-    if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
-    const k = await db.get('SELECT id, bld_libraries FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+  router.post('/library-craft', requireAuth, async (req, res) => {
+    const { item, qty } = req.body;
+    if (!item || qty <= 0) return res.status(400).json({ error: 'Invalid input' });
+    const k = await db.get('SELECT id, bld_libraries, library_allocation FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
     if ((k.bld_libraries || 0) === 0) return res.status(400).json({ error: 'You need at least 1 library first' });
     
-    const save = {
-      scribe_craft: allocation.scribe_craft || null,
-    };
-    await db.run('UPDATE kingdoms SET library_allocation = ? WHERE id = ?', [JSON.stringify(save), k.id]);
-    res.json({ ok: true, allocation: save });
+    let alloc = {};
+    try { alloc = JSON.parse(k.library_allocation || '{}'); } catch {}
+    if (alloc.scribe_craft) { alloc[alloc.scribe_craft] = alloc.scribe_target || 999; delete alloc.scribe_craft; delete alloc.scribe_target; }
+    
+    alloc[item] = (alloc[item] || 0) + Number(qty);
+    await db.run('UPDATE kingdoms SET library_allocation = ? WHERE id = ?', [JSON.stringify(alloc), k.id]);
+    res.json({ ok: true, allocation: JSON.stringify(alloc) });
+  });
+
+  router.post('/library-cancel', requireAuth, async (req, res) => {
+    const { item } = req.body;
+    const k = await db.get('SELECT id, library_allocation FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    
+    let alloc = {};
+    try { alloc = JSON.parse(k.library_allocation || '{}'); } catch {}
+    if (alloc.scribe_craft) { alloc[alloc.scribe_craft] = alloc.scribe_target || 999; delete alloc.scribe_craft; delete alloc.scribe_target; }
+    
+    delete alloc[item];
+    await db.run('UPDATE kingdoms SET library_allocation = ? WHERE id = ?', [JSON.stringify(alloc), k.id]);
+    res.json({ ok: true, allocation: JSON.stringify(alloc) });
   });
 
   // ── Fire units ────────────────────────────────────────────────────────────────
@@ -1315,7 +1345,7 @@ module.exports = function(db) {
       
       const filtered = kingdoms.filter(r => r.id === k.id || (discovered[r.id] && discovered[r.id].found));
       res.json(filtered);
-    } catch (err) {
+    } catch {
       // region column may not exist yet — fallback query
       try {
         const k = await db.get('SELECT id, discovered_kingdoms FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
