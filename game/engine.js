@@ -283,10 +283,12 @@ function towerDetectionPower(k) {
   const race    = k.race || 'human';
   const mult    = TOWER_DETECT_MULT[race] || 1.0;
   const twUpgrades = safeJsonParse(k.tower_def_upgrades, {}, 'towerDetectionPower:tower_def_upgrades');
-  const arrowMult  = twUpgrades.arrow_slits ? 1.20 : 1.0;
+  const arrwMult  = twUpgrades.arrow_slits ? 1.20 : 1.0;
   const btlMult    = (safeJsonParse(k.wall_upgrades, {}, 'towerDetectionPower:wall_upgrades').battlements) ? 1.20 : 1.0;
   const thievesOnWatch = Math.min(k.thieves||0, towers * 10);
-  return Math.floor((towers * 50 + thievesOnWatch * 15) * mult * arrowMult * btlMult);
+  const thiefLvlMult = unitLevelMult(k, 'thieves');
+  const stealthMult  = raceBonus(k, 'stealth');
+  return Math.floor((towers * 50 + thievesOnWatch * 15 * thiefLvlMult * stealthMult) * mult * arrwMult * btlMult);
 }
 
 // Outpost contribution — ranger patrol defense
@@ -298,7 +300,9 @@ function outpostRangerPower(k) {
   const opUpgrades = safeJsonParse(k.outpost_upgrades, {}, 'outpostRangerPower:outpost_upgrades');
   const stationMult = opUpgrades.ranger_station ? 1.25 : 1.0;
   const rangersOnPatrol = Math.min(k.rangers||0, outposts * 20);
-  return Math.floor((outposts * 30 + rangersOnPatrol * 10) * mult * stationMult);
+  const rangerLvlMult = unitLevelMult(k, 'rangers');
+  const militaryMult = raceBonus(k, 'military');
+  return Math.floor((outposts * 30 + rangersOnPatrol * 10 * rangerLvlMult * militaryMult) * mult * stationMult);
 }
 
 // Check and award Citadel status
@@ -1129,7 +1133,6 @@ function processSmithyProduction(k, events) {
   if (smithies === 0) return updates;
 
   const hl = TOOL_COL.hammers;
-  const sl = TOOL_COL.scaffolding;
 
   // ── Hammer degradation — each active hammer decays 1 turn of durability ──────
   const hammerCount = updates[hl] !== undefined ? updates[hl] : (k[hl] || 0);
@@ -1345,20 +1348,27 @@ function processBuildQueue(k, events) {
         const nextTurn = Math.floor((progress[building] + actualWork) / cost);
         updates._build_estimates.push(`${building.replace(/_/g, ' ')} (${nextTurn} next turn)`);
       } else {
-        const turnsLeft = Math.ceil((cost - progress[building]) / actualWork);
-        updates._build_estimates.push(`${building.replace(/_/g, ' ')} (${turnsLeft} turns left)`);
+        const turnsLeft = Math.ceil((cost - Math.max(0, progress[building])) / actualWork);
+        const pct = Math.floor((Math.max(0, progress[building]) / cost) * 100);
+        updates._build_estimates.push(`${building.replace(/_/g, ' ')} (${pct}%, ${turnsLeft} turns left)`);
       }
     }
   }
 
+  let buildMsg = '';
   if (completedItems.length > 0) {
-    events.push({ type: 'system', message: `🔨 Your engineers constructed: ${completedItems.join(', ')}.` });
+    buildMsg += `Your engineers constructed: ${completedItems.join(', ')}. `;
+  } else if (activeBuildings.size > 0 && updates._build_estimates && updates._build_estimates.length > 0) {
+    buildMsg += `Engineers making progress. `;
   }
-  
   if (updates._build_estimates && updates._build_estimates.length > 0) {
-    events.push({ type: 'system', message: `🏗️ Construction Est: ${updates._build_estimates.join(' · ')}.` });
+    buildMsg += `Est: ${updates._build_estimates.join(' · ')}.`;
+  }
+  if (buildMsg) {
+    events.push({ type: 'system', message: `🔨 ${buildMsg.trim()}` });
   }
   delete updates._build_estimates;
+  if (blueprintsUsed  > 0) updates.blueprints_stored = Math.max(0, (k.blueprints_stored || 0) - blueprintsUsed);
   if (scaffoldingUsed > 0) updates[sl]  = Math.max(0, scaffoldingLeft);
 
   // News notices for missing tools
@@ -1531,10 +1541,11 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   const atkMagePower    = sent.mages * 2.5 * ((attacker.res_attack_magic || 100) / 100) * atkRaceMag * atkMageLvl;
   // War machines — scaled by crew sufficiency
   const engLvl          = effectiveTroopLevel(attacker, 'engineers');
+  const atkEngMult      = unitLevelMult(attacker, 'engineers');
   const crewNeeded      = wmCrewRequired(attacker.race, engLvl);
   const engAvail        = Math.max(0, (attacker.engineers || 0));
   const wmCrewable      = Math.min(sent.warMachines, Math.floor(engAvail / crewNeeded));
-  const wmPower         = wmCrewable * 500 * ((attacker.res_war_machines || 100) / 100) * raceBonus(attacker, 'war_machines');
+  const wmPower         = wmCrewable * 500 * ((attacker.res_war_machines || 100) / 100) * raceBonus(attacker, 'war_machines') * atkEngMult;
   
   // Hero power — attacker
   let atkHeroPower = 0;
@@ -1560,11 +1571,12 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   const defMagePower    = (defender.mages||0) * 1.5 * ((defender.res_defense_magic||100)/100) * defRaceMag * defMageLvl;
   // War machine garrison — crewed by engineers at home
   const defEngLvl       = effectiveTroopLevel(defender, 'engineers');
+  const defEngMult      = unitLevelMult(defender, 'engineers');
   const defCrewNeeded   = wmCrewRequired(defender.race, defEngLvl);
   const defWmCrewable   = Math.min(defWmActive, Math.floor((defender.engineers||0) / defCrewNeeded));
-  const defWmPower      = defWmCrewable * 500 * ((defender.res_war_machines||100)/100) * raceBonus(defender,'war_machines');
+  const defWmPower      = defWmCrewable * 500 * ((defender.res_war_machines||100)/100) * raceBonus(defender,'war_machines') * defEngMult;
   // Engineer garrison repair bonus
-  const defEngBonus     = Math.floor((defender.engineers||0) / 10) * 50;
+  const defEngBonus     = Math.floor((defender.engineers||0) / 10) * 50 * defEngMult * raceBonus(defender, 'construction');
   // Wall defense power (includes warmachines mounted on walls)
   const defWallPower    = wallDefensePower(defender);
   // Outpost ranger patrol power
@@ -2441,6 +2453,7 @@ function processMageTower(k, events) {
   const capacity = towers * 20;
   const effectiveMages = Math.min(k.mages || 0, capacity);
   const mageLvlMult = unitLevelMult(k, 'mages');
+  const raceMagic = raceBonus(k, 'magic');
 
   let towerUpgrades = {};
   try { towerUpgrades = JSON.parse(k.tower_upgrades || '{}'); } catch {}
@@ -2456,7 +2469,7 @@ function processMageTower(k, events) {
       const req = SCROLL_REQUIREMENTS[task];
       const effective = Math.min(magesPerTask, req.mages);
       const progKey = 'scroll_' + task;
-      const workDone = (effective >= req.mages ? 1 : effective / req.mages) * mageLvlMult * towerSpeedMult;
+      const workDone = (effective >= req.mages ? 1 : effective / req.mages) * mageLvlMult * towerSpeedMult * raceMagic;
       const newProg = (progress[progKey] || 0) + workDone;
 
       if (newProg >= req.turns) {
@@ -2488,9 +2501,10 @@ function processMageTower(k, events) {
 
       if (workDone > 0 && alloc[task] > 0) {
          if (!updates._mage_estimates) updates._mage_estimates = [];
+         const pct = Math.floor(((progress[progKey] || 0) / req.turns) * 100);
          const turnsLeft = Math.ceil((req.turns - (progress[progKey] || 0)) / workDone);
          const displayTask = task === 'blank_scroll' ? 'Blank scroll' : task.replace(/_/g, ' ') + ' scroll';
-         updates._mage_estimates.push(`${displayTask} (${turnsLeft} turns left)`);
+         updates._mage_estimates.push(`${displayTask} (${pct}%, ${turnsLeft} turns left)`);
       }
     });
 
@@ -2656,9 +2670,10 @@ function processLibrary(k, events) {
 
       if (workDone > 0 && alloc[task] > 0) {
         if (!updates._scribe_estimates) updates._scribe_estimates = [];
+        const pct = Math.floor(((progress[progressKey] || 0) / req.turns) * 100);
         const turnsLeft = Math.ceil((req.turns - (progress[progressKey] || 0)) / workDone);
         const displayTask = task.replace(/_/g, ' ');
-        updates._scribe_estimates.push(`${displayTask} (${turnsLeft} turns left)`);
+        updates._scribe_estimates.push(`${displayTask} (${pct}%, ${turnsLeft} turns left)`);
       }
     });
 
