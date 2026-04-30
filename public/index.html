@@ -785,7 +785,7 @@
 
         <!-- Col 1: Military & support -->
         <div class="card">
-          <div class="card-title">Military &amp; support</div>
+          <div class="card-title">Military &amp; support <span id="citadel-badge" class="badge badge-gold" style="display:none;margin-left:8px">🏰 Citadel</span></div>
           <!-- Header row -->
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;padding:4px 0 6px;border-bottom:1px solid var(--border2)">
             <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Unit</span>
@@ -853,7 +853,7 @@
             <span style="font-size:13px;color:var(--text)">Warmachines</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-war_machines">0</span>
             <span></span>
-            <span class="badge yellow" style="text-align:center;font-size:9px">Siege</span>
+            <span class="badge badge-gold" style="text-align:center;font-size:9px">Siege</span>
           </div>
         </div>
 
@@ -931,15 +931,11 @@
 
         <!-- Unit rows -->
         <style>
-          .hire-row .hname { font-size:13px; color:var(--gold); font-weight:600; justify-self: start; }
-          .hire-row .hdesc { justify-self: start; }
-          .hire-row > div:first-child { width: 100%; text-align: left; }
-          .hire-row .hdesc { font-size:11px; color:var(--text3); }
-          .hire-row .hcount { font-size:13px; font-weight:600; text-align:right; color:var(--gold); }
-          .hire-row .hprice { font-size:12px; text-align:right; color:var(--gold); }
-          .hire-row .hbtns { display:flex; flex-direction:row; gap:4px; align-items:center; justify-content:flex-end; }
-          .hire-row input { max-width: 80px; text-align: right; background: var(--bg3); border: 1px solid var(--border); color: var(--gold); }
-          .hire-row input { width:100%; font-size:12px; padding: 4px 8px; border-radius: 6px; }
+          .hire-row .hname { font-size:14px; color:var(--gold); font-weight:700; }
+          .hire-row .hdesc { font-size:11px; color:var(--text3); margin-top:2px; }
+          .hire-row .hcount { font-size:14px; font-weight:700; color:var(--gold); }
+          .hire-row .hprice { font-size:13px; color:var(--gold); font-weight:600; }
+          .hire-row input { max-width: 80px; text-align: right; background: var(--bg3); border: 1px solid var(--border); color: var(--gold); font-weight: 700; }
         </style>
 
         <div class="hire-row">
@@ -5218,6 +5214,9 @@ async function loadKingdom() {
     bld_vaults: kingdom.bld_vaults, bld_smithies: kingdom.bld_smithies,
     bld_markets: kingdom.bld_markets, bld_cathedrals: kingdom.bld_cathedrals,
     bld_training: kingdom.bld_training, bld_colosseums: kingdom.bld_colosseums,
+    bld_libraries: kingdom.bld_libraries || 0,
+    bld_taverns: kingdom.bld_taverns || 0,
+    bld_mage_towers: kingdom.bld_mage_towers || 0,
     bld_castles: kingdom.bld_castles,
     description: kingdom.description || '',
     weapons_stockpile: kingdom.weapons_stockpile || 0,
@@ -6929,7 +6928,8 @@ async function loadStudies() {
   var el = function(id){ return document.getElementById(id); };
 
   // Tower
-  var towers = state.bld_cathedrals || 0;
+  var towers = data.bld_cathedrals || 0;
+  state.bld_cathedrals = towers; // Sync
   var towerCap = towers * 20;
   var towerMages = Math.min(state.mages || 0, towerCap);
   if (el('st-towers'))     el('st-towers').textContent     = fmt(towers);
@@ -6939,12 +6939,14 @@ async function loadStudies() {
   renderMageTowerPanel();
 
   // School
+  state.bld_schools = data.bld_schools || state.bld_schools || 0; // Sync
   if (el('st-schools'))    el('st-schools').textContent    = fmt(state.bld_schools||0);
   if (el('st-researchers'))el('st-researchers').textContent= fmt(state.researchers||0);
   if (el('st-school-cap')) el('st-school-cap').textContent = fmt((state.bld_schools||0)*100);
 
   // Research focus selectors
   var focus = data.research_focus || [];
+  state.research_focus = focus; // Sync
   var hasRepo = !!(data.school_upgrades||{}).repository;
   var slot2 = el('research-focus-slot-2');
   if (slot2) slot2.style.display = hasRepo ? 'block' : 'none';
@@ -6953,7 +6955,8 @@ async function loadStudies() {
   updateFocusPreview();
 
   // Shrine
-  var shrines = state.bld_shrines || 0;
+  var shrines = data.bld_shrines || state.bld_shrines || 0;
+  state.bld_shrines = shrines; // Sync
   var shrineCap = shrines * 15;
   var shrineClerics = Math.min(state.clerics || 0, shrineCap);
   if (el('st-shrines'))      el('st-shrines').textContent = fmt(shrines);
@@ -6973,7 +6976,9 @@ async function loadStudies() {
 
   // Library
   var libs = data.bld_libraries || state.bld_libraries || 0;
+  state.bld_libraries = libs; // Sync back to state
   var libUpgrades = data.library_upgrades || {};
+  state.library_upgrades = libUpgrades; // Sync back to state
   var capPerLib = libUpgrades.grand_library ? 40 : 20;
   var libCap = libs * capPerLib;
   var libScribes = Math.min(state.scribes || 0, libCap);
