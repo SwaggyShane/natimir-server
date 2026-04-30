@@ -6879,55 +6879,7 @@ async function loadExploration() {
   loadActiveExpeditions();
 }
 
-function updateExpeditionAvailability() {
-  var rangers = state.rangers || 0;
-  var maps    = state.maps    || 0;
-  
-  var r1 = document.getElementById('ex-btn-scout');
-  var r2 = document.getElementById('ex-btn-expl');
-  var r3 = document.getElementById('ex-btn-far');
-  
-  if (r1) r1.disabled = rangers < 5  || maps < 1;
-  if (r2) r2.disabled = rangers < 25 || maps < 5;
-  if (r3) r3.disabled = rangers < 100 || maps < 15;
-}
-
-async function loadActiveExpeditions() {
-  var result = await apiCall('GET', '/api/kingdom/expeditions');
-  if (result.error) return;
-  var container = document.getElementById('active-expeditions');
-  if (!container) return;
-  
-  var active = result.expeditions || [];
-  if (active.length === 0) {
-    container.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:20px">No active expeditions</div>';
-    return;
-  }
-  
-  container.innerHTML = active.map(function(ex) {
-    var turnsLeft = ex.return_turn - (state.turn||0);
-    var pct = Math.max(0, Math.min(100, Math.floor(((ex.total_turns - turnsLeft) / ex.total_turns) * 100)));
-    var typeLabel = { scout:'Scouting', explore:'Exploration', far:'Far Voyage' }[ex.type] || 'Expedition';
-    
-    return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px">'
-      + '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
-      + '<span style="font-size:13px;font-weight:600;color:var(--text)">' + typeLabel + '</span>'
-      + '<span style="font-size:11px;color:var(--text3)">' + Math.max(0, turnsLeft) + ' turns left</span>'
-      + '</div>'
-      + '<div style="height:6px;background:var(--bg4);border-radius:3px;margin-bottom:4px">'
-      + '<div style="height:6px;width:' + pct + '%;background:var(--blue);border-radius:3px"></div>'
-      + '</div>'
-      + '</div>';
-  }).join('');
-}
-
-async function startExpedition(type) {
-  var result = await apiCall('POST', '/api/kingdom/expeditions', { type });
-  if (result.error) return toast(result.error, 'error');
-  toast('Expedition started!', 'success');
-  loadActiveExpeditions();
-  loadState();
-}
+// Outdated duplicate functions removed.
 
 async function loadStudies() {
   var data = await apiCall('GET', '/api/kingdom/studies/overview');

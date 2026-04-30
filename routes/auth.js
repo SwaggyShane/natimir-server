@@ -32,28 +32,34 @@ module.exports = function(db) {
 
       // Starting buildings based on race
       const buildings = {
-        bld_farms: 1, bld_schools: 1, bld_barracks: 1, bld_armories: 1, bld_housing: 100,
-        bld_markets: 0, bld_smithies: 0, bld_cathedrals: 0, bld_shrines: 0, bld_outposts: 0
+        bld_farms: 10, bld_schools: 1, bld_barracks: 1, bld_armories: 1, bld_housing: 100,
+        bld_markets: 0, bld_smithies: 0, bld_cathedrals: 0, bld_shrines: 0, bld_outposts: 0, bld_training: 0
       };
+      let fighters = 0, rangers = 50, food = 5000;
+
       if (chosenRace === 'human')     buildings.bld_markets = 1;
       if (chosenRace === 'dwarf')     buildings.bld_smithies = 1;
       if (chosenRace === 'high_elf')  buildings.bld_cathedrals = 1;
       if (chosenRace === 'dark_elf')  buildings.bld_shrines = 1;
-      if (chosenRace === 'orc')       buildings.bld_outposts = 1;
-      if (chosenRace === 'dire_wolf') buildings.bld_barracks = 2; // Extra barracks for wolf
+      if (chosenRace === 'orc')       buildings.bld_training = 1;
+      if (chosenRace === 'dire_wolf') {
+        buildings.bld_barracks = 2; // Extra barracks for wolf
+        fighters = 100;
+        rangers = 100;
+      }
 
       await db.run(
         `INSERT INTO kingdoms (
-          player_id, name, race, region, gold, land, population,
-          researchers, engineers, rangers, turns_stored,
+          player_id, name, race, region, gold, land, population, food,
+          researchers, engineers, fighters, rangers, turns_stored,
           res_spellbook, blueprints_stored,
           bld_farms, bld_schools, bld_barracks, bld_armories, bld_housing,
-          bld_markets, bld_smithies, bld_cathedrals, bld_shrines, bld_outposts, world_fragments
-        ) VALUES (?, ?, ?, ?, 10000, 504, 50000, 100, 100, 50, 400, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]')`,
+          bld_markets, bld_smithies, bld_cathedrals, bld_shrines, bld_outposts, bld_training, world_fragments
+        ) VALUES (?, ?, ?, ?, 10000, 504, 50000, ?, 100, 100, ?, ?, 400, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]')`,
         [
-          playerResult.lastID, kingdomName, chosenRace, region,
+          playerResult.lastID, kingdomName, chosenRace, region, food, fighters, rangers,
           buildings.bld_farms, buildings.bld_schools, buildings.bld_barracks, buildings.bld_armories, buildings.bld_housing,
-          buildings.bld_markets, buildings.bld_smithies, buildings.bld_cathedrals, buildings.bld_shrines, buildings.bld_outposts
+          buildings.bld_markets, buildings.bld_smithies, buildings.bld_cathedrals, buildings.bld_shrines, buildings.bld_outposts, buildings.bld_training
         ]
       );
       await db.run('COMMIT');

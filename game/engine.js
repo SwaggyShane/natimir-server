@@ -1021,7 +1021,11 @@ function hireUnits(k, unit, amount) {
 
   // Level cap check (researchers, engineers, scribes have no level cap)
   if (!['researchers','engineers','scribes'].includes(unit)) {
-    const cap = getCap(unit, k.level || 1);
+    let cap = getCap(unit, k.level || 1);
+    // Orc: Unit capacity -50% rangers
+    if (k.race === 'orc' && unit === 'rangers') {
+      cap = Math.floor(cap * 0.5);
+    }
     const current = k[unit] || 0;
     if (current >= cap) return { error: `Level ${k.level||1} cap reached for ${unit} (max ${cap.toLocaleString()}) — gain levels to increase` };
     if (current + amount > cap) return { error: `Level ${k.level||1} cap: can only hire ${(cap - current).toLocaleString()} more ${unit} (max ${cap.toLocaleString()})` };
@@ -2186,28 +2190,30 @@ function expeditionRewards(type, rangers, fighters, k) {
       events.push({ type: 'attack', message: `💀 Dungeon raid FAILED — your forces were overwhelmed. ${fLost.toLocaleString()} fighters lost.` });
     } else {
       updates._fighters_returned = fighters;
+      
+      const dungeonMult = { orc: 2.0, dire_wolf: 1.5, high_elf: 0.5 }[k.race] || 1.0;
 
-      const dungeonGold = Math.floor(fighters * rand(8, 12) * tacBonus * exploreBonus * randomBonus);
+      const dungeonGold = Math.floor(fighters * rand(8, 12) * tacBonus * exploreBonus * randomBonus * dungeonMult);
       rewards.push({ text: `+${dungeonGold.toLocaleString()} gold plundered from the dungeon` });
       updates.gold = (k.gold || 0) + dungeonGold;
 
-      const mana = rand(Math.floor(rangers * 1 * exploreBonus), Math.floor(rangers * 4 * exploreBonus));
+      const mana = Math.floor(rand(Math.floor(rangers * 1 * exploreBonus), Math.floor(rangers * 4 * exploreBonus)) * dungeonMult);
       rewards.push({ text: `+${mana} mana from dungeon ley stones` });
       updates.mana = (k.mana || 0) + mana;
 
       const disc = ['res_weapons','res_armor','res_military','res_attack_magic','res_spellbook'][rand(0,4)];
-      const boost = rand(3, Math.floor(12 * exploreBonus));
+      const boost = Math.floor(rand(3, Math.floor(12 * exploreBonus)) * dungeonMult);
       const discLabel = disc.replace('res_','').replace('_',' ');
       rewards.push({ text: `Dungeon tome found — ${discLabel} permanently +${boost}%` });
       updates[disc] = (k[disc] || 0) + boost;
 
       if (roll(0.12)) {
-        const wm = rand(1, Math.max(2, Math.floor(fighters / 500 * exploreBonus)));
+        const wm = Math.max(1, Math.floor(rand(1, Math.max(2, Math.floor(fighters / 500 * exploreBonus))) * dungeonMult));
         rewards.push({ text: `⚡ Ancient war machine${wm > 1 ? 's' : ''} recovered from the dungeon depths — +${wm}` });
         updates.war_machines = (k.war_machines || 0) + wm;
       }
       if (roll(0.06)) {
-        const boost2 = rand(10, Math.floor(40 * exploreBonus));
+        const boost2 = Math.floor(rand(10, Math.floor(40 * exploreBonus)) * dungeonMult);
         rewards.push({ text: `⚡ The dungeon's heart pulsed with ancient magic — spellbook permanently +${boost2}` });
         updates.res_spellbook = (updates.res_spellbook || k.res_spellbook || 0) + boost2;
       }
@@ -2336,7 +2342,7 @@ async function resolveExpeditions(db, k, engine) {
         'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
         'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
         'bld_farms','bld_barracks','bld_markets','bld_cathedrals','blueprints_stored','maps',
-        'troop_levels','xp','level','discovered_kingdoms',
+        'troop_levels','xp','level','discovered_kingdoms','world_fragments',
       ]);
 
       // Award XP
@@ -2349,7 +2355,7 @@ async function resolveExpeditions(db, k, engine) {
       }
 
       const safeUpdates = Object.fromEntries(
-        Object.entries(updates).filter(([k2, v]) => VALID_KINGDOM_COLS.has(k2) && v !== undefined && v !== null && !isNaN(Number(v)))
+        Object.entries(updates).filter(([k2, v]) => VALID_KINGDOM_COLS.has(k2) && v !== undefined && v !== null)
       );
       if (Object.keys(safeUpdates).length > 0) {
         const cols = Object.keys(safeUpdates).map(c => `${c} = ?`).join(', ');

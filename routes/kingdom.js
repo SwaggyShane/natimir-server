@@ -996,11 +996,9 @@ module.exports = function(db) {
     if (existing) return res.status(400).json({ error: `A ${type} expedition is already underway` });
 
     try {
-      const { updates, events } = await runTurn(db, k);
-      // Deduct troops from resolved state
-      updates.rangers  = Math.max(0, (updates.rangers  !== undefined ? updates.rangers  : k.rangers)  - r);
-      updates.fighters = Math.max(0, (updates.fighters !== undefined ? updates.fighters : k.fighters) - f);
-      await applyUpdates(db, k.id, { rangers: updates.rangers, fighters: updates.fighters });
+      const newRangers = Math.max(0, k.rangers - r);
+      const newFighters = Math.max(0, k.fighters - f);
+      await applyUpdates(db, k.id, { rangers: newRangers, fighters: newFighters });
 
       await db.run('INSERT INTO expeditions (kingdom_id, type, turns_left, rangers, fighters) VALUES (?, ?, ?, ?, ?)',
         [k.id, type, EXP_TURNS[type], r, f]);
@@ -1010,8 +1008,9 @@ module.exports = function(db) {
 
       res.json({
         ok: true, turns_left: EXP_TURNS[type],
-        turns_stored: updates.turns_stored,
-        updates, events,
+        turns_stored: k.turns_stored,
+        updates: { rangers: newRangers, fighters: newFighters }, 
+        events: [],
         message: `🧭 ${label} expedition launched — ${troops} deployed for ${EXP_TURNS[type]} turns.`,
       });
     } catch (err) {

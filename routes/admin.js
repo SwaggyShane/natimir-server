@@ -79,25 +79,31 @@ module.exports = function(db, io) {
     const kingdoms = await db.all('SELECT id, race FROM kingdoms');
     for (const k of kingdoms) {
       const buildings = {
-        bld_farms: 1, bld_schools: 1, bld_barracks: 1, bld_armories: 1, bld_housing: 100,
-        bld_markets: 0, bld_smithies: 0, bld_cathedrals: 0, bld_shrines: 0, bld_outposts: 0
+        bld_farms: 10, bld_schools: 1, bld_barracks: 1, bld_armories: 1, bld_housing: 100,
+        bld_markets: 0, bld_smithies: 0, bld_cathedrals: 0, bld_shrines: 0, bld_outposts: 0, bld_training: 0
       };
+      let fighters = 0, rangers = 50, food = 5000;
+
       if (k.race === 'human')     buildings.bld_markets = 1;
       if (k.race === 'dwarf')     buildings.bld_smithies = 1;
       if (k.race === 'high_elf')  buildings.bld_cathedrals = 1;
       if (k.race === 'dark_elf')  buildings.bld_shrines = 1;
-      if (k.race === 'orc')       buildings.bld_outposts = 1;
-      if (k.race === 'dire_wolf') buildings.bld_barracks = 2; // Extra barracks for wolf
+      if (k.race === 'orc')       buildings.bld_training = 1;
+      if (k.race === 'dire_wolf') {
+        buildings.bld_barracks = 2; // Extra barracks for wolf
+        fighters = 100;
+        rangers = 100;
+      }
 
       await db.run(`UPDATE kingdoms SET
-        gold = 10000, mana = 0, land = 504, population = 50000, food = 0, morale = 100,
+        gold = 10000, mana = 0, land = 504, population = 50000, food = ?, morale = 100,
         turn = 0, turns_stored = 400,
-        fighters = 0, rangers = 50, clerics = 0, mages = 0, thieves = 0, ninjas = 0,
+        fighters = ?, rangers = ?, clerics = 0, mages = 0, thieves = 0, ninjas = 0,
         researchers = 100, engineers = 100, scribes = 0,
         war_machines = 0, weapons_stockpile = 0, armor_stockpile = 0,
         bld_farms = ?, bld_barracks = ?, bld_outposts = ?, bld_guard_towers = 0,
         bld_schools = ?, bld_armories = ?, bld_vaults = 0, bld_smithies = ?,
-        bld_markets = ?, bld_cathedrals = ?, bld_training = 0, bld_colosseums = 0,
+        bld_markets = ?, bld_cathedrals = ?, bld_training = ?, bld_colosseums = 0,
         bld_castles = 0, bld_shrines = ?, bld_libraries = 0, bld_taverns = 0, bld_housing = ?,
         bld_walls = 0,
         res_economy = 100, res_weapons = 100, res_armor = 100, res_military = 100,
@@ -117,9 +123,10 @@ module.exports = function(db, io) {
         food_shortage_turns = 0, food_surplus_turns = 0, mercenaries = '[]'
         WHERE id = ?`,
         [
+          food, fighters, rangers,
           buildings.bld_farms, buildings.bld_barracks, buildings.bld_outposts,
           buildings.bld_schools, buildings.bld_armories, buildings.bld_smithies,
-          buildings.bld_markets, buildings.bld_cathedrals, buildings.bld_shrines, buildings.bld_housing,
+          buildings.bld_markets, buildings.bld_cathedrals, buildings.bld_training, buildings.bld_shrines, buildings.bld_housing,
           k.id
         ]
       );

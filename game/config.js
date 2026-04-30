@@ -3,11 +3,11 @@
 
 const config = {
   RACE_BONUSES: {
-    high_elf:  { research: 1.15, magic: 1.20, economy: 1.05, military: 0.90, morale: 0.95, scribe: 1.20 },
+    high_elf:  { research: 1.25, magic: 1.20, economy: 1.05, military: 0.90, morale: 0.95, scribe: 1.20 },
     dwarf:     { construction: 1.20, war_machines: 1.25, economy: 1.202, magic: 0.75, research: 0.90, morale: 1.00, scribe: 0.85 },
-    dire_wolf: { military: 1.30, covert: 1.10, research: 0.70, magic: 0.60, economy: 0.70, morale: 1.10, scribe: 0.80 },
+    dire_wolf: { military: 1.30, covert: 1.10, research: 0.60, magic: 0.25, economy: 0.80, morale: 1.10, scribe: 0.80 },
     dark_elf:  { covert: 1.25, stealth: 1.30, magic: 1.10, military: 0.85, economy: 0.90, morale: 0.90, scribe: 1.10 },
-    human:     { economy: 1.05, morale: 1.05, scribe: 1.05 },
+    human:     { economy: 1.50, morale: 1.05, scribe: 1.05 },
     orc:       { military: 1.20, economy: 1.10, research: 0.80, magic: 0.65, construction: 0.90, morale: 1.05, scribe: 0.60 },
   },
 
