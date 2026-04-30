@@ -4,6 +4,17 @@ const { requireAuth } = require('./middleware');
 
 const router = express.Router();
 
+function safeJsonParse(str, fallback = {}, context = 'unknown') {
+  if (!str) return fallback;
+  if (typeof str === 'object') return str;
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    console.error(`[JSON Parse Error] Context: ${context}. Error: ${e.message}. Data: ${str}`);
+    return fallback;
+  }
+}
+
 module.exports = function(db) {
 
   router.get('/me', requireAuth, async (req, res) => {
@@ -12,15 +23,36 @@ module.exports = function(db) {
       [req.player.playerId]
     );
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-    try { k.research_allocation    = JSON.parse(k.research_allocation    || '{}'); } catch { k.research_allocation    = {}; }
-    try { k.mage_tower_allocation  = JSON.parse(k.mage_tower_allocation  || '{}'); } catch { k.mage_tower_allocation  = {}; }
-    try { k.shrine_allocation      = JSON.parse(k.shrine_allocation      || '{}'); } catch { k.shrine_allocation      = {}; }
-    try { k.library_allocation     = JSON.parse(k.library_allocation     || '{}'); } catch { k.library_allocation     = {}; }
-    try { k.library_progress       = JSON.parse(k.library_progress       || '{}'); } catch { k.library_progress       = {}; }
-    try { k.tower_progress         = JSON.parse(k.tower_progress         || '{}'); } catch { k.tower_progress         = {}; }
-    try { k.scrolls                = JSON.parse(k.scrolls                || '{}'); } catch { k.scrolls                = {}; }
-    try { k.active_effects         = JSON.parse(k.active_effects         || '{}'); } catch { k.active_effects         = {}; }
-    try { k.discovered_kingdoms    = JSON.parse(k.discovered_kingdoms    || '{}'); } catch { k.discovered_kingdoms    = {}; }
+    k.research_allocation    = safeJsonParse(k.research_allocation, {}, 'me:research_allocation');
+    k.mage_tower_allocation  = safeJsonParse(k.mage_tower_allocation, {}, 'me:mage_tower_allocation');
+    k.shrine_allocation      = safeJsonParse(k.shrine_allocation, {}, 'me:shrine_allocation');
+    k.library_allocation     = safeJsonParse(k.library_allocation, {}, 'me:library_allocation');
+    k.library_progress       = safeJsonParse(k.library_progress, {}, 'me:library_progress');
+    k.tower_progress         = safeJsonParse(k.tower_progress, {}, 'me:tower_progress');
+    k.scrolls                = safeJsonParse(k.scrolls, {}, 'me:scrolls');
+    k.active_effects         = safeJsonParse(k.active_effects, {}, 'me:active_effects');
+    k.discovered_kingdoms    = safeJsonParse(k.discovered_kingdoms, {}, 'me:discovered_kingdoms');
+    k.build_queue            = safeJsonParse(k.build_queue, {}, 'me:build_queue');
+    k.build_progress         = safeJsonParse(k.build_progress, {}, 'me:build_progress');
+    k.build_allocation       = safeJsonParse(k.build_allocation, {}, 'me:build_allocation');
+    k.troop_levels           = safeJsonParse(k.troop_levels, {}, 'me:troop_levels');
+    k.training_allocation    = safeJsonParse(k.training_allocation, {}, 'me:training_allocation');
+    k.smithy_allocation      = safeJsonParse(k.smithy_allocation, {}, 'me:smithy_allocation');
+    k.racial_bonuses_unlocked = safeJsonParse(k.racial_bonuses_unlocked, {}, 'me:racial_bonuses_unlocked');
+    k.active_event           = safeJsonParse(k.active_event, {}, 'me:active_event');
+    k.location_maps_wip      = safeJsonParse(k.location_maps_wip, [], 'me:location_maps_wip');
+    k.wall_upgrades          = safeJsonParse(k.wall_upgrades, {}, 'me:wall_upgrades');
+    k.tower_def_upgrades     = safeJsonParse(k.tower_def_upgrades, {}, 'me:tower_def_upgrades');
+    k.outpost_upgrades       = safeJsonParse(k.outpost_upgrades, {}, 'me:outpost_upgrades');
+    k.defense_upgrades       = safeJsonParse(k.defense_upgrades, {}, 'me:defense_upgrades');
+    k.tower_upgrades         = safeJsonParse(k.tower_upgrades, {}, 'me:tower_upgrades');
+    k.school_upgrades        = safeJsonParse(k.school_upgrades, {}, 'me:school_upgrades');
+    k.shrine_upgrades        = safeJsonParse(k.shrine_upgrades, {}, 'me:shrine_upgrades');
+    k.library_upgrades       = safeJsonParse(k.library_upgrades, {}, 'me:library_upgrades');
+    k.farm_upgrades          = safeJsonParse(k.farm_upgrades, {}, 'me:farm_upgrades');
+    k.market_upgrades        = safeJsonParse(k.market_upgrades, {}, 'me:market_upgrades');
+    k.tavern_upgrades        = safeJsonParse(k.tavern_upgrades, {}, 'me:tavern_upgrades');
+    k.mercenaries            = safeJsonParse(k.mercenaries, [], 'me:mercenaries');
     res.json(k);
   });
 
@@ -116,12 +148,10 @@ module.exports = function(db) {
     const heroes = await db.all('SELECT * FROM heroes WHERE kingdom_id = ? AND status = "idle"', [k.id]);
     const { updates, events } = engine.processTurn(k);
 
+    const heroBatch = [];
     for (const hero of heroes) {
-      // Award passive XP
-      const xpResult = engine.awardHeroXp(hero, 10); // 10 XP per turn
-      await db.run('UPDATE heroes SET level = ?, xp = ? WHERE id = ?', [xpResult.level, xpResult.xp, hero.id]);
-
-      // Apply turn bonuses
+      const xpResult = engine.awardHeroXp(hero, 10);
+      heroBatch.push({ id: hero.id, level: xpResult.level, xp: xpResult.xp });
       engine.applyHeroTurnBonuses(hero, k, updates);
     }
 
@@ -146,6 +176,9 @@ module.exports = function(db) {
     await db.run('BEGIN');
     try {
       await applyUpdates(db, k.id, updates);
+      for (const h of heroBatch) {
+        await db.run('UPDATE heroes SET level = ?, xp = ? WHERE id = ?', [h.level, h.xp, h.id]);
+      }
       const turnNum = updates.turn || k.turn || 0;
       if (filteredEvents.length > 0) {
         await bulkInsertNews(db, filteredEvents.map(ev => ({

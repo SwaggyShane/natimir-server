@@ -2,34 +2,49 @@
 // Pure game logic — no I/O, no socket calls.
 // All functions take a kingdom row (or rows) and return mutations + events.
 
-const RACE_BONUSES = {
-  high_elf:  { research: 1.15, magic: 1.20, economy: 1.05, military: 0.90, morale: 0.95, scribe: 1.20 },
-  dwarf:     { construction: 1.20, war_machines: 1.25, economy: 1.202, magic: 0.75, research: 0.90, morale: 1.00, scribe: 0.85 },
-  dire_wolf: { military: 1.30, covert: 1.10, research: 0.70, magic: 0.60, economy: 0.70, morale: 1.10, scribe: 0.80 },
-  dark_elf:  { covert: 1.25, stealth: 1.30, magic: 1.10, military: 0.85, economy: 0.90, morale: 0.90, scribe: 1.10 },
-  human:     { economy: 1.05, morale: 1.05, scribe: 1.05 },
-  orc:       { military: 1.20, economy: 1.10, research: 0.80, magic: 0.65, construction: 0.90, morale: 1.05, scribe: 0.60 },
-};
+const config = require('./config');
 
-// Named regions — one per race, each with a passive bonus stacking on top of race bonuses
-const REGION_DATA = {
-  dwarf:     { name: 'The Iron Holds',      bonus: 'construction', mult: 0.05, lore: 'Ancient mountain citadels carved from living rock, where forge-fires have burned unbroken for a thousand years.' },
-  high_elf:  { name: 'The Silverwood',      bonus: 'magic',        mult: 0.05, lore: 'A vast enchanted forest where moonlight pools in crystal streams and every leaf hums with residual arcane power.' },
-  orc:       { name: 'The Bloodplains',     bonus: 'military',     mult: 0.05, lore: 'Endless scarred steppe where the ground itself is soaked with the memory of ten thousand wars.' },
-  dark_elf:  { name: 'The Underspire',      bonus: 'stealth',      mult: 0.05, lore: 'A labyrinthine underground city of obsidian towers and shadow-markets, where every corridor hides a blade.' },
-  human:     { name: 'The Heartlands',      bonus: 'economy',      mult: 0.05, lore: 'Fertile central plains criss-crossed by ancient trade roads, where every crossroads is a kingdom in miniature.' },
-  dire_wolf: { name: 'The Ashfang Wilds',   bonus: 'military',     mult: 0.05, lore: 'Primal wilderness of ash-grey forest and howling ravines, where only the strong survive the first winter.' },
-};
+const {
+  RACE_BONUSES, REGION_DATA, UNIT_COST, MAX_RESEARCH, HOUSING_CAP_BY_RACE,
+  TROOP_RACE_BONUS, WALL_STRENGTH_MULT, TOWER_DETECT_MULT, OUTPOST_RANGER_MULT,
+  WALL_UPGRADES, TOWER_DEF_UPGRADES, OUTPOST_UPGRADES, CITADEL_REQ,
+  SEASON_ORDER, SEASON_DURATION, SEASON_FARM_MULT, SEASON_ICONS,
+  LOCATE_RACE_MULT, FARM_YIELD_MULT, FARM_WORKERS_PER, FOOD_CONSUMPTION_MULT,
+  MARKET_INCOME_MULT, TRADE_RATE_MULT, COMMODITY_VALUES, COMMODITY_RACE_DISCOUNT,
+  TOWER_UPGRADES, SCHOOL_UPGRADES, SHRINE_UPGRADES, LIBRARY_UPGRADES,
+  FARM_UPGRADES, MARKET_UPGRADES, TAVERN_UPGRADES, MERC_TIERS,
+  XP_RACE_BONUS, XP_BASE, BUILDING_COST, BUILDING_GOLD_COST, BUILDING_LAND_COST,
+  SPELL_DEFS, SCROLL_REQUIREMENTS, SCRIBE_ITEMS, SUPPORT_CAP_RACE, WM_CREW_REQUIRED,
+  RESEARCH_MAP, BUILDING_ALIASES, RACIAL_UNITS,
+  WORLD_FRAGMENTS, JUNK_PRIZES, ULTRA_RARE_PRIZES, THRONE_OF_NAZDREG, EXPEDITION_TURNS,
+  LORE_EVENTS, CAPS, BUILDING_COL, TOOL_COL, TOOL_GOLD_COST, BLUEPRINT_REQUIRED: BP_REQ,
+  SCAFFOLDING_REQUIRED: SCAFF_REQ, SCAFFOLDING_BONUS_BUILDINGS: SCAFF_BONUS, HERO_CLASSES
+} = config;
 
-// Assign region to a kingdom by race
-function assignRegion(race) {
-  return REGION_DATA[race]?.name || 'The Unknown Lands';
-}
-
-const UNIT_COST = 250;
-const MAX_RESEARCH = 1000; // percent cap for most disciplines
+const BLUEPRINT_REQUIRED = new Set(BP_REQ);
+const SCAFFOLDING_REQUIRED = new Set(SCAFF_REQ);
+const SCAFFOLDING_BONUS_BUILDINGS = new Set(SCAFF_BONUS);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+const _parseCache = new Map();
+function clearParseCache() { _parseCache.clear(); }
+
+function safeJsonParse(str, fallback = {}, context = 'unknown') {
+  if (!str) return fallback;
+  if (typeof str === 'object') return str;
+  const cacheKey = `${context}:${str}`;
+  if (_parseCache.has(cacheKey)) return _parseCache.get(cacheKey);
+
+  try {
+    const val = JSON.parse(str);
+    _parseCache.set(cacheKey, val);
+    return val;
+  } catch (e) {
+    console.error(`[JSON Parse Error] Context: ${context}. Error: ${e.message}. Data: ${str}`);
+    return fallback;
+  }
+}
 
 function raceBonus(kingdom, stat) {
   const bonuses = RACE_BONUSES[kingdom.race] || {};
@@ -47,6 +62,14 @@ function raceBonus(kingdom, stat) {
   }
 
   return base * regionMult * allianceMult;
+}
+
+function housingCapPerBuilding(race) {
+  return HOUSING_CAP_BY_RACE[race] || 500;
+}
+
+function assignRegion(race) {
+  return race; // simple mapping for now: race name = region id
 }
 
 function goldPerTurn(k) {
@@ -67,8 +90,7 @@ function manaPerTurn(k) {
   const mageMana       = Math.floor(effectiveMages / 5);
 
   // Tower upgrades
-  let towerUpgrades = {};
-  try { towerUpgrades = JSON.parse(k.tower_upgrades || '{}'); } catch {}
+  const towerUpgrades = safeJsonParse(k.tower_upgrades, {}, 'manaPerTurn:tower_upgrades');
   const arcaneMult = towerUpgrades.arcane_focus ? 1.25 : 1.0;
 
   return Math.floor((raceManaBase + towerMana + mageMana) * raceBonus(k, 'magic') * arcaneMult);
@@ -76,20 +98,6 @@ function manaPerTurn(k) {
 
 function foodBalance(k) {
   return farmProduction(k) - foodConsumption(k);
-}
-
-// Race-specific population per housing building
-const HOUSING_CAP_BY_RACE = {
-  dwarf:     650,  // +30% — master builders, compact stone halls
-  orc:       600,  // +20% — pack together, unbothered by cramped conditions
-  human:     500,  // baseline
-  dark_elf:  450,  // -10% — selective underground warrens
-  high_elf:  350,  // -30% — require spacious dwellings
-  dire_wolf: 700,  // +40% — den living, natural pack animals
-};
-
-function housingCapPerBuilding(race) {
-  return HOUSING_CAP_BY_RACE[race] || 500;
 }
 
 function naturalMoraleCap(k) {
@@ -151,21 +159,8 @@ function troopXpForLevel(level) {
   return level * 5000;
 }
 
-// Race training bonuses — which races train which troop types faster
-// These can push effective level beyond 100 in combat calculations
-const TROOP_RACE_BONUS = {
-  high_elf:  { clerics: 1.5, mages: 1.5, researchers: 1.3 },
-  dwarf:     { fighters: 1.3, engineers: 1.5 },
-  dire_wolf: { fighters: 1.8, rangers: 1.5 },
-  dark_elf:  { ninjas: 1.8, thieves: 1.5, rangers: 1.3 },
-  human:     { fighters: 1.1, rangers: 1.1, clerics: 1.1, mages: 1.1, thieves: 1.1, ninjas: 1.1 },
-  orc:       { fighters: 1.6, clerics: 1.2 },
-};
-
-// Get effective troop level including invisible race bonus (used in combat)
 function effectiveTroopLevel(k, unit) {
-  let troopLevels = {};
-  try { troopLevels = JSON.parse(k.troop_levels || '{}'); } catch { troopLevels = {}; }
+  const troopLevels = safeJsonParse(k.troop_levels, {}, 'effectiveTroopLevel:troop_levels');
   const data = troopLevels[unit] || { level: 1 };
   const raceBonus = TROOP_RACE_BONUS[k.race]?.[unit] || 1.0;
   // Race bonus multiplies above level 100 — a Dark Elf ninja at level 100 acts as level 180
@@ -174,8 +169,7 @@ function effectiveTroopLevel(k, unit) {
 
 // Award XP to a specific troop type — returns updated troop_levels JSON and any level-ups
 function awardTroopXp(k, unit, xpAmount) {
-  let troopLevels = {};
-  try { troopLevels = JSON.parse(k.troop_levels || '{}'); } catch { troopLevels = {}; }
+  const troopLevels = safeJsonParse(k.troop_levels, {}, 'awardTroopXp:troop_levels');
   const current = troopLevels[unit] || { level: 1, xp: 0, count: 0 };
   const cap = 100;
   if (current.level >= cap) return { troop_levels: JSON.stringify(troopLevels), levelUps: [] };
@@ -227,8 +221,7 @@ function racialUnitBonus(k, unit) {
 // new_avg_xp = (old_xp × old_count) / (old_count + hired)
 function diluteTroopXp(k, unit, hired) {
   if (!hired || hired <= 0) return null;
-  let troopLevels = {};
-  try { troopLevels = JSON.parse(k.troop_levels || '{}'); } catch {}
+  const troopLevels = safeJsonParse(k.troop_levels, {}, 'diluteTroopXp:troop_levels');
   const current = troopLevels[unit] || { level: 1, xp: 0, count: k[unit] || 0 };
   const oldCount = Math.max(1, current.count || k[unit] || 1);
   const totalXp  = current.xp + troopXpForLevel(current.level); // total absolute XP
@@ -251,46 +244,13 @@ function awardUnitXp(k, unit, xpAmount) {
 
 // ── Defense system ────────────────────────────────────────────────────────────
 
-// Wall strength racial modifier
-const WALL_STRENGTH_MULT = {
-  human:1.00, dwarf:1.35, high_elf:1.10, orc:0.85, dark_elf:0.90, dire_wolf:0.80,
-};
-// Guard tower (thief detection) racial modifier
-const TOWER_DETECT_MULT = {
-  human:1.00, dwarf:1.00, high_elf:1.10, orc:0.80, dark_elf:1.40, dire_wolf:0.70,
-};
-// Outpost (ranger patrol) racial modifier
-const OUTPOST_RANGER_MULT = {
-  human:1.00, dwarf:0.80, high_elf:0.95, orc:0.90, dark_elf:1.30, dire_wolf:1.40,
-};
-
-const WALL_UPGRADES = {
-  reinforced:    { name:'Reinforced Walls',  cost:10000,  desc:'+25% wall strength, −10% land lost per attack',      requires:null          },
-  battlements:   { name:'Battlements',       cost:30000,  desc:'Guard towers +20% effectiveness',                    requires:'reinforced'  },
-  fortress_walls:{ name:'Fortress Walls',    cost:100000, desc:'War machines on walls deal +50% damage',             requires:'battlements' },
-};
-const TOWER_DEF_UPGRADES = {
-  arrow_slits:   { name:'Arrow Slits',       cost:5000,   desc:'+20% ranged defense from guard towers',              requires:null           },
-  watchtower:    { name:'Watchtower',         cost:20000,  desc:'Thieves detect incoming attacks 1 turn early',       requires:'arrow_slits'  },
-  signal_tower:  { name:'Signal Tower',       cost:50000,  desc:'Attack warnings shared with alliance members',       requires:'watchtower'   },
-};
-const OUTPOST_UPGRADES = {
-  ranger_station:{ name:'Ranger Station',    cost:5000,   desc:'+25% ranger patrol effectiveness',                   requires:null              },
-  forward_camp:  { name:'Forward Camp',       cost:20000,  desc:'Rangers detect incoming expeditions targeting land', requires:'ranger_station'  },
-  field_hq:      { name:'Field Headquarters', cost:60000,  desc:'Expedition rangers return with +10% gold bonus',    requires:'forward_camp'    },
-};
-
-// Citadel threshold
-const CITADEL_REQ = { walls:50, guard_towers:20, outposts:20, castles:1 };
-
 // Compute overall defense rating label
 function defenseRating(k) {
   const walls   = k.bld_walls         || 0;
   const towers  = k.bld_guard_towers  || 0;
   const outpost = k.bld_outposts      || 0;
   const wm      = k.war_machines      || 0;
-  let defUpgrades = {};
-  try { defUpgrades = JSON.parse(k.defense_upgrades||'{}'); } catch {}
+  const defUpgrades = safeJsonParse(k.defense_upgrades, {}, 'defenseRating:defense_upgrades');
   if (defUpgrades.citadel) return '🏰 Citadel';
   if (walls === 0)                               return '🔴 Undefended';
   if (walls < 10 && towers === 0)               return '🟠 Lightly Defended';
@@ -307,8 +267,7 @@ function wallDefensePower(k) {
   if (!walls) return 0;
   const race   = k.race || 'human';
   const mult   = WALL_STRENGTH_MULT[race] || 1.0;
-  let wallUpgrades = {};
-  try { wallUpgrades = JSON.parse(k.wall_upgrades||'{}'); } catch {}
+  const wallUpgrades = safeJsonParse(k.wall_upgrades, {}, 'wallDefensePower:wall_upgrades');
   const reinMult   = wallUpgrades.reinforced    ? 1.25 : 1.0;
 
   // Base: each wall = 100 defense power (scaled by race + upgrades)
@@ -323,10 +282,9 @@ function towerDetectionPower(k) {
   if (!towers) return 0;
   const race    = k.race || 'human';
   const mult    = TOWER_DETECT_MULT[race] || 1.0;
-  let twUpgrades = {};
-  try { twUpgrades = JSON.parse(k.tower_def_upgrades||'{}'); } catch {}
+  const twUpgrades = safeJsonParse(k.tower_def_upgrades, {}, 'towerDetectionPower:tower_def_upgrades');
   const arrowMult  = twUpgrades.arrow_slits ? 1.20 : 1.0;
-  const btlMult    = (JSON.parse(k.wall_upgrades||'{}').battlements) ? 1.20 : 1.0;
+  const btlMult    = (safeJsonParse(k.wall_upgrades, {}, 'towerDetectionPower:wall_upgrades').battlements) ? 1.20 : 1.0;
   const thievesOnWatch = Math.min(k.thieves||0, towers * 10);
   return Math.floor((towers * 50 + thievesOnWatch * 15) * mult * arrowMult * btlMult);
 }
@@ -337,8 +295,7 @@ function outpostRangerPower(k) {
   if (!outposts) return 0;
   const race   = k.race || 'human';
   const mult   = OUTPOST_RANGER_MULT[race] || 1.0;
-  let opUpgrades = {};
-  try { opUpgrades = JSON.parse(k.outpost_upgrades||'{}'); } catch {}
+  const opUpgrades = safeJsonParse(k.outpost_upgrades, {}, 'outpostRangerPower:outpost_upgrades');
   const stationMult = opUpgrades.ranger_station ? 1.25 : 1.0;
   const rangersOnPatrol = Math.min(k.rangers||0, outposts * 20);
   return Math.floor((outposts * 30 + rangersOnPatrol * 10) * mult * stationMult);
@@ -347,8 +304,7 @@ function outpostRangerPower(k) {
 // Check and award Citadel status
 function checkCitadel(k, events) {
   const updates = {};
-  let defUpgrades = {};
-  try { defUpgrades = JSON.parse(k.defense_upgrades||'{}'); } catch {}
+  const defUpgrades = safeJsonParse(k.defense_upgrades, {}, 'checkCitadel:defense_upgrades');
   if (defUpgrades.citadel) return updates; // already unlocked
   const req = CITADEL_REQ;
   if ((k.bld_walls||0) >= req.walls && (k.bld_guard_towers||0) >= req.guard_towers &&
@@ -373,8 +329,7 @@ function applyWarmachineDamage(attacker, defender, win) {
   const walls = defender.bld_walls || 0;
   if (walls > 0) {
     // Walls take damage — % based on wall upgrades
-    let wallUpgrades = {};
-    try { wallUpgrades = JSON.parse(defender.wall_upgrades||'{}'); } catch {}
+    const wallUpgrades = safeJsonParse(defender.wall_upgrades, {}, 'applyWarmachineDamage:wall_upgrades');
     const warmachineResist = wallUpgrades.fortress_walls ? 0.03 : wallUpgrades.reinforced ? 0.06 : 0.10;
     const wallLost    = Math.max(1, Math.floor(walls * warmachineResist));
     updates.bld_walls = Math.max(0, walls - wallLost);
@@ -392,14 +347,8 @@ function applyWarmachineDamage(attacker, defender, win) {
 }
 
 // ── Season system ─────────────────────────────────────────────────────────────
-const SEASON_ORDER     = ['spring','summer','fall','winter'];
-const SEASON_DURATION  = { spring:3, summer:5, fall:2, winter:3 }; // real days
-const SEASON_FARM_MULT = { spring:1.10, summer:1.20, fall:0.90, winter:0.70 };
-const SEASON_ICONS     = { spring:'🌸', summer:'☀️', fall:'🍂', winter:'❄️' };
 
 // ── Location system ───────────────────────────────────────────────────────────
-// Chance modifiers for finding a kingdom by race
-const LOCATE_RACE_MULT = { human:1.00, dwarf:0.80, high_elf:0.95, orc:0.90, dark_elf:1.30, dire_wolf:1.40 };
 
 function calcDiscoveryChance(k) {
   const baseChance = 0.12; // 12% base
@@ -411,8 +360,7 @@ function calcDiscoveryChance(k) {
 
 function processLocationMapsWip(k, events) {
   const updates = {};
-  let wip = [];
-  try { wip = JSON.parse(k.location_maps_wip||'[]'); } catch {}
+  const wip = safeJsonParse(k.location_maps_wip, [], 'processLocationMapsWip:location_maps_wip');
   if (!wip.length) return updates;
 
   const scribesAvail = k.scribes || 0;
@@ -427,8 +375,7 @@ function processLocationMapsWip(k, events) {
     item.turns_remaining = (item.turns_remaining || 5) - 1;
     if (item.turns_remaining <= 0) {
       completed.push(item);
-      let disc = {};
-      try { disc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
+      const disc = safeJsonParse(k.discovered_kingdoms, {}, 'processLocationMapsWip:discovered_kingdoms');
       disc[item.target_id] = { found: true, mapped: true };
       updates.discovered_kingdoms = JSON.stringify(disc);
       events.push({ type:'system', message:`🗺️ Scribes have completed a location map for ${item.target_name}. You may now interact with them.` });
@@ -441,66 +388,8 @@ function processLocationMapsWip(k, events) {
   return updates;
 }
 
-const FARM_YIELD_MULT       = { human:1.00, dwarf:0.90, high_elf:1.15, orc:0.85, dark_elf:0.95, dire_wolf:0.80 };
-const FARM_WORKERS_PER      = { human:10,   dwarf:8,    high_elf:12,   orc:15,   dark_elf:10,   dire_wolf:12   };
-const FOOD_CONSUMPTION_MULT = { human:1.00, dwarf:0.85, high_elf:0.80, orc:1.35, dark_elf:0.95, dire_wolf:1.40 };
-const MARKET_INCOME_MULT    = { human:1.00, dwarf:1.25, high_elf:1.10, orc:0.85, dark_elf:1.05, dire_wolf:0.75 };
-const TRADE_RATE_MULT       = { human:1.00, dwarf:1.15, high_elf:1.20, orc:0.80, dark_elf:1.30, dire_wolf:0.70 };
-
-const COMMODITY_VALUES = { food:2, weapons:6, armor:8, mana:4, maps:50, scrolls:200, blueprints:150 };
-const COMMODITY_RACE_DISCOUNT = {
-  dwarf:    { weapons:0.85, armor:0.85 },
-  high_elf: { scrolls:0.80, mana:0.85 },
-  dark_elf: { _all:0.90 },
-  orc:      { food:1.20 },
-  dire_wolf:{ maps:0.80 },
-  human:    {},
-};
-
-const TOWER_UPGRADES = {
-  arcane_focus:      { name:'Arcane Focus',       cost:5000,  desc:'+25% mana production per turn',           requires:null             },
-  ley_line_tap:      { name:'Ley Line Tap',        cost:20000, desc:'Towers passively generate scroll energy', requires:'arcane_focus'   },
-  sanctum_of_power:  { name:'Sanctum of Power',    cost:75000, desc:'All spells twice as effective',          requires:'ley_line_tap'   },
-};
-const SCHOOL_UPGRADES = {
-  advanced_curriculum: { name:'Advanced Curriculum', cost:3000,  desc:'+20% research output per turn',        requires:null                   },
-  repository:          { name:'Repository',           cost:12000, desc:'Unlocks a second research discipline', requires:'advanced_curriculum'  },
-  grand_academy:       { name:'Grand Academy',        cost:40000, desc:'Researchers gain XP 50% faster',      requires:'repository'           },
-};
-const SHRINE_UPGRADES = {
-  sacred_grove:      { name:'Sacred Grove',       cost:4000,  desc:'+15% morale gain from shrines per turn',             requires:null            },
-  war_blessing:      { name:'War Blessing',        cost:15000, desc:'Clerics heal +10% more casualties in combat',        requires:'sacred_grove'  },
-  divine_sanctuary:  { name:'Divine Sanctuary',    cost:50000, desc:'Auto-stabilise morale at 50% once per 20 turns, posted to news', requires:'war_blessing' },
-};
-const LIBRARY_UPGRADES = {
-  surveyors_eyrie:  { name:'The Surveyor\'s Eyrie', cost:25000, desc:'Surveyors have a 20% chance of finding a location', requires:null },
-  mason_sigil:      { name:'The Master Mason\'s Sigil', cost:150000, desc:'Buildings constructed with Certified plans are more resistant to attacks', requires:'surveyors_eyrie' },
-  specimen_vault:   { name:'The Specimen Vault', cost:50000, desc:'Study World Fragments to create Hybrid Blueprints', requires:'mason_sigil' }
-};
-const FARM_UPGRADES = {
-  irrigated:  { name:'Irrigated Farm', cost:500,   yieldBonus:0.30, requires:null         },
-  granary:    { name:'Granary',        cost:2000,  bufferTurns:10,  requires:null         },
-  plantation: { name:'Plantation',     cost:10000, yieldBonus:0.60, requires:'irrigated'  },
-};
-const MARKET_UPGRADES = {
-  trading_post: { name:'Trading Post', cost:5000,  unlocksTrade:true,      requires:null            },
-  bazaar:       { name:'Bazaar',       cost:50000, incomeBonus:0.50,       requires:'trading_post'  },
-  black_market: { name:'Black Market', cost:15000, raceOnly:'dark_elf',    requires:'trading_post'  },
-};
-const TAVERN_UPGRADES = {
-  inn:        { name:'Inn',        cost:8000,  unlocksMercTier:'sellsword', requires:null  },
-  guild_hall: { name:'Guild Hall', cost:30000, unlocksMercTier:'veteran',   requires:'inn' },
-};
-const MERC_TIERS = {
-  rabble:    { levelMin:5,  levelMax:10, costPer:50,   duration:10, upkeepPct:0.25, requires:null         },
-  sellsword: { levelMin:15, levelMax:25, costPer:150,  duration:20, upkeepPct:0.25, requires:'inn'        },
-  veteran:   { levelMin:30, levelMax:45, costPer:400,  duration:30, upkeepPct:0.25, requires:'guild_hall' },
-  elite:     { levelMin:50, levelMax:65, costPer:1000, duration:40, upkeepPct:0.25, requires:'guild_hall' },
-};
-
 function hybridMultiplier(k, target) {
-  let hbp = {};
-  try { hbp = JSON.parse(k.hybrid_blueprints || '{}'); } catch {}
+  const hbp = safeJsonParse(k.hybrid_blueprints, {}, 'hybridMultiplier:hybrid_blueprints');
   let active = false;
   for (const key in hbp) {
     if (hbp[key].assigned && hbp[key].building === target) {
@@ -518,16 +407,14 @@ function totalHiredUnits(k) {
 function farmProduction(k) {
   const farms = k.bld_farms || 0;
   if (!farms) return 0;
-  let upgrades = {};
-  try { upgrades = JSON.parse(k.farm_upgrades || '{}'); } catch {}
+  const upgrades = safeJsonParse(k.farm_upgrades, {}, 'farmProduction:farm_upgrades');
   const race         = k.race || 'human';
   const workersNeeded = FARM_WORKERS_PER[race] || 10;
   const freePop       = Math.max(0, (k.population||0) - totalHiredUnits(k));
   const workedFarms   = Math.min(farms, Math.floor(freePop / workersNeeded));
   let   baseYield     = workedFarms * 10 * (FARM_YIELD_MULT[race] || 1.0);
   // Apply season and active event farm multiplier
-  let activeEv = {};
-  try { activeEv = JSON.parse(k.active_event||'{}'); } catch {}
+  const activeEv = safeJsonParse(k.active_event, {}, 'farmProduction:active_event');
   const seasonMult  = (k._season_farm_mult) || 1.0; // injected by processTurn
   const evFarmMult  = activeEv.farm_yield  ? activeEv.farm_yield.mult  : 1.0;
 
@@ -548,8 +435,7 @@ function foodConsumption(k) {
 function marketIncomeFull(k) {
   const markets = k.bld_markets || 0;
   if (!markets) return 0;
-  let upgrades = {};
-  try { upgrades = JSON.parse(k.market_upgrades || '{}'); } catch {}
+  const upgrades = safeJsonParse(k.market_upgrades, {}, 'marketIncomeFull:market_upgrades');
   const race         = k.race || 'human';
   const mult         = MARKET_INCOME_MULT[race] || 1.0;
   const freePop      = Math.max(0, (k.population||0) - totalHiredUnits(k));
@@ -564,8 +450,7 @@ function marketIncomeFull(k) {
 function tavernEntertainmentBonus(k) {
   const taverns = k.bld_taverns || 0;
   if (!taverns) return 0;
-  let upgrades = {};
-  try { upgrades = JSON.parse(k.tavern_upgrades || '{}'); } catch {}
+  const upgrades = safeJsonParse(k.tavern_upgrades, {}, 'tavernEntertainmentBonus:tavern_upgrades');
   const base = taverns * 2 * hybridMultiplier(k, 'bld_taverns');
   return Math.floor(upgrades.guild_hall ? base*1.5 : upgrades.inn ? base*1.2 : base);
 }
@@ -584,8 +469,7 @@ function processFoodEconomy(k, events) {
   const cons      = foodConsumption(k);
   const balance   = prod - cons;
   let   food      = k.food || 0;
-  let   upgrades  = {};
-  try { upgrades = JSON.parse(k.farm_upgrades || '{}'); } catch {}
+  const upgrades = safeJsonParse(k.farm_upgrades, {}, 'processFoodEconomy:farm_upgrades');
   const maxStore  = cons * (upgrades.granary ? 15 : 5);
 
   if (balance >= 0) {
@@ -637,8 +521,7 @@ function processFoodEconomy(k, events) {
 
 function processMercenaries(k, events) {
   const updates = {};
-  let mercs = [];
-  try { mercs = JSON.parse(k.mercenaries || '[]'); } catch {}
+  const mercs = safeJsonParse(k.mercenaries, [], 'processMercenaries:mercenaries');
   if (!mercs.length) return updates;
 
   const currentTurn = k.turn || 0;
@@ -667,8 +550,7 @@ function processMercenaries(k, events) {
 function hireMercenaries(k, unitType, tier, count) {
   const tierDef = MERC_TIERS[tier];
   if (!tierDef) return { error:'Invalid tier' };
-  let tavUpgrades = {};
-  try { tavUpgrades = JSON.parse(k.tavern_upgrades||'{}'); } catch {}
+  const tavUpgrades = safeJsonParse(k.tavern_upgrades, {}, 'hireMercenaries:tavern_upgrades');
   if (tierDef.requires && !tavUpgrades[tierDef.requires])
     return { error:`Requires ${tierDef.requires.replace('_',' ')} upgrade` };
   if (!(k.bld_taverns > 0)) return { error:'Need at least 1 tavern' };
@@ -678,8 +560,7 @@ function hireMercenaries(k, unitType, tier, count) {
   const upkeep = Math.ceil(cost * tierDef.upkeepPct / tierDef.duration);
   if ((k.gold||0) < cost) return { error:`Need ${cost.toLocaleString()} gold` };
 
-  let mercs = [];
-  try { mercs = JSON.parse(k.mercenaries||'[]'); } catch {}
+  const mercs = safeJsonParse(k.mercenaries, [], 'hireMercenaries:mercenaries');
   mercs.push({ unit_type:unitType, tier, level, count, hired_at_turn:k.turn||0, duration_turns:tierDef.duration, upkeep_per_turn:upkeep });
 
   return {
@@ -698,8 +579,7 @@ function purchaseUpgrade(k, category, upgradeKey) {
   const def = defs[upgradeKey];
   if (!def) return { error:'Invalid upgrade' };
   const colName = `${category}_upgrades`;
-  let upgrades = {};
-  try { upgrades = JSON.parse(k[colName]||'{}'); } catch {}
+  const upgrades = safeJsonParse(k[colName], {}, `purchaseUpgrade:${colName}`);
   if (upgrades[upgradeKey])                        return { error:'Already purchased' };
   if (def.requires && !upgrades[def.requires])     return { error:`Requires ${def.requires.replace(/_/g,' ')} first` };
   if (def.raceOnly && k.race !== def.raceOnly)     return { error:`Only available to ${def.raceOnly.replace(/_/g,' ')}` };
@@ -710,40 +590,8 @@ function purchaseUpgrade(k, category, upgradeKey) {
   return { updates:{ gold:(k.gold||0)-def.cost, [colName]:JSON.stringify(upgrades) } };
 }
 
-const LORE_EVENTS = {
-  high_elf: [
-    "A rare lunar eclipse has bathed the Silverwood in violet light. Your mages report that the Ley Lines are thrumming with ancient resonance.",
-    "The High Council of Elders has shared a vision of the First Age. Immersion in history has bolstered your kingdom's prestige.",
-    "A diplomatic envoy from the Hidden Glade has arrived, bringing scrolls of forgotten poetry and architectural secrets."
-  ],
-  dwarf: [
-    "Deep-scouts have uncovered a vein of 'Living Granite' in the lower depths of the Iron Holds. Ancient runic carvings confirm it was intended for a Great Gate.",
-    "The Brewmaster's Guild has declared a week of Remembrance. Hammers fall silent as the songs of the ancestors fill the great caverns.",
-    "A massive steam-burst in the Geyser-Works revealed a cached archive of steam-engine blueprints from the Era of Industry."
-  ],
-  dire_wolf: [
-    "A great pack-gathering occurred under the Ashfang moon. The elders spoke of the 'First Hunt' and the blood-ties that bind the wilds.",
-    "A blizzard has unearthed an ancient monolith of bone. Your trackers sense a lingering aura of the Great Pack-Mother.",
-    "The winds from the northern peaks carry the scent of old magic. Your rangers find signs of the spirit-kin returning to the Ash-Tainted groves."
-  ],
-  dark_elf: [
-    "The Night-Market in Underspire was unusually quiet tonight. Rumors of the 'Silent Treaty' are circulating among the shadow-cloaks.",
-    "A collapse in the lower tunnels revealed a mural depicting the descent of the First Matriarch. The historical weight is palpable.",
-    "The Poisoner's Guild has decoded a cipher from the Age of Betrayal. Subtle shifts in the power balance follow."
-  ],
-  human: [
-    "A traveling troupe of bards in the Heartlands is performing the 'Saga of the Unbroken Kingdom'. Loyalty to the throne swells.",
-    "A hidden cellar in a crossroads inn yielded a collection of antique trade ledgers dating back to the Merchant-King's reign.",
-    "The harvest festival this year is particularly vibrant. Eldest villagers recount tales of the land's bounty before the Great Sundering."
-  ],
-  orc: [
-    "The war-drums of the Bloodplains beat with a rhythm not heard for generations. The spirit of the Great Khan is said to be stirring.",
-    "A trial by combat near the Scarred Monolith ended in a draw, with both warriors claiming they saw the ghosts of the Old Guard.",
-    "Your scouts found a buried cache of obsidian axe-heads. The craftsmanship predates even the earliest known Orcish settlements."
-  ]
-};
-
 function processTurn(k) {
+  clearParseCache();
   const events = [];
   const updates = { turn: k.turn + 1, updated_at: Math.floor(Date.now() / 1000) };
 
@@ -785,8 +633,7 @@ function processTurn(k) {
   Object.assign(updates, locUpdates);
 
   // ── 4e. Active event tick-down ────────────────────────────────────────────────
-  let activeEv2 = {};
-  try { activeEv2 = JSON.parse((updates.active_event || k.active_event)||'{}'); } catch {}
+  const activeEv2 = safeJsonParse(updates.active_event || k.active_event, {}, 'processTurn:active_event');
   let changed = false;
   for (const key of Object.keys(activeEv2)) {
     activeEv2[key].turns_remaining = (activeEv2[key].turns_remaining||1) - 1;
@@ -808,15 +655,6 @@ function processTurn(k) {
   // Researchers, engineers, scribes are exempt if housed in their buildings.
   // Overflow (unhomed) units pay normal upkeep.
 
-  // Racial capacity multipliers for support buildings
-  const SUPPORT_CAP_RACE = {
-    high_elf:  { researcher: 1.5, engineer: 1.0, scribe: 1.5 },
-    dwarf:     { researcher: 0.9, engineer: 1.5, scribe: 1.0 },
-    dire_wolf: { researcher: 0.7, engineer: 1.0, scribe: 0.7 },
-    dark_elf:  { researcher: 1.2, engineer: 0.9, scribe: 1.3 },
-    human:     { researcher: 1.0, engineer: 1.0, scribe: 1.0 },
-    orc:       { researcher: 0.8, engineer: 1.2, scribe: 0.8 },
-  };
   const capRace = SUPPORT_CAP_RACE[k.race] || { researcher: 1.0, engineer: 1.0, scribe: 1.0 };
 
   // Capacity per building (base × race multiplier)
@@ -918,15 +756,12 @@ function processTurn(k) {
       { col: 'res_spellbook',     key: 'spellbook',      label: 'Spellbook',        multi: raceMagic    },
     ];
 
-    // School upgrades
-    let schoolUpgrades = {};
-    try { schoolUpgrades = JSON.parse(k.school_upgrades||'{}'); } catch {}
+    const schoolUpgrades = safeJsonParse(k.school_upgrades, {}, 'processTurn:school_upgrades');
     const curriculumMult = schoolUpgrades.advanced_curriculum ? 1.20 : 1.0;
     const maxSlots       = schoolUpgrades.repository ? 2 : 1;
 
     // Research focus — single or dual discipline
-    let focus = [];
-    try { focus = JSON.parse(k.research_focus||'[]'); } catch {}
+    let focus = safeJsonParse(k.research_focus, [], 'processTurn:research_focus');
     if (!focus.length) {
       // Auto-select highest current discipline
       const top = ALL_DISCIPLINES.reduce((best, d) => ((k[d.col]||0) >= (k[best.col]||0) ? d : best), ALL_DISCIPLINES[0]);
@@ -1010,10 +845,8 @@ function processTurn(k) {
 
   // ── 9. Training fields — passive troop XP each turn ──────────────────────────
   if ((k.bld_training||0) > 0) {
-    let troopLevels = {};
-    try { troopLevels = JSON.parse(updates.troop_levels || k.troop_levels || '{}'); } catch { troopLevels = {}; }
-    let allocation = {};
-    try { allocation = JSON.parse(k.training_allocation || '{}'); } catch { allocation = {}; }
+    const troopLevels = safeJsonParse(updates.troop_levels || k.troop_levels, {}, 'processTurn:troop_levels');
+    const allocation = safeJsonParse(k.training_allocation, {}, 'processTurn:training_allocation');
 
     const TROOP_TYPES = ['fighters','rangers','clerics','mages','thieves','ninjas'];
     const trainingFields   = k.bld_training || 0;
@@ -1117,16 +950,12 @@ function processTurn(k) {
   updates.level = currentLevel;
 
   // ── Racial bonus unlock check — fires once when signature unit hits level 5 ──
-  const RACIAL_UNITS = { dwarf:'engineers', high_elf:'mages', orc:'fighters', dark_elf:'ninjas', dire_wolf:'rangers', human:'clerics' };
   const keyUnit = RACIAL_UNITS[k.race];
   if (keyUnit) {
     // Use already-set updates value if present, else fall back to k
-    let racialData = {};
-    try { racialData = JSON.parse(updates.racial_bonuses_unlocked || k.racial_bonuses_unlocked || '{}'); } catch {}
+    const racialData = safeJsonParse(updates.racial_bonuses_unlocked || k.racial_bonuses_unlocked, {}, 'processTurn:racial_bonuses_unlocked');
     if (!racialData[keyUnit]) {
-      const tls = typeof (updates.troop_levels || k.troop_levels) === 'string'
-        ? JSON.parse(updates.troop_levels || k.troop_levels || '{}')
-        : (updates.troop_levels || k.troop_levels || {});
+      const tls = safeJsonParse(updates.troop_levels || k.troop_levels, {}, 'processTurn:troop_levels_racial_check');
       const unitLevel = tls[keyUnit]?.level || 1;
       if (unitLevel >= 5) {
         racialData[keyUnit] = true;
@@ -1156,45 +985,6 @@ function levelCap(base, max, level) {
   const lv = Math.max(1, Math.min(1000, level || 1));
   return Math.floor(base + (max - base) * (lv - 1) / 999);
 }
-
-const CAPS = {
-  // Combat troops: level 1 → level 1000
-  fighters:  { base: 500,    max: 5000000  },
-  rangers:   { base: 250,    max: 2000000  },
-  clerics:   { base: 100,    max: 1000000  },
-  mages:     { base: 100,    max: 1000000  },
-  thieves:   { base: 100,    max: 500000   },
-  ninjas:    { base: 50,     max: 250000   },
-  // No cap on researchers or engineers
-
-  // Buildings: small kingdoms start with low limits
-  bld_walls:         { base: 500,   max: 1000000 },
-  bld_barracks:     { base: 10,    max: 50000   },
-  bld_outposts:     { base: 10,    max: 25000   },
-  bld_guard_towers: { base: 10,    max: 25000   },
-  bld_schools:      { base: 5,     max: 10000   },
-  bld_armories:     { base: 5,     max: 10000   },
-  bld_vaults:       { base: 5,     max: 10000   },
-  bld_smithies:     { base: 5,     max: 5000    },
-  bld_markets:      { base: 3,     max: 5000    },
-  bld_cathedrals:   { base: 3,     max: 5000    },
-  bld_training:     { base: 2,     max: 2000    },
-  bld_colosseums:   { base: 2,     max: 2000    },
-  bld_castles:      { base: 1,     max: 500     },
-  war_machines:     { base: 1000,  max: 10000   },
-
-  // Research: starts at 100% base, scales to 1000% max
-  res_economy:       { base: 100,  max: 10000 },
-  res_weapons:       { base: 100,  max: 10000 },
-  res_armor:         { base: 100,  max: 10000 },
-  res_military:      { base: 100,  max: 10000 },
-  res_spellbook:     { base: 500,  max: 500000 },
-  res_attack_magic:  { base: 100,  max: 10000 },
-  res_defense_magic: { base: 100,  max: 10000 },
-  res_entertainment: { base: 100,  max: 10000 },
-  res_construction:  { base: 100,  max: 10000 },
-  res_war_machines:  { base: 100,  max: 10000 },
-};
 
 function getCap(field, level) {
   const c = CAPS[field];
@@ -1256,19 +1046,6 @@ function hireUnits(k, unit, amount) {
 
 // ── Research ──────────────────────────────────────────────────────────────────
 
-const RESEARCH_MAP = {
-  economy:      'res_economy',
-  weapons:      'res_weapons',
-  armor:        'res_armor',
-  military:     'res_military',
-  spellbook:    'res_spellbook',
-  attack_magic: 'res_attack_magic',
-  defense_magic:'res_defense_magic',
-  entertainment:'res_entertainment',
-  construction: 'res_construction',
-  war_machines: 'res_war_machines',
-};
-
 function studyDiscipline(k, discipline, researchersAssigned) {
   const col = RESEARCH_MAP[discipline];
   if (!col) return { error: 'Unknown discipline' };
@@ -1313,53 +1090,11 @@ function levelFromXp(totalXp) {
   return lo;
 }
 
-// Race XP multipliers per activity type
-const XP_RACE_BONUS = {
-  high_elf:  { research: 1.5, magic: 1.5 },
-  dwarf:     { construction: 1.5, economy: 1.25 },
-  dire_wolf: { combat: 1.5, exploration: 1.25 },
-  dark_elf:  { covert: 1.5, magic: 1.25 },
-  human:     { all: 1.10 },
-  orc:       { combat: 1.25, economy: 1.25 },
-};
-
 function xpRaceBonus(k, activity) {
   const bonuses = XP_RACE_BONUS[k.race] || {};
   const base = bonuses.all || 1.0;
   return Math.max(base, bonuses[activity] || base);
 }
-
-// XP base values per activity
-const XP_BASE = {
-  turn:         10,    // per turn taken
-  gold_earned:  0.001, // per GC of income
-  combat_win:   500,   // per combat victory
-  combat_loss:  100,   // per combat defeat
-  research:     50,    // per discipline that advanced
-  construction: 20,    // per building unit completed
-  exploration:  5,     // per acre found
-  spell_cast:   0.01,  // per mana spent
-  covert_op:    150,   // per covert operation
-};
-
-const BUILDING_ALIASES = {
-  farm: 'farms',
-  outpost: 'outposts',
-  tower: 'guard_towers',
-  school: 'schools',
-  armory: 'armories',
-  vault: 'vaults',
-  smithy: 'smithies',
-  market: 'markets',
-  cathedral: 'cathedrals',
-  colosseum: 'colosseums',
-  shrine: 'shrines',
-  castle: 'castles',
-  library: 'libraries',
-  tavern: 'taverns',
-  weapon: 'weapons',
-  armour: 'armor'
-};
 
 // Award XP and check for level up — returns { xp, level, levelled, events }
 function awardXp(k, activity, amount) {
@@ -1377,52 +1112,6 @@ function awardXp(k, activity, amount) {
 
 // ── Construction ──────────────────────────────────────────────────────────────
 
-// Engineer-turns required to complete one unit of each building
-const BUILDING_COST = {
-  farms: 2500, barracks: 5000, outposts: 7500, guard_towers: 2500,
-  schools: 7500, armories: 2500, vaults: 10000, smithies: 10000,
-  markets: 10000, cathedrals: 15000, shrines: 5000, training: 20000, colosseums: 5000,
-  castles: 100000, libraries: 10000, housing: 5000, walls: 500, taverns: 3000,
-  war_machines: 1000, weapons: 10, armor: 10,
-};
-
-const BUILDING_COL = {
-  farms: 'bld_farms', barracks: 'bld_barracks', outposts: 'bld_outposts',
-  guard_towers: 'bld_guard_towers', schools: 'bld_schools', armories: 'bld_armories',
-  vaults: 'bld_vaults', smithies: 'bld_smithies', markets: 'bld_markets',
-  cathedrals: 'bld_cathedrals', shrines: 'bld_shrines', training: 'bld_training',
-  colosseums: 'bld_colosseums', castles: 'bld_castles', libraries: 'bld_libraries',
-  housing: 'bld_housing', walls: 'bld_walls', taverns: 'bld_taverns',
-  war_machines: 'war_machines', weapons: 'weapons_stockpile', armor: 'armor_stockpile',
-};
-
-const BUILDING_GOLD_COST = {
-  farms: 50, barracks: 200, outposts: 150, guard_towers: 150,
-  schools: 500, armories: 400, vaults: 400, smithies: 800,
-  markets: 2000, cathedrals: 3000, shrines: 1000, training: 10000, colosseums: 1500,
-  castles: 25000, libraries: 2000, housing: 500, walls: 300, taverns: 1000,
-  war_machines: 100, weapons: 100, armor: 150,
-};
-
-// Land cost per building unit completed
-const BUILDING_LAND_COST = {
-  farms: 1, barracks: 1, outposts: 1, guard_towers: 1, armories: 1, vaults: 1,
-  schools: 2, smithies: 2, markets: 2, colosseums: 2, shrines: 2, libraries: 2,
-  housing: 1,
-  cathedrals: 5, training: 5,
-  castles: 10,
-  war_machines: 0, weapons: 0, armor: 0,
-};
-const TOOL_COL       = { hammers: 'tools_hammers', scaffolding: 'tools_scaffolding', blueprints: 'tools_blueprints' };
-const TOOL_GOLD_COST = { hammers: 0, scaffolding: 2500, blueprints: 0 }; // hammers cost 1 turn via smithy; blueprints from library
-
-// Buildings requiring blueprint (base cost >= 100 turns @ 100 engineers)
-const BLUEPRINT_REQUIRED = new Set(['vaults','smithies','markets','cathedrals','training','colosseums','castles','libraries']);
-// Buildings requiring scaffolding (base cost > 100 turns)
-const SCAFFOLDING_REQUIRED = new Set(['cathedrals','training','castles']);
-// Scaffolding also gives a bonus for buildings under 100 turns (consumed on completion)
-const SCAFFOLDING_BONUS_BUILDINGS = new Set(['farms','barracks','outposts','guard_towers','schools','armories','shrines','housing','colosseums']);
-
 // Scaffolding bonus scales inversely with building difficulty: smaller buildings get bigger % boost
 function scaffoldingBonus(building) {
   const cost = BUILDING_COST[building] || 10000;
@@ -1435,8 +1124,7 @@ function processSmithyProduction(k, events) {
   const smithies = k.bld_smithies || 0;
   if (smithies === 0) return updates;
 
-  let alloc = {};
-  try { alloc = JSON.parse(k.smithy_allocation || '{}'); } catch {}
+  const alloc = safeJsonParse(k.smithy_allocation, {}, 'processSmithyProduction:smithy_allocation');
 
   const hammerAlloc    = Math.min(Number(alloc.hammers)    || 0, smithies); // max 1 per smithy per turn
   const scaffoldAlloc  = Math.min(Number(alloc.scaffolding) || 0, smithies);
@@ -1487,27 +1175,32 @@ function processSmithyProduction(k, events) {
 
 // Add buildings to the queue — charges gold, no turn cost
 function queueBuildings(k, orders) {
-  let queue = {};
-  try { queue = JSON.parse(k.build_queue || '{}'); } catch { queue = {}; }
+  const queue = safeJsonParse(k.build_queue, {}, 'queueBuildings:build_queue');
 
   let totalCost = 0;
+  const processedOrders = {};
+
   for (const [building, qty] of Object.entries(orders)) {
-    if (!BUILDING_COST[building]) continue;
-    const n = Number(qty);
+    // Normalize building name (e.g., 'library' -> 'libraries')
+    const key = BUILDING_ALIASES[building] || building;
+    if (!BUILDING_COST[key]) {
+      console.warn(`[queueBuildings] Unknown building type: ${building} (normalized to ${key})`);
+      continue;
+    }
+    const n = Math.max(0, Number(qty));
     if (n <= 0) continue;
-    const goldPerUnit = BUILDING_GOLD_COST[building] || 100;
+    
+    const goldPerUnit = BUILDING_GOLD_COST[key] || 100;
     totalCost += goldPerUnit * n;
+    processedOrders[key] = n;
   }
 
   if (totalCost > k.gold) {
     return { error: `Need ${totalCost.toLocaleString()} gold but only have ${k.gold.toLocaleString()} gold` };
   }
 
-  for (const [building, qty] of Object.entries(orders)) {
-    if (!BUILDING_COST[building]) continue;
-    const n = Number(qty);
-    if (n <= 0) continue;
-    queue[building] = (queue[building] || 0) + n;
+  for (const [key, n] of Object.entries(processedOrders)) {
+    queue[key] = (queue[key] || 0) + n;
   }
 
   return {
@@ -1538,8 +1231,7 @@ function processBuildQueue(k, events) {
   let scaffoldingUsed = 0;
 
   // Get engineer allocation
-  let allocationRaw = {};
-  try { allocationRaw = JSON.parse(k.build_allocation || '{}'); } catch { allocationRaw = {}; }
+  const allocationRaw = safeJsonParse(k.build_allocation, {}, 'processBuildQueue:build_allocation');
   let allocation = {};
   for (const b of Object.keys(allocationRaw)) {
     const key = BUILDING_ALIASES[b] || b;
@@ -1547,8 +1239,7 @@ function processBuildQueue(k, events) {
   }
 
   // Also check legacy build_queue for any manually queued items
-  let queueRaw = {};
-  try { queueRaw = JSON.parse(k.build_queue || '{}'); } catch { queueRaw = {}; }
+  const queueRaw = safeJsonParse(k.build_queue, {}, 'processBuildQueue:build_queue');
   let queue = {};
   for (const b of Object.keys(queueRaw)) {
     const key = BUILDING_ALIASES[b] || b;
@@ -1556,8 +1247,7 @@ function processBuildQueue(k, events) {
   }
 
   // Normalize progress
-  let progressRaw = {};
-  try { progressRaw = JSON.parse(k.build_progress || '{}'); } catch { progressRaw = {}; }
+  const progressRaw = safeJsonParse(k.build_progress, {}, 'processBuildQueue:build_progress');
   let progress = {};
   for (const b of Object.keys(progressRaw)) {
     const key = BUILDING_ALIASES[b] || b;
@@ -1738,11 +1428,6 @@ function forgeTools(k, toolType, quantity) {
 
 // ── Military combat ───────────────────────────────────────────────────────────
 
-// War machine crew requirements by race
-const WM_CREW_REQUIRED = {
-  dwarf: 2, human: 3, high_elf: 4, dark_elf: 4, orc: 5, dire_wolf: 6,
-};
-
 function wmCrewRequired(race, engineerLevel) {
   let base = WM_CREW_REQUIRED[race] || 3;
   // Dwarf racial unique — solo crew at engineer level 5+
@@ -1893,8 +1578,7 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   // Structure defense (castles)
   const defStructures   = Math.floor((defender.bld_castles||0) / 500) * 5000;
   // Citadel bonus
-  let defCitadelMult = 1.0;
-  try { if (JSON.parse(defender.defense_upgrades||'{}').citadel) defCitadelMult = 1.15; } catch {}
+  const defCitadelMult = safeJsonParse(defender.defense_upgrades, {}, 'resolveMilitaryAttack:defense_upgrades').citadel ? 1.15 : 1.0;
 
   // Hero power — defender
   let defHeroPower = 0;
@@ -1963,9 +1647,7 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   const newDefMorale = Math.max(MORALE_FLOOR, Math.min(200, (defender.morale||100) + defMoraleChange));
 
   // The attacker is always discovered by the defender (map drop)
-  let defDiscRaw = {};
-  try { defDiscRaw = JSON.parse(defender.discovered_kingdoms || '{}'); } catch {}
-  let defDisc = { ...defDiscRaw };
+  const defDisc = safeJsonParse(defender.discovered_kingdoms, {}, 'resolveMilitaryAttack:defender_discovered_kingdoms');
   defDisc[attacker.id] = { found: true, mapped: true }; // Attackers leave maps
   defenderUpdates.discovered_kingdoms = JSON.stringify(defDisc);
 
@@ -1974,8 +1656,7 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
     const baseChance = 0.04;
     const raceBonus = (attacker.race === 'orc' || attacker.race === 'dire_wolf') ? 1.5 : 1.0;
     if (Math.random() < (baseChance * raceBonus)) {
-      let atkDisc = {};
-      try { atkDisc = JSON.parse(attacker.discovered_kingdoms || '{}'); } catch {}
+      const atkDisc = safeJsonParse(attacker.discovered_kingdoms, {}, 'resolveMilitaryAttack:attacker_discovered_kingdoms');
       // In a real scenario we'd pick a random kingdom from defender's mapped list
       // For now, let's just make sure they mapped the defender if they didn't already
       if (!atkDisc[defender.id] || !atkDisc[defender.id].mapped) {
@@ -2055,58 +1736,7 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
 
 // ── Magic ─────────────────────────────────────────────────────────────────────
 
-const SPELL_DEFS = {
-  // Tier 1 — Spellbook 100–400
-  spark:      { minSB: 100,  tier: 1, effect: 'buildings',   damageType: 'fire',    desc: 'Burns a small number of enemy farms' },
-  fog_of_war: { minSB: 150,  tier: 1, effect: 'debuff',      damageType: 'illusion',desc: 'Blinds enemy rangers for 3 turns', duration: 3 },
-  mend:       { minSB: 200,  tier: 1, effect: 'friendly',    damageType: 'none',    desc: 'Heals your own troop casualties from last battle' },
-  blight:     { minSB: 250,  tier: 1, effect: 'debuff',      damageType: 'poison',  desc: 'Poisons enemy food supply for 5 turns', duration: 5 },
-  rain:       { minSB: 300,  tier: 1, effect: 'buildings',   damageType: 'cool',    desc: 'Floods enemy farms — more damage than Spark' },
-  dispel:     { minSB: 400,  tier: 1, effect: 'friendly',    damageType: 'none',    desc: 'Removes all active curses and debuffs from your kingdom' },
-  // Tier 2 — Spellbook 500–900
-  lightning:  { minSB: 500,  tier: 2, effect: 'troops',      damageType: 'strike',  desc: 'Strikes down enemy fighters' },
-  bless:      { minSB: 600,  tier: 2, effect: 'friendly',    damageType: 'none',    desc: 'Boosts morale and population growth for 5 turns', duration: 5 },
-  silence:    { minSB: 700,  tier: 2, effect: 'debuff',      damageType: 'mental',  desc: 'Suppresses enemy research progress for 3 turns', duration: 3 },
-  amnesia:    { minSB: 800,  tier: 2, effect: 'research',    damageType: 'mental',  desc: 'Permanently wipes a chunk of enemy economy research' },
-  drain:      { minSB: 900,  tier: 2, effect: 'mana',        damageType: 'arcane',  desc: 'Siphons mana from enemy kingdom to yours' },
-  // Tier 3 — Spellbook 1000–1500
-  plague:     { minSB: 1000, tier: 3, effect: 'population',  damageType: 'disease', desc: 'Kills enemy population over 5 turns', duration: 5 },
-  earthquake: { minSB: 1200, tier: 3, effect: 'buildings',   damageType: 'force',   desc: 'Destroys buildings across all types' },
-  tempest:    { minSB: 1400, tier: 3, effect: 'troops',      damageType: 'storm',   desc: 'Kills all troop types simultaneously' },
-  shield:     { minSB: 1500, tier: 3, effect: 'friendly',    damageType: 'none',    desc: 'Reduces incoming spell damage by 50% for 5 turns', duration: 5 },
-  // Tier 4 — Spellbook 2000+
-  armageddon: { minSB: 2000, tier: 4, effect: 'catastrophic',damageType: 'void',    desc: 'Destroys land, buildings, and population simultaneously. One cast, total devastation.' },
-};
-
 // Scroll crafting requirements: { mages needed, turns to complete }
-const SCROLL_REQUIREMENTS = {
-  blank_scroll: { mages: 5,   turns: 5  },
-  spark:      { mages: 5,   turns: 5  },
-  fog_of_war: { mages: 8,   turns: 8  },
-  mend:       { mages: 8,   turns: 10 },
-  blight:     { mages: 10,  turns: 12 },
-  rain:       { mages: 10,  turns: 15 },
-  dispel:     { mages: 12,  turns: 15 },
-  lightning:  { mages: 15,  turns: 20 },
-  bless:      { mages: 15,  turns: 20 },
-  silence:    { mages: 20,  turns: 25 },
-  amnesia:    { mages: 20,  turns: 30 },
-  drain:      { mages: 25,  turns: 30 },
-  plague:     { mages: 30,  turns: 40 },
-  earthquake: { mages: 35,  turns: 50 },
-  tempest:    { mages: 40,  turns: 60 },
-  shield:     { mages: 40,  turns: 60 },
-  armageddon: { mages: 100, turns: 200 },
-};
-
-// Map/blueprint crafting requirements (scribes)
-const SCRIBE_ITEMS = {
-  map:          { scribes: 3,  turns: 10, desc: 'Required to interact with another kingdom' },
-  blueprint:    { scribes: 5,  turns: 20, desc: 'Boosts construction speed by 10% when used' },
-  location_map: { scribes: 10, turns: 5,  desc: 'Uses 1 map to scribe an unmapped location into a usable map' },
-  hybrid_blueprint: { scribes: 100, turns: 500, desc: 'Study a World Fragment to randomly devise a unique building upgrade' },
-};
-
 function castSpell(caster, target, spellId, obscure) {
   const def = SPELL_DEFS[spellId];
   if (!def) return { error: 'Unknown spell' };
@@ -2436,137 +2066,8 @@ function resolveAllianceDefense(attackResult, allies) {
 }
 
 // ── Expedition rewards ──────────────────────────────────────────────────────
-// ── Expedition helpers ──────────────────────────────────────────────────────
-const WORLD_FRAGMENTS = [
-  'Volcanic Rock', 'Ancient Elven Wood', 'Dragon Scale', 'Abyssal Crystal',
-  'Celestial Feather', 'Dwarven Star-Metal', 'Cursed Bloodstone',
-  'Tears of the World Tree', 'Void Essence', 'Titan Bone'
-];
-
 function roll(chance) { return Math.random() < chance; }
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-
-const JUNK_PRIZES = [
-  'a suspiciously damp sock',
-  'a map to a location that no longer exists',
-  'a very confident fortune cookie with no fortune inside',
-  'a half-eaten ration bar of unknown vintage',
-  'a decorative rock (it does nothing)',
-  'a pamphlet titled "10 Reasons Orcs Are Actually Quite Misunderstood"',
-  'a jar of mysterious grey paste (do not eat)',
-  'a slightly bent sword that the previous owner called "Destiny"',
-  'a tiny flag from a kingdom that fell 300 years ago',
-  'a love letter addressed to someone named Grimbold',
-  'a collection of 47 different types of dirt',
-  'a boot (just the one)',
-  'a certificate of participation from the Third Annual Swamp Festival',
-  'a wheel of cheese that has achieved sentience (probably)',
-  'a bag of magic beans that are, on closer inspection, just beans',
-  'a very thorough guide to knitting (no one in your kingdom knows how to read)',
-  'a suspicious smell that follows rangers home',
-  'a crystal ball showing only static',
-  'an extremely detailed painting of a cloud',
-  'a dwarf\'s shopping list (mostly cheese)',
-  'a torch that only works in daylight',
-  'a book called "How To Stop Being Poor" — all pages blank',
-  'a rusty key to an unknown lock',
-  'a proclamation declaring your kingdom "pretty good, probably"',
-  'a coupon for 10% off at an inn that burned down decades ago',
-];
-
-// ── Ultra-rare expedition prizes ─────────────────────────────────────────────
-const ULTRA_RARE_PRIZES = [
-  {
-    id: 'ancient_dragon_egg',
-    text: '🥚 An ancient dragon egg, still warm — it pulses with primordial magic',
-    effect: (k, updates) => {
-      updates.res_attack_magic = (k.res_attack_magic || 0) + 75;
-      updates.res_spellbook    = (k.res_spellbook    || 0) + 50;
-      updates.mana             = (k.mana             || 0) + 5000;
-    },
-  },
-  {
-    id: 'tome_of_forgotten_kings',
-    text: "📖 The Tome of Forgotten Kings — ancient military wisdom permanently inscribed in your kingdom's history",
-    effect: (k, updates) => {
-      updates.res_military = (k.res_military || 0) + 80;
-      updates.res_weapons  = (k.res_weapons  || 0) + 50;
-      updates.res_armor    = (k.res_armor    || 0) + 50;
-    },
-  },
-  {
-    id: 'crystalline_mana_heart',
-    text: '💎 A crystalline mana heart — it hums with a frequency older than the world itself',
-    effect: (k, updates) => {
-      updates.mana              = (k.mana              || 0) + 20000;
-      updates.res_defense_magic = (k.res_defense_magic || 0) + 60;
-      updates.res_spellbook     = (k.res_spellbook     || 0) + 100;
-    },
-  },
-  {
-    id: 'vault_of_the_ancients',
-    text: '💰 A sealed vault of the Ancient Ones — untold riches beyond imagining',
-    effect: (k, updates) => {
-      updates.gold        = (k.gold        || 0) + 500000;
-      updates.res_economy = (k.res_economy || 0) + 60;
-    },
-  },
-  {
-    id: 'lost_legion_banner',
-    text: '⚔️ The Banner of the Lost Legion — ten thousand warriors emerge from the mist and pledge their eternal service',
-    effect: (k, updates) => {
-      updates.fighters     = (k.fighters     || 0) + 10000;
-      updates.res_military = (k.res_military || 0) + 40;
-    },
-  },
-  {
-    id: 'seed_of_the_world_tree',
-    text: '🌳 The Seed of the World Tree — your lands bloom with ancient fertility',
-    effect: (k, updates) => {
-      updates.land       = (k.land       || 0) + 500;
-      updates.bld_farms  = (k.bld_farms  || 0) + 100;
-      updates.population = (k.population || 0) + 50000;
-    },
-  },
-];
-
-// ── The Throne of Nazdreg Grishnak — unique, exists once in the entire world ──
-const THRONE_OF_NAZDREG = {
-  id: 'throne_of_nazdreg',
-  unique: true,
-  text: [
-    '👑 The Throne of Nazdreg Grishnak',
-    '',
-    'Your rangers stumble upon a clearing unlike any other.',
-    'Vines have claimed it, but beneath the green — a throne of obsidian and iron,',
-    'carved with the fury and grace of a warrior who loved deeply and lived fully.',
-    '',
-    'Inscribed in the stone, worn smooth by years of wilderness rain:',
-    '',
-    '    Nazdreg Grishnak',
-    '    August 13, 1975 — August 19, 2012',
-    '',
-    'An orc who sat upon this throne once commanded armies and shaped the world.',
-    'His name is remembered. His legacy endures.',
-    '',
-    'Your people carry the throne home with reverence.',
-    'They say the land itself feels stronger for it.',
-  ].join('\n'),
-  effect: (k, updates) => {
-    updates.res_military      = (k.res_military      || 0) + 100;
-    updates.res_economy       = (k.res_economy       || 0) + 100;
-    updates.res_construction  = (k.res_construction  || 0) + 100;
-    updates.res_weapons       = (k.res_weapons       || 0) + 100;
-    updates.res_armor         = (k.res_armor         || 0) + 100;
-    updates.res_entertainment = (k.res_entertainment || 0) + 100;
-    updates.gold              = (k.gold              || 0) + 1000000;
-    updates.land              = (k.land              || 0) + 1000;
-    updates.population        = (k.population        || 0) + 100000;
-    const natCap = (k.res_entertainment || 0) + 100; // approximation of new cap
-    updates.morale            = Math.min(natCap * 2, (k.morale || 100) + Math.floor(natCap * 0.5));
-    updates.fighters          = (k.fighters          || 0) + 50000;
-  },
-};
 
 function junkPrize() {
   return JUNK_PRIZES[Math.floor(Math.random() * JUNK_PRIZES.length)];
@@ -2598,8 +2099,6 @@ function expeditionRewards(type, rangers, fighters, k) {
   // Rangers returned stored separately so resolveExpeditions can use SQL increment
   updates._rangers_returned = returned;
 
-  // Expedition turn counts — used to calculate gold from foraging rate
-  const EXPEDITION_TURNS = { scout: 10, deep: 25, dungeon: 50 };
   const expTurns = EXPEDITION_TURNS[type] || 10;
 
   // Gold base = forage rate (rangers × 12 × tacBonus) × turns × race bonus × random 5–30% bonus
@@ -3174,49 +2673,6 @@ function processLibrary(k, events) {
 }
 
 // ── Hero Units ────────────────────────────────────────────────────────────────
-
-const HERO_CLASSES = {
-  paladin: {
-    name: "Paladin",
-    description: "Holy warrior who protects troops and heals casualties.",
-    abilities: ["Protective Aura", "Holy Heal", "Unyielding Faith"],
-    recruitCost: 50000,
-    recruitMana: 10000,
-    statBonus: { military: 1.10, morale: 1.15 }
-  },
-  archmage: {
-    name: "Archmage",
-    description: "Master of the arcane who boosts mana and spell power.",
-    abilities: ["Arcane Infusion", "Mana Surge", "Elemental Storm"],
-    recruitCost: 50000,
-    recruitMana: 25000,
-    statBonus: { magic: 1.25, research: 1.10 }
-  },
-  warlord: {
-    name: "Warlord",
-    description: "Battle-hardened leader who maximizes military might.",
-    abilities: ["War Cry", "Tactical Mastery", "Bloodlust"],
-    recruitCost: 75000,
-    recruitMana: 5000,
-    statBonus: { military: 1.25, morale: 1.10 }
-  },
-  shadowblade: {
-    name: "Shadowblade",
-    description: "Lethal assassin who excels in covert operations.",
-    abilities: ["Deadly Strike", "Shadow Veil", "Infiltrator"],
-    recruitCost: 60000,
-    recruitMana: 15000,
-    statBonus: { covert: 1.30, stealth: 1.20 }
-  },
-  sovereign: {
-    name: "Sovereign",
-    description: "Charismatic leader who focuses on prosperity and growth.",
-    abilities: ["Royal Decree", "Golden Touch", "Inspiring Presence"],
-    recruitCost: 100000,
-    recruitMana: 10000,
-    statBonus: { economy: 1.20, morale: 1.20, population: 1.10 }
-  }
-};
 
 function heroXpForLevel(level) {
   if (level <= 1) return 0;

@@ -85,7 +85,7 @@ module.exports = function(db, io) {
       bld_farms = 200, bld_barracks = 1, bld_outposts = 0, bld_guard_towers = 0,
       bld_schools = 1, bld_armories = 1, bld_vaults = 0, bld_smithies = 0,
       bld_markets = 0, bld_cathedrals = 0, bld_training = 0, bld_colosseums = 0,
-      bld_castles = 0, bld_shrines = 0, bld_libraries = 0, bld_housing = 100,
+      bld_castles = 0, bld_shrines = 0, bld_libraries = 0, bld_taverns = 0, bld_mage_towers = 0, bld_housing = 100,
       res_economy = 100, res_weapons = 100, res_armor = 100, res_military = 100,
       res_attack_magic = 100, res_defense_magic = 100, res_entertainment = 100,
       res_construction = 100, res_war_machines = 100, res_spellbook = 0,
@@ -94,7 +94,7 @@ module.exports = function(db, io) {
       mage_tower_allocation = '{}', shrine_allocation = '{}', library_allocation = '{}',
       library_progress = '{}', scrolls = '{}', active_effects = '{}',
       world_fragments = '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]',
-      hybrid_blueprints = '{}', Maps = 0, blueprints_stored = 1,
+      hybrid_blueprints = '{}', maps = 0, blueprints_stored = 1,
       tools_hammers = 0, tools_scaffolding = 0, tools_blueprints = 0
     `);
     await db.run('DELETE FROM expeditions');
