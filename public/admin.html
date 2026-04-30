@@ -104,10 +104,11 @@ textarea{width:100%;resize:vertical;min-height:60px}
   </div>
 
   <!-- Tab navigation -->
-  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border2);padding-bottom:0">
+  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border2);padding-bottom:0;overflow-x:auto">
     <button class="admin-tab active" onclick="showAdminTab('manage',this)">⚙️ Manage</button>
     <button class="admin-tab" onclick="showAdminTab('kingdoms',this)">🏰 Kingdoms</button>
     <button class="admin-tab" onclick="showAdminTab('events',this)">📅 Events</button>
+    <button class="admin-tab" onclick="showAdminTab('config',this)">🛠️ Configs</button>
     <button class="admin-tab" onclick="showAdminTab('changelog',this)">📋 Changelog</button>
   </div>
 
@@ -311,6 +312,23 @@ textarea{width:100%;resize:vertical;min-height:60px}
         <div style="padding:24px;text-align:center;color:var(--text3)">Loading...</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- TAB: Configs -->
+<div id="atab-config" class="atab" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h2 style="margin:0">Game Constants & Modifiers</h2>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="loadGameConfigs()">↻ Refresh</button>
+      <button class="btn btn-gold" onclick="saveGameConfigs()">💾 Save Overrides</button>
+    </div>
+  </div>
+  <div style="color:var(--text3);font-size:12px;margin-bottom:16px;">
+    These changes are written to the server's config overrides and applied immediately without requiring a restart. Leave a field blank to reset it to the codebase default.
+  </div>
+  <div id="config-editor" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+    <div style="padding:24px;color:var(--text3);grid-column:1/-1;">Loading...</div>
   </div>
 </div>
 
@@ -950,6 +968,7 @@ function showAdminTab(id, btn) {
   if (btn) btn.classList.add('active');
   if (id === 'events') { loadEventLog(); loadEventList(); }
   if (id === 'changelog') { loadSuggestions(); }
+  if (id === 'config') { loadGameConfigs(); }
 }
 
 async function loadSuggestions() {
@@ -1193,8 +1212,114 @@ api('GET','/api/auth/me').then(function(me) {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('main-screen').style.display = 'block';
     loadData();
-  }
-});
+var CONFIG_SECTIONS = [
+  { key: 'UNIT_COST', type: 'number', label: 'Base Unit Cost' },
+  { key: 'MAX_RESEARCH', type: 'number', label: 'Max Research Progress' },
+  { key: 'HOUSING_CAP_BY_RACE', type: 'object', label: 'Housing Capacity By Race' },
+  { key: 'WALL_STRENGTH_MULT', type: 'object', label: 'Wall Strength Multipliers' },
+  { key: 'TOWER_DETECT_MULT', type: 'object', label: 'Tower Detect Multipliers' },
+  { key: 'OUTPOST_RANGER_MULT', type: 'object', label: 'Outpost Ranger Multipliers' },
+  { key: 'LOCATE_RACE_MULT', type: 'object', label: 'Discovery Multipliers' },
+  { key: 'FARM_YIELD_MULT', type: 'object', label: 'Farm Yield Multipliers' },
+  { key: 'FARM_WORKERS_PER', type: 'object', label: 'Farm Workers Per Farm' },
+  { key: 'FOOD_CONSUMPTION_MULT', type: 'object', label: 'Food Consumption' },
+  { key: 'MARKET_INCOME_MULT', type: 'object', label: 'Market Income' },
+  { key: 'TRADE_RATE_MULT', type: 'object', label: 'Trade Rates' },
+  { key: 'WM_CREW_REQUIRED', type: 'object', label: 'WM Crew Required' },
+  { key: 'SEASON_FARM_MULT', type: 'object', label: 'Season Farm Multipliers' },
+  { key: 'XP_BASE', type: 'object', label: 'Base XP Awards' },
+  { key: 'BUILDING_COST', type: 'object', label: 'Building Cost (Turns)' },
+  { key: 'BUILDING_GOLD_COST', type: 'object', label: 'Building Gold Cost' },
+  { key: 'BUILDING_LAND_COST', type: 'object', label: 'Building Land Cost' },
+  { key: 'SUPPORT_CAP_RACE', type: 'nested', label: 'Support Unit Caps (Nested)' },
+  { key: 'XP_RACE_BONUS', type: 'nested', label: 'XP Race Bonuses (Nested)' },
+  { key: 'RACE_BONUSES', type: 'nested', label: 'Global Race Specs (Nested)' },
+  { key: 'TROOP_RACE_BONUS', type: 'nested', label: 'Troop Power Mods (Nested)' },
+];
+
+var loadedConfigs = {};
+
+async function loadGameConfigs() {
+  document.getElementById('config-editor').innerHTML = '<div style="padding:24px;color:var(--text3);grid-column:1/-1;">Loading config...</div>';
+  var res = await api('GET', '/api/admin/config');
+  if (res.error) return toast('Failed to load configs: ' + res.error, 'error');
+  
+  loadedConfigs = res;
+  var html = '';
+  
+  CONFIG_SECTIONS.forEach(function(sec) {
+    var val = res[sec.key];
+    if (val === undefined) return;
+    
+    html += '<div class="card" style="margin-bottom:0">';
+    html += '<h3 style="margin:0 0 10px;font-size:14px;color:var(--purple)">' + sec.label + '</h3>';
+    
+    if (sec.type === 'number') {
+      html += '<input type="number" id="cfg-' + sec.key + '" value="' + val + '" placeholder="Default" style="width:100%" class="cfg-input" data-key="' + sec.key + '" data-type="number">';
+    } else if (sec.type === 'object') {
+      html += '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center">';
+      for (var k in val) {
+        html += '<div style="font-size:12px;color:var(--text3);text-align:right">' + k + '</div>';
+        // Check if value is object or array and skip
+        if (typeof val[k] === 'object') continue;
+        html += '<div><input type="number" step="0.01" class="cfg-input" data-key="' + sec.key + '" data-sub="' + k + '" placeholder="' + val[k] + '" style="width:100%"></div>';
+      }
+      html += '</div>';
+    } else if (sec.type === 'nested') {
+      for (var outer in val) {
+        html += '<div style="font-size:12px;color:var(--gold);margin:8px 0 4px;font-weight:600;text-transform:uppercase">' + outer + '</div>';
+        html += '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center">';
+        for (var inner in val[outer]) {
+          html += '<div style="font-size:11px;color:var(--text3);text-align:right">' + inner + '</div>';
+          if (typeof val[outer][inner] === 'object') continue;
+          html += '<div><input type="number" step="0.01" class="cfg-input" data-key="' + sec.key + '" data-sub="' + outer + '" data-sub2="' + inner + '" placeholder="' + val[outer][inner] + '" style="width:100%"></div>';
+        }
+        html += '</div>';
+      }
+    }
+    
+    html += '</div>';
+  });
+  
+  document.getElementById('config-editor').innerHTML = html;
+}
+
+async function saveGameConfigs() {
+  var overrides = {};
+  var inputs = document.querySelectorAll('.cfg-input');
+  
+  inputs.forEach(function(inp) {
+    if (inp.value === '') return;
+    
+    var val = parseFloat(inp.value);
+    if (isNaN(val)) return;
+    
+    var key = inp.getAttribute('data-key');
+    var sub = inp.getAttribute('data-sub');
+    var sub2 = inp.getAttribute('data-sub2');
+    
+    if (!overrides[key]) {
+      var type = inp.getAttribute('data-type');
+      if (type === 'number') overrides[key] = val;
+      else overrides[key] = {};
+    }
+    
+    if (sub2) {
+      if (!overrides[key][sub]) overrides[key][sub] = {};
+      overrides[key][sub][sub2] = val;
+    } else if (sub) {
+      overrides[key][sub] = val;
+    } else if (inp.getAttribute('data-type') === 'number') {
+      overrides[key] = val;
+    }
+  });
+  
+  var res = await api('POST', '/api/admin/config', { overrides: overrides });
+  if (res.error) return toast('Failed to save config: ' + res.error, 'error');
+  
+  toast('Config overrides saved and applied', 'success');
+  loadGameConfigs();
+}
 </script>
 <!-- GLOBAL UI FIXES -->
 <script>

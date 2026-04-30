@@ -540,4 +540,22 @@ const config = {
   },
 };
 
+const fs = require('fs');
+const path = require('path');
+try {
+  const overridesPath = path.join(__dirname, 'config_overrides.json');
+  if (fs.existsSync(overridesPath)) {
+    const overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8'));
+    for (const key of Object.keys(overrides)) {
+      if (typeof overrides[key] === 'object' && config[key] && !Array.isArray(config[key])) {
+        Object.assign(config[key], overrides[key]);
+      } else {
+        config[key] = overrides[key];
+      }
+    }
+  }
+} catch (e) {
+  console.error('[CONFIG] Error loading overrides:', e.message);
+}
+
 module.exports = config;

@@ -320,6 +320,42 @@ module.exports = function(db, io) {
     res.json({ ok: true });
   });
 
+  router.get('/config', async (_req, res) => {
+    const config = require('../game/config');
+    res.json(config);
+  });
+
+  router.post('/config', async (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    const config = require('../game/config');
+    const { overrides } = req.body;
+    if (!overrides) return res.status(400).json({ error: 'overrides required' });
+    
+    const overridesPath = path.join(__dirname, '../game/config_overrides.json');
+    let existing = {};
+    try {
+      if (fs.existsSync(overridesPath)) {
+        existing = JSON.parse(fs.readFileSync(overridesPath, 'utf8'));
+      }
+    } catch {}
+
+    // Merge existing overrides and new overrides
+    for (const key of Object.keys(overrides)) {
+      if (typeof overrides[key] === 'object' && config[key] && !Array.isArray(config[key])) {
+        existing[key] = { ...(existing[key] || {}), ...overrides[key] };
+        // Apply immediately to memory
+        Object.assign(config[key], overrides[key]);
+      } else {
+        existing[key] = overrides[key];
+        config[key] = overrides[key];
+      }
+    }
+    
+    fs.writeFileSync(overridesPath, JSON.stringify(existing, null, 2));
+    res.json({ ok: true, existing });
+  });
+
   // ── Flush all location data ───────────────────────────────────────────────────
   router.post('/flush-locations', async (_req, res) => {
     await db.run("UPDATE kingdoms SET discovered_kingdoms='{}', location_maps_wip='[]', world_fragments='[]', hybrid_blueprints='{}'");
