@@ -878,7 +878,7 @@
           <div class="trow"><span class="name">Farms</span><span class="count" id="kb-farms">0</span></div>
           <div class="trow"><span class="name">Barracks</span><span class="count" id="kb-barracks">0</span></div>
           <div class="trow"><span class="name">Schools</span><span class="count" id="kb-schools">0</span></div>
-          <div class="trow"><span class="name">Libraries</span><span class="count" id="kb-libraries">0</span></div>
+          <div class="trow"><span class="name">Library</span><span class="count" id="kb-libraries">0</span></div>
           <div class="trow"><span class="name">Mage Towers</span><span class="count" id="kb-cathedrals">0</span></div>
           <div class="trow"><span class="name">Smithies</span><span class="count" id="kb-smithies">0</span></div>
           <div class="trow"><span class="name">Markets</span><span class="count" id="kb-markets">0</span></div>
@@ -918,7 +918,7 @@
           Barracks: <span id="hire-barracks-cap" style="color:var(--gold)">0</span> cap (<span id="hire-barracks-used" style="color:var(--text2)">0</span> used) ·
           Schools: <span id="hire-school-cap" style="color:var(--gold)">0</span> cap (<span id="hire-school-used" style="color:var(--text2)">0</span> used) ·
           Smithies: <span id="hire-smithy-cap" style="color:var(--gold)">0</span> cap (<span id="hire-smithy-used" style="color:var(--text2)">0</span> used) ·
-          Libraries: <span id="hire-library-cap" style="color:var(--gold)">0</span> cap (<span id="hire-library-used" style="color:var(--text2)">0</span> used)
+          Library: <span id="hire-library-cap" style="color:var(--gold)">0</span> cap (<span id="hire-library-used" style="color:var(--text2)">0</span> used)
         </div>
 
         <!-- Header row -->
@@ -1183,7 +1183,7 @@
           <div style="display:flex;flex-direction:column;gap:12px">
             <div class="card" style="margin:0">
               <div class="card-title">Library Operations</div>
-              <div class="trow"><span class="name">Libraries</span><span class="count" id="st-libraries">0</span></div>
+              <div class="trow"><span class="name">Library</span><span class="count" id="st-libraries">0</span></div>
               <div class="trow"><span class="name">Scribes (Current/Cap)</span><span class="count"><span id="st-scribes-lib">0</span> / <span id="st-lib-cap">0</span></span></div>
               
               <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
@@ -1621,7 +1621,7 @@
         </div>
         <div class="trow">
           <span class="bld-icon" style="background:#2a3a6a">📖</span>
-          <span class="name">Libraries</span><span class="desc">Houses scribes · 2 land</span>
+          <span class="name">Library</span><span class="desc">Houses scribes · 2 land</span>
           <span class="count" id="bld-libraries">0</span>
           <div style="display:flex;align-items:center;gap:4px">
             <input type="number"   id="ba-library" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
@@ -6991,7 +6991,7 @@ async function loadStudies() {
   renderUpgrades('tower',   TOWER_UPGRADES_JS,   data.tower_upgrades||{},   'tower-upgrade-list');
   renderUpgrades('school',  SCHOOL_UPGRADES_JS,  data.school_upgrades||{},  'school-upgrade-list');
   renderUpgrades('shrine',  SHRINE_UPGRADES_JS,  data.shrine_upgrades||{},  'shrine-upgrade-list');
-  renderUpgrades('slibrary', LIBRARY_UPGRADES_JS, data.library_upgrades||{}, 'library-upgrade-list');
+  renderUpgrades('library', LIBRARY_UPGRADES_JS, data.library_upgrades||{}, 'library-upgrade-list');
 }
 
 function updateFocusPreview() {
