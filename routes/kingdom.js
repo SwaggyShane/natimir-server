@@ -159,6 +159,21 @@ module.exports = function(db) {
           message: ev.message, turn_num: turnNum,
         })));
       }
+
+      if (updates._find_kingdom_surveyor) {
+        const other = await db.get('SELECT id, name FROM kingdoms WHERE id != ? ORDER BY RANDOM() LIMIT 1', [k.id]);
+        if (other) {
+          const freshK = await db.get('SELECT discovered_kingdoms FROM kingdoms WHERE id=?', [k.id]);
+          let disc = {}; try { disc = JSON.parse(freshK.discovered_kingdoms || '{}'); } catch {}
+          if (!disc[other.id]) {
+            disc[other.id] = { found: true };
+            await db.run('UPDATE kingdoms SET discovered_kingdoms = ? WHERE id = ?', [JSON.stringify(disc), k.id]);
+            const turnNum = updates.turn || k.turn || 0;
+            await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?, ?, ?, ?)', [k.id, 'system', `🔭 Your Surveyors discovered the kingdom of ${other.name}!`, turnNum]);
+            events.push({ type: 'system', message: `🔭 Your Surveyors discovered the kingdom of ${other.name}!` });
+          }
+        }
+      }
     } catch (err) {
       console.error('[runTurn] expedition resolve error:', err.message);
     }
@@ -1049,28 +1064,35 @@ module.exports = function(db) {
     res.json({ discovered: disc, wip });
   });
 
-  // ── Location — start mapping a discovered kingdom ─────────────────────────────
-  router.post('/locations/start-map', requireAuth, async (req, res) => {
-    const { targetId } = req.body;
-    const k = await db.get('SELECT * FROM kingdoms WHERE player_id=?', [req.player.playerId]);
-    if (!k) return res.status(404).json({ error:'Kingdom not found' });
-    let disc={};
-    try { disc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
-    if (!disc[targetId]?.found) return res.status(400).json({ error:'Location not yet discovered' });
-    if (disc[targetId]?.mapped) return res.status(400).json({ error:'Already mapped' });
-    const target = await db.get('SELECT id, name FROM kingdoms WHERE id=?', [targetId]);
-    if (!target) return res.status(404).json({ error:'Kingdom not found' });
-    let wip=[];
-    try { wip = JSON.parse(k.location_maps_wip||'[]'); } catch {}
-    const scribesInUse = wip.length * 10;
-    if ((k.scribes||0) - scribesInUse < 10) return res.status(400).json({ error:'Need 10 free scribes (not already mapping another kingdom)' });
-    if ((k.maps||0) < 1) return res.status(400).json({ error:'Need at least 1 blank map in your library' });
-    wip.push({ target_id: target.id, target_name: target.name, turns_remaining: 5 });
-    await db.run('UPDATE kingdoms SET location_maps_wip=?, maps=maps-1 WHERE id=?', [JSON.stringify(wip), k.id]);
-    res.json({ ok:true, message:`Scribes have begun mapping ${target.name}. Completes in 5 turns.` });
+  // ── Location — steal map (covert action) ──────────────────────────────────────
+  router.post('/assign-hybrid-blueprint', requireAuth, async (req, res) => {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'Missing blueprint id' });
+
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+
+    if ((k.gold || 0) < 500000) return res.status(400).json({ error: 'Not enough gold (need 500k)' });
+    if ((k.mana || 0) < 100000) return res.status(400).json({ error: 'Not enough mana (need 100k)' });
+
+    let hbp = {}; try { hbp = JSON.parse(k.hybrid_blueprints || '{}'); } catch {}
+    if (!hbp[id]) return res.status(400).json({ error: 'Blueprint not found' });
+    if (hbp[id].assigned) return res.status(400).json({ error: 'Blueprint already assigned' });
+
+    // Assign it
+    hbp[id].assigned = true;
+    const newGold = (k.gold || 0) - 500000;
+    const newMana = (k.mana || 0) - 100000;
+
+    await db.run('UPDATE kingdoms SET hybrid_blueprints = ?, gold = ?, mana = ? WHERE id = ?', 
+      [JSON.stringify(hbp), newGold, newMana, k.id]);
+
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?, ?, ?, ?)',
+      [k.id, 'system', `✨ Assigned a ${hbp[id].fragment} Hybrid Blueprint to ${hbp[id].building.replace('bld_', '').replace(/_/g, ' ')}!`, k.turn]);
+
+    res.json({ ok:true, hybrid_blueprints: JSON.stringify(hbp), gold: newGold, mana: newMana });
   });
 
-  // ── Location — steal map (covert action) ──────────────────────────────────────
   router.post('/locations/steal-map', requireAuth, async (req, res) => {
     const { targetId } = req.body;
     const k = await db.get('SELECT * FROM kingdoms WHERE player_id=?', [req.player.playerId]);

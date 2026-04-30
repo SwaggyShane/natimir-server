@@ -3,12 +3,12 @@
 // All functions take a kingdom row (or rows) and return mutations + events.
 
 const RACE_BONUSES = {
-  high_elf:  { research: 1.15, magic: 1.20, economy: 1.05, military: 0.90, morale: 0.95 },
-  dwarf:     { construction: 1.20, war_machines: 1.25, economy: 1.202, magic: 0.75, research: 0.90, morale: 1.00 },
-  dire_wolf: { military: 1.30, covert: 1.10, research: 0.70, magic: 0.60, economy: 0.70, morale: 1.10 },
-  dark_elf:  { covert: 1.25, stealth: 1.30, magic: 1.10, military: 0.85, economy: 0.90, morale: 0.90 },
-  human:     { economy: 1.05, morale: 1.05 },
-  orc:       { military: 1.20, economy: 1.10, research: 0.80, magic: 0.65, construction: 0.90, morale: 1.05 },
+  high_elf:  { research: 1.15, magic: 1.20, economy: 1.05, military: 0.90, morale: 0.95, scribe: 1.20 },
+  dwarf:     { construction: 1.20, war_machines: 1.25, economy: 1.202, magic: 0.75, research: 0.90, morale: 1.00, scribe: 0.85 },
+  dire_wolf: { military: 1.30, covert: 1.10, research: 0.70, magic: 0.60, economy: 0.70, morale: 1.10, scribe: 0.80 },
+  dark_elf:  { covert: 1.25, stealth: 1.30, magic: 1.10, military: 0.85, economy: 0.90, morale: 0.90, scribe: 1.10 },
+  human:     { economy: 1.05, morale: 1.05, scribe: 1.05 },
+  orc:       { military: 1.20, economy: 1.10, research: 0.80, magic: 0.65, construction: 0.90, morale: 1.05, scribe: 0.60 },
 };
 
 // Named regions — one per race, each with a passive bonus stacking on top of race bonuses
@@ -360,6 +360,12 @@ function checkCitadel(k, events) {
   return updates;
 }
 
+function getMasonSigilResist(k) {
+  let upg = {};
+  try { upg = JSON.parse(k.library_upgrades || '{}'); } catch {}
+  return upg.mason_sigil ? 0.5 : 1.0;
+}
+
 // Process building warmachine damage on successful attack (no walls = building damage)
 function applyWarmachineDamage(attacker, defender, win) {
   const updates = {};
@@ -378,7 +384,7 @@ function applyWarmachineDamage(attacker, defender, win) {
     const target = DAMAGEABLE[Math.floor(Math.random() * DAMAGEABLE.length)];
     const current = defender[target] || 0;
     if (current > 0) {
-      const dmg = Math.max(1, Math.floor(current * 0.05));
+      const dmg = Math.max(1, Math.floor(current * 0.05 * getMasonSigilResist(defender)));
       updates[target] = Math.max(0, current - dmg);
     }
   }
@@ -467,9 +473,9 @@ const SHRINE_UPGRADES = {
   divine_sanctuary:  { name:'Divine Sanctuary',    cost:50000, desc:'Auto-stabilise morale at 50% once per 20 turns, posted to news', requires:'war_blessing' },
 };
 const LIBRARY_UPGRADES = {
-  illuminated_manuscripts: { name:'Illuminated Manuscripts', cost:5000,  desc:'Scribes craft maps & blueprints 25% faster',   requires:null                      },
-  master_draftsmen:        { name:'Master Draftsmen',        cost:15000, desc:'Scribes craft maps & blueprints an additional 25% faster', requires:'illuminated_manuscripts'  },
-  grand_library:           { name:'Grand Library',            cost:50000, desc:'Library capacity ×2 (40 scribes per library)', requires:'master_draftsmen' },
+  surveyors_eyrie:  { name:'The Surveyor\'s Eyrie', cost:25000, desc:'Surveyors have a 20% chance of finding a location', requires:null },
+  mason_sigil:      { name:'The Master Mason\'s Sigil', cost:150000, desc:'Buildings constructed with Certified plans are more resistant to attacks', requires:'surveyors_eyrie' },
+  specimen_vault:   { name:'The Specimen Vault', cost:50000, desc:'Study World Fragments to create Hybrid Blueprints', requires:'mason_sigil' }
 };
 const FARM_UPGRADES = {
   irrigated:  { name:'Irrigated Farm', cost:500,   yieldBonus:0.30, requires:null         },
@@ -491,6 +497,19 @@ const MERC_TIERS = {
   veteran:   { levelMin:30, levelMax:45, costPer:400,  duration:30, upkeepPct:0.25, requires:'guild_hall' },
   elite:     { levelMin:50, levelMax:65, costPer:1000, duration:40, upkeepPct:0.25, requires:'guild_hall' },
 };
+
+function hybridMultiplier(k, target) {
+  let hbp = {};
+  try { hbp = JSON.parse(k.hybrid_blueprints || '{}'); } catch {}
+  let active = false;
+  for (const key in hbp) {
+    if (hbp[key].assigned && hbp[key].building === target) {
+      active = true;
+      break;
+    }
+  }
+  return active ? 1.5 : 1.0;
+}
 
 function totalHiredUnits(k) {
   return (k.fighters||0)+(k.rangers||0)+(k.clerics||0)+(k.mages||0)+(k.thieves||0)+(k.ninjas||0)+(k.researchers||0)+(k.engineers||0)+(k.scribes||0);
@@ -514,7 +533,7 @@ function farmProduction(k) {
 
   if (upgrades.irrigated)  baseYield *= 1.30;
   if (upgrades.plantation) baseYield *= 1.60;
-  baseYield *= seasonMult * evFarmMult;
+  baseYield *= seasonMult * evFarmMult * hybridMultiplier(k, 'bld_farms');
   return Math.floor(baseYield);
 }
 
@@ -547,7 +566,7 @@ function tavernEntertainmentBonus(k) {
   if (!taverns) return 0;
   let upgrades = {};
   try { upgrades = JSON.parse(k.tavern_upgrades || '{}'); } catch {}
-  const base = taverns * 2;
+  const base = taverns * 2 * hybridMultiplier(k, 'bld_taverns');
   return Math.floor(upgrades.guild_hall ? base*1.5 : upgrades.inn ? base*1.2 : base);
 }
 
@@ -1622,7 +1641,7 @@ function processBuildQueue(k, events) {
 
   // News notices for missing tools
   if (updates._blueprint_needed) {
-    events.push({ type: 'system', message: `📐 Blueprint required to build: ${updates._blueprint_needed.join(', ')}. Craft one in your Library using scribes.` });
+    events.push({ type: 'system', message: `⚙️ Blueprint required to build: ${updates._blueprint_needed.join(', ')}. Craft one in your Library using scribes.` });
     delete updates._blueprint_needed;
   }
   if (updates._scaffolding_needed) {
@@ -2038,8 +2057,10 @@ const SCROLL_REQUIREMENTS = {
 
 // Map/blueprint crafting requirements (scribes)
 const SCRIBE_ITEMS = {
-  map:       { scribes: 3,  turns: 10, desc: 'Required to interact with another kingdom' },
-  blueprint: { scribes: 5,  turns: 20, desc: 'Boosts construction speed by 10% when used' },
+  map:          { scribes: 3,  turns: 10, desc: 'Required to interact with another kingdom' },
+  blueprint:    { scribes: 5,  turns: 20, desc: 'Boosts construction speed by 10% when used' },
+  location_map: { scribes: 10, turns: 5,  desc: 'Uses 1 map to scribe an unmapped location into a usable map' },
+  hybrid_blueprint: { scribes: 100, turns: 500, desc: 'Study a World Fragment to randomly devise a unique building upgrade' },
 };
 
 function castSpell(caster, target, spellId, obscure) {
@@ -2078,7 +2099,7 @@ function castSpell(caster, target, spellId, obscure) {
   // Check shield active effect on target
   let targetEffects = {};
   try { targetEffects = JSON.parse(target.active_effects || '{}'); } catch {}
-  const shielded = targetEffects.shield ? 0.5 : 1.0;
+  const shielded = (targetEffects.shield ? 0.5 : 1.0) * getMasonSigilResist(target);
 
   const targetUpdates = {};
   let damageDesc = '';
@@ -2372,6 +2393,12 @@ function resolveAllianceDefense(attackResult, allies) {
 
 // ── Expedition rewards ──────────────────────────────────────────────────────
 // ── Expedition helpers ──────────────────────────────────────────────────────
+const WORLD_FRAGMENTS = [
+  'Volcanic Rock', 'Ancient Elven Wood', 'Dragon Scale', 'Abyssal Crystal',
+  'Celestial Feather', 'Dwarven Star-Metal', 'Cursed Bloodstone',
+  'Tears of the World Tree', 'Void Essence', 'Titan Bone'
+];
+
 function roll(chance) { return Math.random() < chance; }
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
@@ -2624,6 +2651,10 @@ function expeditionRewards(type, rangers, fighters, k) {
       rewards.push({ text: `🗺️ A map was discovered in the deep wilderness` });
     }
 
+    if (roll(0.05)) {
+      updates._find_world_fragment = true;
+    }
+
   } else if (type === 'dungeon') {
     const power = (rangers + fighters * 2) * tacBonus * exploreBonus;
     const successChance = Math.min(0.90, 0.25 + (power / 24000));
@@ -2675,8 +2706,12 @@ function expeditionRewards(type, rangers, fighters, k) {
         const curBP = updates.blueprints_stored !== undefined ? updates.blueprints_stored : (k.blueprints_stored || 0);
         if (smithyCap === 0 || curBP < smithyCap) {
           updates.blueprints_stored = curBP + 1;
-          rewards.push({ text: `📐 A blueprint was recovered from the dungeon depths` });
+          rewards.push({ text: `⚙️ A blueprint was recovered from the dungeon depths` });
         }
+      }
+
+      if (roll(0.10)) {
+        updates._find_world_fragment = true;
       }
     }
   }
@@ -2751,6 +2786,17 @@ async function resolveExpeditions(db, k, engine) {
             rewards.push({ text: `🔭 Your rangers discovered the kingdom of ${other.name}!` });
           }
         }
+      }
+
+      if (updates._find_world_fragment) {
+        delete updates._find_world_fragment;
+        let frags = [];
+        try { frags = JSON.parse(freshK.world_fragments || '[]'); } catch {}
+        const frag = WORLD_FRAGMENTS[Math.floor(Math.random() * WORLD_FRAGMENTS.length)];
+        frags.push(frag);
+        updates.world_fragments = JSON.stringify(frags);
+        rewards.push({ text: `🔮 Your rangers recovered a World Fragment: ${frag}` });
+        events.push({ type: 'system', message: `🔮 A World Fragment (${frag}) was discovered during the expedition.` });
       }
 
       const serverAnnounce = updates._server_announce || null;
@@ -2982,8 +3028,8 @@ function processLibrary(k, events) {
   // Library upgrades
   let libUpgrades = {};
   try { libUpgrades = JSON.parse(k.library_upgrades || '{}'); } catch {}
-  const capacityPerLib = libUpgrades.grand_library ? 40 : 20;
-  const scribeSpeedMult = (libUpgrades.illuminated_manuscripts ? 1.25 : 1.0) * (libUpgrades.master_draftsmen ? 1.25 : 1.0);
+  const capacityPerLib = 20;
+  const scribeSpeedMult = raceBonus(k, 'scribe'); // Or similar? I will look up how other racial modifiers are done. Let's look at raceBonus.
 
   const capacity        = libs * capacityPerLib;
   const effectiveScribes = Math.min(k.scribes || 0, capacity);
@@ -2999,6 +3045,29 @@ function processLibrary(k, events) {
 
     activeTasks.forEach(task => {
       const req = SCRIBE_ITEMS[task];
+      let disc = {};
+      try { disc = JSON.parse(updates.discovered_kingdoms || k.discovered_kingdoms || '{}'); } catch {}
+
+      if (task === 'location_map') {
+        const unmapped = Object.keys(disc).filter(id => disc[id].found && !disc[id].mapped);
+        if (unmapped.length === 0) {
+          delete alloc[task]; progress[progressKey] = 0;
+          events.push({ type: 'system', message: `⚠️ Scribes halted location mapping — no unmapped locations found.` });
+          return;
+        }
+        if ((updates.maps !== undefined ? updates.maps : (k.maps || 0)) < 1) {
+          events.push({ type: 'system', message: `⚠️ Scribes halted location mapping — no blank maps available!` });
+          return;
+        }
+      } else if (task === 'hybrid_blueprint') {
+        let frags = []; try { frags = JSON.parse(updates.world_fragments || k.world_fragments || '[]'); } catch {}
+        if (frags.length === 0) {
+          delete alloc[task]; progress[progressKey] = 0;
+          events.push({ type: 'system', message: `⚠️ Scribes halted Hybrid Blueprint research — no World Fragments available!` });
+          return;
+        }
+      }
+
       const effective = Math.min(scribesPerTask, req.scribes);
       const progressKey = 'scribe_' + task;
       const workDone = (effective >= req.scribes ? 1 : effective / req.scribes) * scribeLvlMult * scribeSpeedMult;
@@ -3007,11 +3076,31 @@ function processLibrary(k, events) {
       if (newProg >= req.turns) {
         progress[progressKey] = 0;
         if (task === 'map') {
-          updates.maps = (k.maps || 0) + 1;
+          updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) + 1;
           events.push({ type: 'system', message: `📜 Your scribes completed a map in the Library — you can now interact with other kingdoms.` });
+        } else if (task === 'location_map') {
+          const unmapped = Object.keys(disc).filter(id => disc[id].found && !disc[id].mapped);
+          const targetId = unmapped[Math.floor(Math.random() * unmapped.length)];
+          disc[targetId].mapped = true;
+          updates.discovered_kingdoms = JSON.stringify(disc);
+          updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) - 1;
+          events.push({ type: 'system', message: `📍 Your scribes mapped a new location! You may now interact with them.` });
+        } else if (task === 'hybrid_blueprint') {
+          let frags = []; try { frags = JSON.parse(updates.world_fragments || k.world_fragments || '[]'); } catch {}
+          let hbp = {}; try { hbp = JSON.parse(updates.hybrid_blueprints || k.hybrid_blueprints || '{}'); } catch {}
+          const fragIndex = Math.floor(Math.random() * frags.length);
+          const frag = frags.splice(fragIndex, 1)[0];
+          updates.world_fragments = JSON.stringify(frags);
+          
+          const buildings = ['farms','barracks','markets','schools','cathedrals','shrines','guard_towers','castles','smithies','libraries'];
+          const targetBld = buildings[Math.floor(Math.random() * buildings.length)];
+          
+          hbp[frag + '_' + Date.now()] = { fragment: frag, building: targetBld, assigned: false };
+          updates.hybrid_blueprints = JSON.stringify(hbp);
+          events.push({ type: 'system', message: `✨ Your scribes fully studied a ${frag} and devised an alternate blueprint for ${targetBld.replace('_', ' ')}!` });
         } else {
-          updates.blueprints_stored = (k.blueprints_stored || 0) + 1;
-          events.push({ type: 'system', message: `📐 Your scribes completed a blueprint in the Library — construction speed bonus applied.` });
+          updates.blueprints_stored = (updates.blueprints_stored !== undefined ? updates.blueprints_stored : k.blueprints_stored || 0) + 1;
+          events.push({ type: 'system', message: `⚙️ Your scribes completed a blueprint in the Library — construction speed bonus applied.` });
         }
         
         alloc[task] -= 1;
@@ -3032,6 +3121,11 @@ function processLibrary(k, events) {
   }
 
   updates.library_progress = JSON.stringify(progress);
+
+  if (libUpgrades.surveyors_eyrie && Math.random() < 0.20) {
+    updates._find_kingdom_surveyor = true;
+  }
+
   return updates;
 }
 

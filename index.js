@@ -77,8 +77,8 @@ async function seedAiKingdoms(db) {
     await db.run(
       `INSERT INTO kingdoms (player_id, name, race, gold, land, population,
         researchers, engineers, rangers, turns_stored, res_spellbook, blueprints_stored,
-        bld_farms, bld_schools, bld_barracks, bld_armories, bld_housing)
-       VALUES (?, ?, ?, 10000, 504, 50000, 100, 100, 50, 400, 0, 2, 200, 1, 1, 1, 100)`,
+        bld_farms, bld_schools, bld_barracks, bld_armories, bld_housing, world_fragments)
+       VALUES (?, ?, ?, 10000, 504, 50000, 100, 100, 50, 400, 0, 1, 200, 1, 1, 1, 100, '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]')`,
       [player.lastID, ai.kingdomName, ai.race]
     );
     seeded++;

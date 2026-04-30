@@ -48,8 +48,8 @@ module.exports = function(db) {
           researchers, engineers, rangers, turns_stored,
           res_spellbook, blueprints_stored,
           bld_farms, bld_schools, bld_barracks, bld_armories, bld_housing,
-          bld_markets, bld_smithies, bld_cathedrals, bld_shrines, bld_outposts
-        ) VALUES (?, ?, ?, ?, 10000, 504, 50000, 100, 100, 50, 400, 0, 2, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          bld_markets, bld_smithies, bld_cathedrals, bld_shrines, bld_outposts, world_fragments
+        ) VALUES (?, ?, ?, ?, 10000, 504, 50000, 100, 100, 50, 400, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]')`,
         [
           playerResult.lastID, kingdomName, chosenRace, region,
           buildings.bld_farms, buildings.bld_schools, buildings.bld_barracks, buildings.bld_armories, buildings.bld_housing,

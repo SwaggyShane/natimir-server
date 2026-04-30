@@ -93,7 +93,8 @@ module.exports = function(db, io) {
       research_allocation = '{}', build_allocation = '{}', build_queue = '{}',
       mage_tower_allocation = '{}', shrine_allocation = '{}', library_allocation = '{}',
       library_progress = '{}', scrolls = '{}', active_effects = '{}',
-      maps = 0, blueprints_stored = 2,
+      world_fragments = '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]',
+      hybrid_blueprints = '{}', Maps = 0, blueprints_stored = 1,
       tools_hammers = 0, tools_scaffolding = 0, tools_blueprints = 0
     `);
     await db.run('DELETE FROM expeditions');
@@ -283,7 +284,7 @@ module.exports = function(db, io) {
 
   // ── Flush all location data ───────────────────────────────────────────────────
   router.post('/flush-locations', async (_req, res) => {
-    await db.run("UPDATE kingdoms SET discovered_kingdoms='{}', location_maps_wip='[]'");
+    await db.run("UPDATE kingdoms SET discovered_kingdoms='{}', location_maps_wip='[]', world_fragments='[]', hybrid_blueprints='{}'");
     console.log('[admin] All location data flushed');
     res.json({ ok: true, message: 'All kingdom location data cleared. Players must rediscover kingdoms.' });
   });

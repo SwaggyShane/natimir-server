@@ -1187,6 +1187,7 @@
               
               <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
                 <div id="st-lib-list"></div>
+                <div id="st-lib-hybrids" style="margin-top:10px;"></div>
               </div>
             </div>
 
@@ -7941,14 +7942,19 @@ function renderLibraryPanel() {
   if (typeof alloc === 'string') { try { alloc = JSON.parse(alloc); } catch(e){ alloc={}; } }
 
   var html = '';
-  ['map', 'blueprint'].forEach(function(item) {
-    var currInv = item === 'map' ? (state.maps||0) : (state.blueprints_stored||0);
-    var info = item === 'map' ? 'World exploration • 20 scribes • 20 turns' : 'Construction bonus • 30 scribes • 30 turns';
+  ['map', 'blueprint', 'location_map', 'hybrid_blueprint'].forEach(function(item) {
+    var currInv = item === 'map' ? (state.maps||0) : item === 'blueprint' ? (state.blueprints_stored||0) : 0;
+    var info = item === 'map' ? 'World exploration • 3 scribes • 10 turns' : item === 'blueprint' ? 'Construction bonus • 5 scribes • 20 turns' : item === 'location_map' ? 'Map a known location (uses 1 map) • 10 scribes • 5 turns' : 'Study a World Fragment • 100 scribes • 500 turns';
+    if (item === 'location_map') currInv = '-';
+    if (item === 'hybrid_blueprint') {
+      var frags = []; try { frags = JSON.parse(state.world_fragments || '[]'); } catch {}
+      currInv = frags.length;
+    }
     var queued = alloc[item] || 0;
     var qText = queued > 0 ? '<div style="color:var(--green);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:8px"><span>Queued: <strong>' + queued + '</strong></span><button class="btn" style="padding:2px 6px;font-size:11px;min-height:0;background:var(--red);color:#fff;border:none" onclick="clearLibraryItem(\'' + item + '\')">Cancel</button></div>' : '';
     html += '<div class="bld-row" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border2)">'
       + '<div class="info">'
-      + '<div class="name" style="text-transform:capitalize">' + item + '  <span style="font-size:11px;color:var(--text3);font-weight:normal">(Owned: ' + currInv + ')</span></div>'
+      + '<div class="name" style="text-transform:capitalize">' + item.replace('_', ' ') + '  <span style="font-size:11px;color:var(--text3);font-weight:normal">' + (item !== 'location_map' ? '(Owned: ' + currInv + ')' : '') + '</span></div>'
       + '<div class="desc">' + info + '</div>'
       + qText
       + '</div>'
@@ -7969,11 +7975,17 @@ function renderLibraryPanel() {
     Object.keys(prog).forEach(function(k) {
       if (!prog[k] || prog[k] <= 0) return;
       if (k === 'scribe_map') {
-        var pct = Math.min(100, Math.floor((prog[k] / 20) * 100));
+        var pct = Math.min(100, Math.floor((prog[k] / 10) * 100)); // Map is 10 turns
         items.push({ label: '🗺️ Map', pct: pct, color: 'var(--green)' });
       } else if (k === 'scribe_blueprint') {
-        var pct2 = Math.min(100, Math.floor((prog[k] / 30) * 100));
-        items.push({ label: '📐 Blueprint', pct: pct2, color: 'var(--amber)' });
+        var pct2 = Math.min(100, Math.floor((prog[k] / 20) * 100)); // Blueprint is 20 turns
+        items.push({ label: '⚙️ Blueprint', pct: pct2, color: 'var(--amber)' });
+      } else if (k === 'scribe_location_map') {
+        var pct3 = Math.min(100, Math.floor((prog[k] / 5) * 100)); // Location Map is 5 turns
+        items.push({ label: '📍 Location Map', pct: pct3, color: 'var(--purple)' });
+      } else if (k === 'scribe_hybrid_blueprint') {
+        var pct4 = Math.min(100, Math.floor((prog[k] / 500) * 100)); // Hybrid is 500 turns
+        items.push({ label: '🔮 Hybrid Blueprint', pct: pct4, color: 'var(--blue)' });
       }
     });
     if (items.length === 0) {
@@ -7991,6 +8003,32 @@ function renderLibraryPanel() {
       }).join('');
     }
   }
+
+  var hybrids = {}; try { hybrids = JSON.parse(state.hybrid_blueprints || '{}'); } catch {}
+  var hHtml = '<div style="color:var(--text3);font-size:12px;margin-bottom:8px">Assign studied World Fragments to their buildings.</div>';
+  var hHtmlList = '';
+  Object.keys(hybrids).forEach(function(k) {
+    if (hybrids[k].assigned) return;
+    var bldName = hybrids[k].building.replace('bld_', '').replace(/_/g, ' ');
+    hHtmlList += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg3);margin-bottom:4px;border-radius:var(--radius)">'
+      + '<div><strong style="color:var(--purple)">' + hybrids[k].fragment + '</strong> <span style="color:var(--text3);font-size:12px">for ' + bldName + '</span></div>'
+      + '<button class="btn btn-gold" onclick="assignHybridBlueprint(\'' + k + '\')" style="font-size:12px;padding:4px 8px">Assign (500k G, 100k M)</button>'
+      + '</div>';
+  });
+  if (!hHtmlList) hHtmlList = '<div style="color:var(--text3);font-size:12px;padding-top:10px;border-top:1px solid var(--border2)">No unassigned hybrid blueprints available.</div>';
+  
+  var hEl = document.getElementById('st-lib-hybrids');
+  if (hEl) hEl.innerHTML = '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)"><h4>Hybrid Blueprints</h4>' + hHtml + hHtmlList + '</div>';
+}
+
+async function assignHybridBlueprint(id) {
+  var result = await apiCall('POST', '/api/kingdom/assign-hybrid-blueprint', { id: id });
+  if (result.error) return toast(result.error, 'error');
+  state.hybrid_blueprints = result.hybrid_blueprints;
+  state.gold = result.gold;
+  state.mana = result.mana;
+  loadStudies();
+  toast('Assigned Hybrid Blueprint!', 'success');
 }
 
 async function craftLibraryItem(id) {
