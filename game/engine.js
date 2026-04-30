@@ -851,20 +851,6 @@ function processTurn(k) {
   const libUpdates = processLibrary({ ...k, ...updates }, events);
   Object.assign(updates, libUpdates);
 
-  // ── 8c. Smithy production — hammers, scaffolding, degradation ────────────────
-  const smithyUpdates = processSmithyProduction({ ...k, ...updates }, events);
-  Object.assign(updates, smithyUpdates);
-
-  // Combine build and hammer messages
-  if (updates._buildMsg || updates._hammerBreakMsg) {
-    let combined = [];
-    if (updates._buildMsg) combined.push(updates._buildMsg);
-    if (updates._hammerBreakMsg) combined.push(updates._hammerBreakMsg);
-    events.push({ type: 'system', message: `🔨 ${combined.join(' ')}` });
-    delete updates._buildMsg;
-    delete updates._hammerBreakMsg;
-  }
-
   // ── 8d. Defence — citadel check ───────────────────────────────────────────────
   const citadelUpdates = checkCitadel({ ...k, ...updates }, events);
   Object.assign(updates, citadelUpdates);
@@ -1160,32 +1146,6 @@ function scaffoldingBonus(building) {
   return Math.max(0.05, Math.floor(50 / (cost / 100)) / 100); // e.g. farm=2.0, barracks=1.0, school=0.67
 }
 
-// ── Smithy production — runs each turn ───────────────────────────────────────
-function processSmithyProduction(k, events) {
-  const updates = {};
-  const smithies = k.bld_smithies || 0;
-  if (smithies === 0) return updates;
-
-  const hl = TOOL_COL.hammers;
-
-  // ── Hammer degradation — each active hammer decays 1 turn of durability ──────
-  const hammerCount = updates[hl] !== undefined ? updates[hl] : (k[hl] || 0);
-  if (hammerCount > 0) {
-    const used = (k.hammer_turns_used || 0) + hammerCount; // each hammer used this turn
-    const breaks = Math.floor(used / 20); // 1 hammer breaks every 20 turns of use
-    if (breaks > 0) {
-      const newCount = Math.max(0, hammerCount - breaks);
-      updates[hl] = newCount;
-      updates.hammer_turns_used = used - (breaks * 20);
-      updates._hammerBreakMsg = `${breaks} hammer${breaks > 1 ? 's' : ''} wore out and broke.`;
-    } else {
-      updates.hammer_turns_used = used;
-    }
-  }
-
-  return updates;
-}
-
 // Add buildings to the queue — charges gold, no turn cost
 function queueBuildings(k, orders) {
   const queue = safeJsonParse(k.build_queue, {}, 'queueBuildings:build_queue');
@@ -1389,19 +1349,41 @@ function processBuildQueue(k, events) {
     }
   }
 
+  // ── Hammer degradation ──
+  const hammerCount = k[hl] || 0;
+  if (hammerCount > 0 && activeBuildings.size > 0) {
+    const used = (k.hammer_turns_used || 0) + hammerCount; // each hammer used this turn
+    const breaks = Math.floor(used / 20); // 1 hammer breaks every 20 turns of use
+    if (breaks > 0) {
+      const newCount = Math.max(0, hammerCount - breaks);
+      updates[hl] = newCount;
+      updates.hammer_turns_used = used - (breaks * 20);
+      updates._hammerBreakMsg = `${breaks} hammer${breaks > 1 ? 's' : ''} wore out and broke.`;
+    } else {
+      updates.hammer_turns_used = used;
+    }
+  }
+
   let buildMsg = '';
   if (completedItems.length > 0) {
-    buildMsg += `Your engineers constructed: ${completedItems.join(', ')}. `;
+    const landUsed = (updates.land !== undefined) ? (k.land || 0) - updates.land : 0;
+    const landStr = landUsed > 0 ? ` · ${landUsed} land used` : '';
+    buildMsg += `Construction: ${completedItems.join(', ')} built${landStr}. `;
   } else if (activeBuildings.size > 0 && updates._build_estimates && updates._build_estimates.length > 0) {
     buildMsg += `Engineers making progress. `;
   }
   if (updates._build_estimates && updates._build_estimates.length > 0) {
     buildMsg += `Est: ${updates._build_estimates.join(' · ')}.`;
   }
-  if (buildMsg) {
-    updates._buildMsg = buildMsg.trim();
+  if (buildMsg || updates._hammerBreakMsg) {
+    let combined = [];
+    if (buildMsg) combined.push(buildMsg.trim());
+    if (updates._hammerBreakMsg) combined.push(updates._hammerBreakMsg);
+    events.push({ type: 'system', message: `🔨 ${combined.join(' ')}` });
   }
   delete updates._build_estimates;
+  delete updates._hammerBreakMsg;
+
   if (blueprintsUsed  > 0) updates.blueprints_stored = Math.max(0, (k.blueprints_stored || 0) - blueprintsUsed);
   if (scaffoldingUsed > 0) updates[sl]  = Math.max(0, scaffoldingLeft);
 
@@ -1425,9 +1407,6 @@ function processBuildQueue(k, events) {
   updates.build_progress = JSON.stringify(progress);
 
   if (completedItems.length > 0) {
-    const landUsed = (updates.land !== undefined) ? (k.land || 0) - updates.land : 0;
-    const landStr = landUsed > 0 ? ` · ${landUsed} land used` : '';
-    events.push({ type: 'system', message: `🔨 Construction: ${completedItems.join(', ')} built${landStr}.` });
     const totalCompleted = completedItems.reduce(function(s, item) {
       const match = item.match(/^(\d[\d,]*)/);
       return s + (match ? parseInt(match[1].replace(/,/g,'')) : 1);
@@ -2919,6 +2898,5 @@ module.exports = {
   UNIT_COST, BUILDING_COST, BUILDING_GOLD_COST, BUILDING_LAND_COST, BUILDING_COL,
   SPELL_DEFS, SCROLL_REQUIREMENTS, SCRIBE_ITEMS, HOUSING_CAP_BY_RACE,
   TOOL_COL, TOOL_GOLD_COST, BLUEPRINT_REQUIRED, SCAFFOLDING_REQUIRED, SCAFFOLDING_BONUS_BUILDINGS,
-  processSmithyProduction,
   HERO_CLASSES, heroXpForLevel, awardHeroXp, getHeroPower, applyHeroTurnBonuses, recruitHero,
 };
