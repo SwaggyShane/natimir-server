@@ -775,26 +775,46 @@ function processTurn(k) {
     focus = focus.slice(0, maxSlots);
     const perSlot = Math.floor(researchers / focus.length);
 
+    let rProgress = safeJsonParse(k.research_progress, {}, 'processTurn:research_progress');
     const advances = [];
+    let resEstimates = [];
+
     focus.forEach(function(fKey) {
       const d = ALL_DISCIPLINES.find(x => x.key === fKey);
       if (!d) return;
+      
+      const current = updates[d.col] !== undefined ? updates[d.col] : (k[d.col] || 0);
+      const cap = getCap(d.col, k.level || 1);
+      if (current >= cap) return; // At cap, no progress
+
       const effective = Math.floor(perSlot * schoolBonus * d.multi * curriculumMult);
+      rProgress[d.col] = (rProgress[d.col] || 0) + effective;
+      
+      // We scale the cost slightly for higher amounts to preserve the old balance somewhat,
+      // but generally 200 points = 1%. We'll just use a flat 200 for simplicity and partial accumulation.
+      const COST_PER_PCT = 200;
       let inc = 0;
-      if (effective >= 2000) inc = 5;
-      else if (effective >= 1200) inc = 3;
-      else if (effective >= 600)  inc = 2;
-      else if (effective >= 200)  inc = 1;
+      if (rProgress[d.col] >= COST_PER_PCT) {
+        inc = Math.floor(rProgress[d.col] / COST_PER_PCT);
+        rProgress[d.col] -= (inc * COST_PER_PCT);
+      }
+
       if (inc > 0) {
-        const current = updates[d.col] !== undefined ? updates[d.col] : (k[d.col] || 0);
-        const cap = getCap(d.col, k.level || 1);
         const newVal = Math.min(cap, current + inc);
         if (newVal !== current) {
           updates[d.col] = newVal;
           advances.push(`${d.label} → ${newVal}%`);
         }
       }
+
+      if (effective > 0) {
+        const pct = Math.floor((rProgress[d.col] / COST_PER_PCT) * 100);
+        const turnsLeft = Math.ceil((COST_PER_PCT - rProgress[d.col]) / effective);
+        resEstimates.push(`${d.label} (${pct}%, ${turnsLeft} turns left)`);
+      }
     });
+
+    updates.research_progress = JSON.stringify(rProgress);
 
     // Award Researcher XP even if no technical advances occurred
     if (researchers > 0) {
@@ -813,7 +833,11 @@ function processTurn(k) {
       updates.level = resXp.level;
       if (resXp.levelled) events.push(...resXp.events);
     } else if (researchers > 0) {
-      events.push({ type: 'system', message: `📚 ${researchers.toLocaleString()} researchers studying ${focus.join(' & ')}.` });
+      if (resEstimates.length > 0) {
+        events.push({ type: 'system', message: `📚 ${researchers.toLocaleString()} researchers studying. Est: ${resEstimates.join(', ')}.` });
+      } else {
+        events.push({ type: 'system', message: `📚 ${researchers.toLocaleString()} researchers studying ${focus.join(' & ')}.` });
+      }
     }
   } else {
     events.push({ type: 'system', message: `📚 No researchers — hire researchers and allocate them to advance your kingdom's knowledge.` });
@@ -830,6 +854,16 @@ function processTurn(k) {
   // ── 8c. Smithy production — hammers, scaffolding, degradation ────────────────
   const smithyUpdates = processSmithyProduction({ ...k, ...updates }, events);
   Object.assign(updates, smithyUpdates);
+
+  // Combine build and hammer messages
+  if (updates._buildMsg || updates._hammerBreakMsg) {
+    let combined = [];
+    if (updates._buildMsg) combined.push(updates._buildMsg);
+    if (updates._hammerBreakMsg) combined.push(updates._hammerBreakMsg);
+    events.push({ type: 'system', message: `🔨 ${combined.join(' ')}` });
+    delete updates._buildMsg;
+    delete updates._hammerBreakMsg;
+  }
 
   // ── 8d. Defence — citadel check ───────────────────────────────────────────────
   const citadelUpdates = checkCitadel({ ...k, ...updates }, events);
@@ -1143,7 +1177,7 @@ function processSmithyProduction(k, events) {
       const newCount = Math.max(0, hammerCount - breaks);
       updates[hl] = newCount;
       updates.hammer_turns_used = used - (breaks * 20);
-      events.push({ type: 'system', message: `🔨 ${breaks} hammer${breaks > 1 ? 's' : ''} wore out and broke.` });
+      updates._hammerBreakMsg = `${breaks} hammer${breaks > 1 ? 's' : ''} wore out and broke.`;
     } else {
       updates.hammer_turns_used = used;
     }
@@ -1365,7 +1399,7 @@ function processBuildQueue(k, events) {
     buildMsg += `Est: ${updates._build_estimates.join(' · ')}.`;
   }
   if (buildMsg) {
-    events.push({ type: 'system', message: `🔨 ${buildMsg.trim()}` });
+    updates._buildMsg = buildMsg.trim();
   }
   delete updates._build_estimates;
   if (blueprintsUsed  > 0) updates.blueprints_stored = Math.max(0, (k.blueprints_stored || 0) - blueprintsUsed);

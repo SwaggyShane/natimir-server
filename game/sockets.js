@@ -359,7 +359,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'xp','level','troop_levels',
     'tax','tax_rate',
     'build_queue','build_progress','build_allocation',
-    'research_allocation','training_allocation',
+    'research_allocation','research_progress','training_allocation',
     'library_allocation','library_progress','tower_progress',
     'mage_tower_allocation','shrine_allocation'
   ]);

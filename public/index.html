@@ -83,9 +83,9 @@
     width: 100%;
     box-sizing: border-box;
   }
-  /* ── Header persistence on mobile ── */
   @media (max-width: 768px) {
-    .topbar { position: sticky; top: 0; z-index: 2000; }
+    .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 2000; }
+    .app { padding-top: 64px; }
     #kd-top { 
       background: var(--bg);
       border-bottom: 2px solid var(--border2);

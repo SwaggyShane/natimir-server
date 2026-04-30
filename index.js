@@ -114,7 +114,7 @@ async function runAiKingdom(db, engine, playerId) {
     'bld_farms','bld_barracks','bld_schools','bld_armories','bld_vaults','bld_smithies',
     'bld_markets','bld_cathedrals','bld_training','bld_colosseums','bld_castles',
     'bld_shrines','bld_libraries',
-    'build_allocation','build_progress','research_allocation','mage_tower_allocation',
+    'build_allocation','build_progress','research_allocation','research_progress','mage_tower_allocation',
     'build_queue','xp','level','troop_levels','maps','scrolls','active_effects',
     'library_progress','tower_progress','library_allocation',
   ]);

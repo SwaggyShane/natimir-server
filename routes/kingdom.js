@@ -132,7 +132,7 @@ module.exports = function(db) {
   router.delete('/news/clear', requireAuth, async (req, res) => {
     const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-    await db.run('DELETE FROM news WHERE kingdom_id = ?', [k.id]);
+    await db.run("DELETE FROM news WHERE kingdom_id = ? AND type != 'lore'", [k.id]);
     res.json({ ok: true });
   });
 
