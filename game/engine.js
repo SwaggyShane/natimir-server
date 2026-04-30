@@ -351,11 +351,10 @@ function applyWarmachineDamage(attacker, defender, win) {
 // ── Location system ───────────────────────────────────────────────────────────
 
 function calcDiscoveryChance(k) {
-  const baseChance = 0.12; // 12% base
+  const baseChance = 0.05; // 5% base
   const race = k.race || 'human';
   const raceMult = LOCATE_RACE_MULT[race] || 1.0;
-  const rangerBonus = Math.min(0.05, (k.rangers||0) / 10000 * 0.05);
-  return Math.min(0.20, baseChance * raceMult + rangerBonus);
+  return baseChance * raceMult;
 }
 
 function processLocationMapsWip(k, events) {
@@ -412,7 +411,7 @@ function farmProduction(k) {
   const workersNeeded = FARM_WORKERS_PER[race] || 10;
   const freePop       = Math.max(0, (k.population||0) - totalHiredUnits(k));
   const workedFarms   = Math.min(farms, Math.floor(freePop / workersNeeded));
-  let   baseYield     = workedFarms * 10 * (FARM_YIELD_MULT[race] || 1.0);
+  let   baseYield     = workedFarms * 100 * (FARM_YIELD_MULT[race] || 1.0);
   // Apply season and active event farm multiplier
   const activeEv = safeJsonParse(k.active_event, {}, 'farmProduction:active_event');
   const seasonMult  = (k._season_farm_mult) || 1.0; // injected by processTurn
@@ -2117,7 +2116,7 @@ function expeditionRewards(type, rangers, fighters, k) {
     }
 
     // DISCOVERY: Chance to find another kingdom
-    if (roll(0.15)) {
+    if (roll(calcDiscoveryChance(k))) {
       updates._find_kingdom = true;
     }
 
@@ -2162,7 +2161,7 @@ function expeditionRewards(type, rangers, fighters, k) {
       updates[disc] = (k[disc] || 0) + boost;
     }
 
-    if (roll(0.30)) {
+    if (roll(calcDiscoveryChance(k))) {
       updates._find_kingdom = true;
     }
     if (roll(0.60)) rewards.push({ text: `Hidden deep in the wilderness, your rangers also discovered ${junkPrize()}` });
@@ -2378,24 +2377,7 @@ async function resolveExpeditions(db, k, engine) {
         if (engine.io) engine.io.emit('chat:system', { message: serverAnnounce, ts: Date.now() });
       }
 
-      // Kingdom location discovery — scout expeditions have a chance of finding a kingdom
-      if (exp.type === 'scout') {
-        const discoveryChance = calcDiscoveryChance(k);
-        if (Math.random() < discoveryChance) {
-          // Pick a random undiscovered kingdom
-          let disc = {};
-          try { disc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
-          const allKingdoms = await db.all('SELECT id, name FROM kingdoms WHERE id != ?', [k.id]);
-          const undiscovered = allKingdoms.filter(t => !disc[t.id]?.found);
-          if (undiscovered.length > 0) {
-            const found = undiscovered[Math.floor(Math.random()*undiscovered.length)];
-            disc[found.id] = { found: true, name: found.name, mapped: false };
-            await db.run('UPDATE kingdoms SET discovered_kingdoms=? WHERE id=?', [JSON.stringify(disc), k.id]);
-            // Record reward
-            rewards.push({ text: `🔭 Your scouts discovered the kingdom of ${found.name}!` });
-          }
-        }
-      }
+
 
       // Save rewards to expedition row for log display
       const rewardJson = JSON.stringify(rewards.map(r => r.text));
