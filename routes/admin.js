@@ -321,8 +321,17 @@ module.exports = function(db, io) {
   });
 
   router.get('/config', async (_req, res) => {
+    const fs = require('fs');
+    const path = require('path');
     const config = require('../game/config');
-    res.json(config);
+    let overrides = {};
+    try {
+      const overridesPath = path.join(__dirname, '../game/config_overrides.json');
+      if (fs.existsSync(overridesPath)) {
+        overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8'));
+      }
+    } catch {}
+    res.json({ config, overrides });
   });
 
   router.post('/config', async (req, res) => {
