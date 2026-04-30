@@ -76,30 +76,59 @@ module.exports = function(db, io) {
 
   // POST /api/admin/reset-all-kingdoms — wipe all kingdoms back to starting stats
   router.post('/reset-all-kingdoms', async (_req, res) => {
-    await db.run(`UPDATE kingdoms SET
-      gold = 10000, mana = 0, land = 504, population = 50000, food = 0, morale = 100,
-      turn = 0, turns_stored = 400,
-      fighters = 0, rangers = 50, clerics = 0, mages = 0, thieves = 0, ninjas = 0,
-      researchers = 100, engineers = 100, scribes = 0,
-      war_machines = 0, weapons_stockpile = 0, armor_stockpile = 0,
-      bld_farms = 200, bld_barracks = 1, bld_outposts = 0, bld_guard_towers = 0,
-      bld_schools = 1, bld_armories = 1, bld_vaults = 0, bld_smithies = 0,
-      bld_markets = 0, bld_cathedrals = 0, bld_training = 0, bld_colosseums = 0,
-      bld_castles = 0, bld_shrines = 0, bld_libraries = 0, bld_taverns = 0, bld_mage_towers = 0, bld_housing = 100,
-      res_economy = 100, res_weapons = 100, res_armor = 100, res_military = 100,
-      res_attack_magic = 100, res_defense_magic = 100, res_entertainment = 100,
-      res_construction = 100, res_war_machines = 100, res_spellbook = 0,
-      xp = 0, level = 1,
-      research_allocation = '{}', build_allocation = '{}', build_queue = '{}',
-      mage_tower_allocation = '{}', shrine_allocation = '{}', library_allocation = '{}',
-      library_progress = '{}', scrolls = '{}', active_effects = '{}',
-      world_fragments = '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]',
-      hybrid_blueprints = '{}', maps = 0, blueprints_stored = 1,
-      scaffolding_stored = 0, hammers_stored = 0
-    `);
+    const kingdoms = await db.all('SELECT id, race FROM kingdoms');
+    for (const k of kingdoms) {
+      const buildings = {
+        bld_farms: 1, bld_schools: 1, bld_barracks: 1, bld_armories: 1, bld_housing: 100,
+        bld_markets: 0, bld_smithies: 0, bld_cathedrals: 0, bld_shrines: 0, bld_outposts: 0
+      };
+      if (k.race === 'human')     buildings.bld_markets = 1;
+      if (k.race === 'dwarf')     buildings.bld_smithies = 1;
+      if (k.race === 'high_elf')  buildings.bld_cathedrals = 1;
+      if (k.race === 'dark_elf')  buildings.bld_shrines = 1;
+      if (k.race === 'orc')       buildings.bld_outposts = 1;
+      if (k.race === 'dire_wolf') buildings.bld_barracks = 2; // Extra barracks for wolf
+
+      await db.run(`UPDATE kingdoms SET
+        gold = 10000, mana = 0, land = 504, population = 50000, food = 0, morale = 100,
+        turn = 0, turns_stored = 400,
+        fighters = 0, rangers = 50, clerics = 0, mages = 0, thieves = 0, ninjas = 0,
+        researchers = 100, engineers = 100, scribes = 0,
+        war_machines = 0, weapons_stockpile = 0, armor_stockpile = 0,
+        bld_farms = ?, bld_barracks = ?, bld_outposts = ?, bld_guard_towers = 0,
+        bld_schools = ?, bld_armories = ?, bld_vaults = 0, bld_smithies = ?,
+        bld_markets = ?, bld_cathedrals = ?, bld_training = 0, bld_colosseums = 0,
+        bld_castles = 0, bld_shrines = ?, bld_libraries = 0, bld_taverns = 0, bld_housing = ?,
+        bld_walls = 0,
+        res_economy = 100, res_weapons = 100, res_armor = 100, res_military = 100,
+        res_attack_magic = 100, res_defense_magic = 100, res_entertainment = 100,
+        res_construction = 100, res_war_machines = 100, res_spellbook = 0,
+        xp = 0, level = 1,
+        research_allocation = '{}', build_allocation = '{}', build_queue = '{}',
+        mage_tower_allocation = '{}', shrine_allocation = '{}', library_allocation = '{}',
+        library_progress = '{}', scrolls = '{}', active_effects = '{}',
+        world_fragments = '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]',
+        hybrid_blueprints = '{}', maps = 0, blueprints_stored = 1,
+        scaffolding_stored = 0, hammers_stored = 0,
+        discovered_kingdoms = '{}', location_maps_wip = '[]',
+        farm_upgrades = '{}', market_upgrades = '{}', tavern_upgrades = '{}',
+        tower_upgrades = '{}', school_upgrades = '{}', shrine_upgrades = '{}', library_upgrades = '{}',
+        wall_upgrades = '{}', tower_def_upgrades = '{}', outpost_upgrades = '{}',
+        food_shortage_turns = 0, food_surplus_turns = 0, mercenaries = '[]'
+        WHERE id = ?`,
+        [
+          buildings.bld_farms, buildings.bld_barracks, buildings.bld_outposts,
+          buildings.bld_schools, buildings.bld_armories, buildings.bld_smithies,
+          buildings.bld_markets, buildings.bld_cathedrals, buildings.bld_shrines, buildings.bld_housing,
+          k.id
+        ]
+      );
+    }
+    
     await db.run('DELETE FROM expeditions');
     await db.run('DELETE FROM news');
-    await db.run('DELETE FROM combat_log');
+    await db.run('DELETE FROM war_log');
+    await db.run('DELETE FROM trade_offers');
     res.json({ ok: true });
   });
 
@@ -183,11 +212,12 @@ module.exports = function(db, io) {
       'war_machines','weapons_stockpile','armor_stockpile','maps','blueprints_stored',
       'scaffolding_stored','hammers_stored',
       'bld_farms','bld_barracks','bld_outposts','bld_guard_towers','bld_schools',
-      'bld_armories','bld_vaults','bld_smithies','bld_markets','bld_cathedrals',
-      'bld_training','bld_colosseums','bld_castles','bld_libraries','bld_shrines','bld_housing',
+      'bld_armories','bld_vaults','bld_smithies','bld_markets','bld_mage_towers',
+      'bld_training','bld_taverns','bld_castles','bld_libraries','bld_shrines','bld_housing',
+      'bld_walls',
       'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
       'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
-      'xp','level',
+      'xp','level'
     ]);
 
     const safe = Object.fromEntries(

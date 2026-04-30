@@ -1462,7 +1462,7 @@
 
         <div id="build-rows" style="--build-cols:36px 1fr 60px 145px auto">
         <style>
-#build-rows .trow { display: grid; grid-template-columns: 32px minmax(0,1fr) 50px 115px; gap: 0 4px; align-items: center; }
+#build-rows .trow { display: grid; grid-template-columns: 32px minmax(0,1fr) 65px 105px; gap: 0 4px; align-items: center; }
 @media(min-width:500px) { #build-rows .trow { grid-template-columns: 32px minmax(0,1fr) 85px 105px; gap: 0 8px; } }
 @media(min-width:1100px) { #build-rows .trow { grid-template-columns: 36px minmax(0,1fr) minmax(0,1fr) 85px 120px; } }
 #build-rows .trow .name { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1473,7 +1473,7 @@
 </style>
         <div id="build-header">
   <style>
-    #build-header { font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 8px;display:grid;grid-template-columns: 32px minmax(0,1fr) 50px 115px; gap: 0 4px; align-items:center; }
+    #build-header { font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 8px;display:grid;grid-template-columns: 32px minmax(0,1fr) 65px 105px; gap: 0 4px; align-items:center; }
     @media(min-width:500px) { #build-header { grid-template-columns: 32px minmax(0,1fr) 85px 105px; gap: 0 8px; } }
     @media(min-width:1100px) { #build-header { grid-template-columns: 36px minmax(0,1fr) minmax(0,1fr) 85px 120px; } }
     #build-header .h-desc { display:none; }
@@ -1655,22 +1655,28 @@
           <span class="bld-icon" style="background:#5a3a1a">🪖</span>
           <span class="name">Warmachines</span><span class="desc">Heavy assault engines</span>
           <span class="count" id="bld-war_machines">0</span>
-          <input type="number"   id="ba-wm" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:80px"   placeholder="Qty">
-          <button class="btn" onclick="setBuildMax('ba-wm','war_machine')" style="padding:5px 10px;font-size:11px">Max</button>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number"   id="ba-wm" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
+            <button class="btn" onclick="setBuildMax('ba-wm','war_machine')" style="padding:4px 8px;font-size:10px">Max</button>
+          </div>
         </div>
         <div class="trow">
           <span class="bld-icon" style="background:#6a1a1a">🗡️</span>
           <span class="name">Weapons</span><span class="desc">Equips fighters for +25% attack</span>
           <span class="count" id="bld-weapons_stockpile">0</span>
-          <input type="number"   id="ba-weapons" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:80px"   placeholder="Qty">
-          <button class="btn" onclick="setBuildMax('ba-weapons','weapons')" style="padding:5px 10px;font-size:11px">Max</button>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number"   id="ba-weapons" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
+            <button class="btn" onclick="setBuildMax('ba-weapons','weapons')" style="padding:4px 8px;font-size:10px">Max</button>
+          </div>
         </div>
         <div class="trow" style="border-bottom:none">
           <span class="bld-icon" style="background:#1a3a6a">🔰</span>
           <span class="name">Armor</span><span class="desc">Equips fighters for +25% defence</span>
           <span class="count" id="bld-armor_stockpile">0</span>
-          <input type="number"   id="ba-armor" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:80px"   placeholder="Qty">
-          <button class="btn" onclick="setBuildMax('ba-armor','armor')" style="padding:5px 10px;font-size:11px">Max</button>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number"   id="ba-armor" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
+            <button class="btn" onclick="setBuildMax('ba-armor','armor')" style="padding:4px 8px;font-size:10px">Max</button>
+          </div>
         </div>
         </div><!-- end build-rows -->
       </div>
