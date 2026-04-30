@@ -8049,25 +8049,24 @@ function renderLibraryPanel() {
   }
 
   var prog = state.library_progress || {};
+  var alloc = state.library_allocation || {};
+  if (typeof alloc === 'string') { try { alloc = JSON.parse(alloc); } catch(e){ alloc={}; } }
   var craftEl = document.getElementById('st-lib-craft-progress');
   if (craftEl) {
     var items = [];
-    Object.keys(prog).forEach(function(k) {
-      if (!prog[k] || prog[k] <= 0) return;
-      if (k === 'scribe_map') {
-        var pct = Math.min(100, Math.floor((prog[k] / 10) * 100)); // Map is 10 turns
-        items.push({ label: '🗺️ Map', pct: pct, color: 'var(--green)' });
-      } else if (k === 'scribe_blueprint') {
-        var pct2 = Math.min(100, Math.floor((prog[k] / 20) * 100)); // Blueprint is 20 turns
-        items.push({ label: '⚙️ Blueprint', pct: pct2, color: 'var(--amber)' });
-      } else if (k === 'scribe_location_map') {
-        var pct3 = Math.min(100, Math.floor((prog[k] / 5) * 100)); // Location Map is 5 turns
-        items.push({ label: '📍 Location Map', pct: pct3, color: 'var(--purple)' });
-      } else if (k === 'scribe_hybrid_blueprint') {
-        var pct4 = Math.min(100, Math.floor((prog[k] / 500) * 100)); // Hybrid is 500 turns
-        items.push({ label: '🔮 Hybrid Blueprint', pct: pct4, color: 'var(--blue)' });
+    ['map', 'blueprint', 'location_map', 'hybrid_blueprint'].forEach(function(item) {
+      if (alloc[item] > 0) {
+        var k = 'scribe_' + item;
+        var p = prog[k] || 0;
+        var label = '', pct = 0, color = '';
+        if (item === 'map') { pct = Math.min(100, Math.floor((p / 10) * 100)); label = '🗺️ Map'; color = 'var(--green)'; }
+        else if (item === 'blueprint') { pct = Math.min(100, Math.floor((p / 20) * 100)); label = '⚙️ Blueprint'; color = 'var(--amber)'; }
+        else if (item === 'location_map') { pct = Math.min(100, Math.floor((p / 5) * 100)); label = '📍 Location Map'; color = 'var(--purple)'; }
+        else if (item === 'hybrid_blueprint') { pct = Math.min(100, Math.floor((p / 500) * 100)); label = '🔮 Hybrid Blueprint'; color = 'var(--blue)'; }
+        items.push({ label: label, pct: pct, color: color });
       }
     });
+
     if (items.length === 0) {
       craftEl.innerHTML = '<div style="font-size:13px;color:var(--text3)">Library is idle.</div>';
     } else {

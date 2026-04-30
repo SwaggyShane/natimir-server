@@ -2552,6 +2552,7 @@ function processLibrary(k, events) {
 
     activeTasks.forEach(task => {
       const req = SCRIBE_ITEMS[task];
+      const progressKey = 'scribe_' + task;
       let disc = {};
       try { disc = JSON.parse(updates.discovered_kingdoms || k.discovered_kingdoms || '{}'); } catch {}
 
@@ -2560,6 +2561,7 @@ function processLibrary(k, events) {
         if (unmapped.length === 0) {
           delete alloc[task]; progress[progressKey] = 0;
           events.push({ type: 'system', message: `⚠️ Scribes halted location mapping — no unmapped locations found.` });
+          completedAny = true;
           return;
         }
         if ((updates.maps !== undefined ? updates.maps : (k.maps || 0)) < 1) {
@@ -2571,12 +2573,12 @@ function processLibrary(k, events) {
         if (frags.length === 0) {
           delete alloc[task]; progress[progressKey] = 0;
           events.push({ type: 'system', message: `⚠️ Scribes halted Hybrid Blueprint research — no World Fragments available!` });
+          completedAny = true;
           return;
         }
       }
 
       const effective = Math.min(scribesPerTask, req.scribes);
-      const progressKey = 'scribe_' + task;
       const workDone = (effective >= req.scribes ? 1 : effective / req.scribes) * scribeLvlMult * scribeSpeedMult;
       const newProg = (progress[progressKey] || 0) + workDone;
 

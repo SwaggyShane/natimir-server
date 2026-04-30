@@ -109,7 +109,7 @@ module.exports = function(db, io) {
         res_economy = 100, res_weapons = 100, res_armor = 100, res_military = 100,
         res_attack_magic = 100, res_defense_magic = 100, res_entertainment = 100,
         res_construction = 100, res_war_machines = 100, res_spellbook = 0,
-        xp = 0, level = 1,
+        xp = 0, level = 1, troop_levels = '{}',
         research_allocation = '{}', build_allocation = '{}', build_queue = '{}',
         mage_tower_allocation = '{}', shrine_allocation = '{}', library_allocation = '{}',
         library_progress = '{}', scrolls = '{}', active_effects = '{}',
