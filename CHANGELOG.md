@@ -4,6 +4,13 @@
 ---
 
 ### Latest Updates (April 2026)
+- **INTERFACE PATCH (1.0.6)** — Major UI cleanup:
+  - **Library Residents** — Libraries now correctly house scribes only.
+  - **Badges** — Added "Siege" (Status), "Racial Gift" (Training), and "Citadel" (Defense) badges.
+  - **Rankings Refresh** — Modernized columns: Player, Kingdom, Score, Level, Turns. Troop counts are now private for rivals.
+  - **Market Upgrade** — Added "Clear Logs" button for trade history.
+  - **Hire Page Rework** — High-contrast yellow labels and improved column alignment.
+  - **Library Sync** — Upgrades are now synced with latest configuration.
 - **RACE LORE EXPANSION** — New in-game events referencing regional history have been added. Discover the secrets of Narmir as you take your turns.
 - **REGION CAPTURE & MASTERY** — Alliances can now contest and capture territories. Holding a region grants a global +10% bonus to the alliance's signature stat (Military, Magic, Economy, etc.).
 - **ALLIANCE LEADERBOARDS** — New rankings tab showing total alliance land, member counts, and average power. Rank your coalition against the world.

@@ -692,6 +692,19 @@
         <h2 style="font-size: 16px; color: var(--gold); margin-bottom: 20px; border-bottom: 1px solid var(--border2); padding-bottom: 10px">🔥 LATEST UPDATES (APRIL 2026)</h2>
         
         <div style="margin-bottom: 24px">
+          <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">🛠️ Game Interface & Logic Patch (v1.0.6)</div>
+          <ul style="font-size: 13px; color: var(--text2); line-height: 1.8; list-style: none; padding-left: 10px">
+            <li>🏰 <strong style="color:var(--text)">Citadel Badge:</strong> Now displays on Defense and Status panels when requirements are met.</li>
+            <li>✨ <strong style="color:var(--text)">Racial Gift Badge:</strong> Now visible on the Training panel for active bonuses.</li>
+            <li>⚓ <strong style="color:var(--text)">Siege Badge:</strong> Added to war machines on the status page.</li>
+            <li>📈 <strong style="color:var(--text)">Rankings Modernization:</strong> New columns (Player, Score, Turns) and stats privacy.</li>
+            <li>📦 <strong style="color:var(--text)">Trade Logs:</strong> New "Clear Logs" button in markets to tidy up old offers.</li>
+            <li>💛 <strong style="color:var(--text)">Hire Page Rework:</strong> High-contrast yellow labels and improved column alignment.</li>
+            <li>📖 <strong style="color:var(--text)">Library Sync:</strong> Upgrades and residents (scribes only) are now correctly synced.</li>
+          </ul>
+        </div>
+
+        <div style="margin-bottom: 24px">
           <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px">📜 Race Lore Expansion</div>
           <p style="font-size: 13px; color: var(--text2); line-height: 1.6">Ancient secrets are beginning to stir. Your turn reports now have a chance to include rare historical events and lore snippets specific to your race and region, bringing the deep history of Narmir to life.</p>
         </div>
@@ -840,7 +853,7 @@
             <span style="font-size:13px;color:var(--text)">Warmachines</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-war_machines">0</span>
             <span></span>
-            <span class="badge yellow" style="text-align:center;font-size:9px">Warmachines</span>
+            <span class="badge yellow" style="text-align:center;font-size:9px">Siege</span>
           </div>
         </div>
 
@@ -899,17 +912,6 @@
 
     <!-- HIRE -->
     <div id="hire" class="panel">
-      <!-- Partial Resource Strip -->
-      <div style="display:flex;gap:20px;padding:12px 16px;background:var(--bg2);border-radius:10px;margin-bottom:16px;border:1px solid var(--border)">
-        <div style="display:flex;flex-direction:column">
-          <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Gold</span>
-          <span style="font-size:18px;font-weight:700;color:var(--gold)" id="hire-strip-gold">0</span>
-        </div>
-        <div style="display:flex;flex-direction:column">
-          <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Population</span>
-          <span style="font-size:18px;font-weight:700;color:var(--text)" id="hire-strip-pop">0</span>
-        </div>
-      </div>
       <div class="card">
         <div class="card-title">Hire units · Population: <span id="hire-pop">50,000</span></div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.8">
@@ -921,19 +923,22 @@
 
         <!-- Header row -->
         <div class="hire-row" style="border-bottom:2px solid var(--border2); font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; padding-bottom:8px">
-          <span>Unit</span><span style="text-align:right">Count</span><span style="text-align:center">Price</span><span style="text-align:right">Action</span>
+          <span style="text-align:left">Unit</span>
+          <span style="text-align:right">Count</span>
+          <span style="text-align:right">Price</span>
+          <span style="text-align:right">Action</span>
         </div>
 
         <!-- Unit rows -->
         <style>
-          .hire-row .hname { font-size:13px; color:var(--text); font-weight:600; justify-self: start; }
+          .hire-row .hname { font-size:13px; color:var(--gold); font-weight:600; justify-self: start; }
           .hire-row .hdesc { justify-self: start; }
-          .hire-row > div:first-child { width: 100%; }
+          .hire-row > div:first-child { width: 100%; text-align: left; }
           .hire-row .hdesc { font-size:11px; color:var(--text3); }
-          .hire-row .hcount { font-size:13px; font-weight:600; text-align:right; color:var(--text); }
-          .hire-row .hprice { font-size:12px; text-align:center; color:var(--gold); }
+          .hire-row .hcount { font-size:13px; font-weight:600; text-align:right; color:var(--gold); }
+          .hire-row .hprice { font-size:12px; text-align:right; color:var(--gold); }
           .hire-row .hbtns { display:flex; flex-direction:row; gap:4px; align-items:center; justify-content:flex-end; }
-          .hire-row input { max-width: 80px; }
+          .hire-row input { max-width: 80px; text-align: right; background: var(--bg3); border: 1px solid var(--border); color: var(--gold); }
           .hire-row input { width:100%; font-size:12px; padding: 4px 8px; border-radius: 6px; }
         </style>
 
@@ -1400,7 +1405,10 @@
         <div>
           <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">Incoming offers</div>
           <div id="trade-received-list"><div style="color:var(--text3);font-size:13px">No pending offers.</div></div>
-          <div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px">Sent offers</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 6px">
+            <div style="font-size:12px;font-weight:700;color:var(--text2)">Sent offers</div>
+            <button class="btn btn-sm btn-red" onclick="clearTradeLogs()" style="font-size:10px;padding:2px 8px">Clear Logs</button>
+          </div>
           <div id="trade-sent-list"><div style="color:var(--text3);font-size:13px">No sent offers.</div></div>
         </div>
       </div>
@@ -1617,7 +1625,7 @@
         </div>
         <div class="trow">
           <span class="bld-icon" style="background:#2a3a6a">📖</span>
-          <span class="name">Libraries</span><span class="desc">Houses scribes and mages · 2 land</span>
+          <span class="name">Libraries</span><span class="desc">Houses scribes · 2 land</span>
           <span class="count" id="bld-libraries">0</span>
           <div style="display:flex;align-items:center;gap:4px">
             <input type="number"   id="ba-library" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
@@ -1909,10 +1917,10 @@
 <!-- DEFENCE PANEL -->
 <div id="defense" class="panel" style="display:none">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-    <div>
-      <div class="card-title">🛡️ Defense</div>
-      <div style="font-size:13px;color:var(--text3);margin-top:2px">Rating: <span id="def-rating" style="font-weight:700">—</span></div>
-    </div>
+      <div>
+        <div class="card-title" style="margin-bottom:2px">🛡️ Defense <span id="citadel-badge-title" class="badge badge-gold" style="display:none;margin-left:8px">🏰 Citadel</span></div>
+        <div style="font-size:13px;color:var(--text3);margin-top:2px">Rating: <span id="def-rating" style="font-weight:700">—</span></div>
+      </div>
     <button class="btn" onclick="loadDefense()">↻ Refresh</button>
   </div>
 
@@ -2536,7 +2544,7 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div>
-        <div class="card-title" style="margin-bottom:2px">Troop Training</div>
+        <div class="card-title" style="margin-bottom:2px">Troop Training <span id="racial-gift-badge" class="badge badge-gold" style="display:none;margin-left:8px">✨ Racial Gift</span></div>
         <div style="font-size:12px;color:var(--text3)">Training fields: <span id="tr-fields" style="color:var(--text)">0</span> · Capacity: <span id="tr-capacity" style="color:var(--gold)">0</span> troops/turn · Weapons: <span id="tr-weapons" style="color:var(--text)">0</span> · Armor: <span id="tr-armor" style="color:var(--text)">0</span></div>
       </div>
       <div style="display:flex;gap:8px">
@@ -2926,17 +2934,16 @@
         <thead>
           <tr style="color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border2)">
             <th style="padding:8px 6px;text-align:left;width:32px">#</th>
+            <th style="padding:8px 6px;text-align:left">Player</th>
             <th style="padding:8px 6px;text-align:left">Kingdom</th>
-            <th style="padding:8px 6px;text-align:right">Land</th>
-            <th style="padding:8px 6px;text-align:right">Population</th>
-            <th style="padding:8px 6px;text-align:right">Fighters</th>
+            <th style="padding:8px 6px;text-align:right">Score</th>
             <th style="padding:8px 6px;text-align:right">Level</th>
-            <th style="padding:8px 6px;text-align:right">Turn</th>
+            <th style="padding:8px 6px;text-align:right">Turns Taken</th>
             <th style="padding:8px 6px;text-align:center">Action</th>
           </tr>
         </thead>
         <tbody id="rankings-list">
-          <tr><td colspan="8" style="color:var(--text3);font-size:13px;text-align:center;padding:24px 0">Loading rankings...</td></tr>
+          <tr><td colspan="7" style="color:var(--text3);font-size:13px;text-align:center;padding:24px 0">Loading rankings...</td></tr>
         </tbody>
       </table>
     </div>
@@ -4689,6 +4696,17 @@ function syncUI() {
   var hammerCap   = smithies * 25;
   var scaffoldCap = smithies * 10;
   var bpCap       = smithies * 25;
+  // Citadel & Racial Gift badges
+  var citBadge = document.getElementById('citadel-badge');
+  var citBadgeMain = document.getElementById('citadel-badge-title');
+  var citadelEarned = (state.bld_walls||0) >= 50 && (state.bld_guard_towers||0) >= 20 && (state.bld_outposts||0) >= 20 && (state.bld_castles||0) >= 1;
+  if (citBadge)     citBadge.style.display = citadelEarned ? 'inline-block' : 'none';
+  if (citBadgeMain) citBadgeMain.style.display = citadelEarned ? 'inline-block' : 'none';
+
+  var rgBadge = document.getElementById('racial-gift-badge');
+  var rgActive = (state.racial_gift_active && state.racial_gift_active !== 'false');
+  if (rgBadge) rgBadge.style.display = rgActive ? 'inline-block' : 'none';
+
   var th = document.getElementById('tools-hammers');
   var ts = document.getElementById('tools-scaffolding');
   var tb = document.getElementById('tools-blueprints');
@@ -5854,12 +5872,6 @@ function renderRankingsPanel(rankings) {
     var rankColor = r.rank === 1 ? 'color:var(--gold);font-weight:700' : r.rank <= 3 ? 'color:var(--amber)' : 'color:var(--text3)';
     var rankBadge = r.rank === 1 ? '👑' : r.rank <= 3 ? '🥈' : '';
 
-    // Estimated power for win chance
-    var myPower = (state.fighters||0) * ((state.res_weapons||100)/100) + (state.mages||0) * 2.5;
-    var theirPower = (r.fighters||0) + (r.mages||0) * 1.5;
-    var winChance = theirPower > 0 ? Math.min(95, Math.max(5, Math.round((myPower/(myPower+theirPower))*100))) : 90;
-    var winColor = winChance >= 60 ? 'var(--green)' : winChance >= 40 ? 'var(--amber)' : 'var(--red)';
-
     var actionBtns = isMe ? '<span style="font-size:11px;color:var(--text3)">—</span>' :
       (r.turn||0) < 400
         ? '<div style="display:flex;gap:4px;justify-content:center">'
@@ -5878,19 +5890,14 @@ function renderRankingsPanel(rankings) {
 
     return '<tr style="border-bottom:1px solid var(--border);' + rowBg + 'transition:background .15s" onmouseover="this.style.background=\'' + (isMe?'rgba(124,106,245,.12)':'rgba(255,255,255,.02)') + '\'" onmouseout="this.style.background=\'' + (isMe?'rgba(124,106,245,.08)':'') + '\'">'
       + '<td style="padding:10px 6px;' + rankColor + '">' + (rankBadge||r.rank) + '</td>'
+      + '<td style="padding:10px 6px;color:var(--text2)">' + (r.username || '—') + '</td>'
       + '<td style="padding:10px 6px">'
         + '<div style="display:flex;align-items:center;gap:8px">'
-        + '<span style="font-size:20px;flex-shrink:0">' + raceIcon + '</span>'
+        + '<span style="font-size:18px;flex-shrink:0">' + raceIcon + '</span>'
         + '<div><div style="' + nameColor + '">' + r.name + meTag + aiTag + protTag + '</div>'
-        + '<div style="font-size:11px;color:var(--text3);text-transform:capitalize;margin-top:1px">' + raceName + (r.username ? ' · ' + r.username : '') + '</div>'
+        + '<div style="font-size:11px;color:var(--text3);text-transform:capitalize;margin-top:1px">' + raceName + '</div>'
         + '</div></div></td>'
       + '<td style="padding:10px 6px;text-align:right;color:var(--gold);font-weight:600">' + fmt(r.land) + '</td>'
-      + '<td style="padding:10px 6px;text-align:right;color:var(--text2)">' + fmtShort(r.population||0) + '</td>'
-      + '<td style="padding:10px 6px;text-align:right">'
-        + (isMe ? '<span style="color:var(--text2)">' + fmt(r.fighters||0) + '</span>'
-          : '<span style="color:' + winColor + ';font-size:12px">' + fmt(r.fighters||0) + '</span>'
-          + '<div style="font-size:10px;color:' + winColor + '">' + winChance + '% win</div>')
-        + '</td>'
       + '<td style="padding:10px 6px;text-align:right;color:var(--text3)">' + (r.level||1) + '</td>'
       + '<td style="padding:10px 6px;text-align:right;color:var(--text3)">' + fmt(r.turn||0) + '</td>'
       + '<td style="padding:10px 8px;text-align:center">' + actionBtns + '</td>'
@@ -6847,9 +6854,9 @@ var SHRINE_UPGRADES_JS = {
   divine_sanctuary: { name:'Divine Sanctuary',   cost:50000, desc:'Auto-stabilise morale at 50% once per 20 turns (posted to news)', requires:'war_blessing' },
 };
 var LIBRARY_UPGRADES_JS = {
-  illuminated_manuscripts: { name:'Illuminated Manuscripts', cost:5000,  desc:'+25% scribe craft speed',   requires:null                      },
-  master_draftsmen:        { name:'Master Draftsmen',        cost:15000, desc:'+25% scribe craft speed',   requires:'illuminated_manuscripts'  },
-  grand_library:           { name:'Grand Library',            cost:50000, desc:'Library capacity ×2',       requires:'master_draftsmen'       },
+  surveyors_eyrie:  { name:'The Surveyor\'s Eyrie', cost:25000, desc:'Surveyors have a 20% chance of finding a location', requires:null },
+  mason_sigil:      { name:'The Master Mason\'s Sigil', cost:150000, desc:'Buildings constructed with Certified plans are more resistant to attacks', requires:'surveyors_eyrie' },
+  specimen_vault:   { name:'The Specimen Vault', cost:50000, desc:'Study World Fragments to create Hybrid Blueprints', requires:'mason_sigil' }
 };
 
 function showStudiesTab(id, btn) {
@@ -7260,6 +7267,19 @@ function populateTradeTargets() {
   if (!sel || !targets || !targets.length) return;
   sel.innerHTML = '<option value="">— select kingdom —</option>'
     + targets.map(function(t) { return '<option value="' + t.id + '">' + escHtml(t.name) + ' · ' + fmt(t.land) + ' acres</option>'; }).join('');
+}
+
+async function clearTradeLogs() {
+  if (!confirm('Clear all completed/expired trade logs?')) return;
+  try {
+    const res = await apiCall('POST', '/api/kingdom/trade/clear-logs');
+    if (res.ok) {
+      toast('Trade logs cleared', 'success');
+      loadMarkets();
+    }
+  } catch (e) {
+    toast('Failed to clear logs', 'error');
+  }
 }
 
 async function sendTradeOffer() {

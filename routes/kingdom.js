@@ -934,6 +934,17 @@ module.exports = function(db) {
     res.json({ ok: true, allocation: JSON.stringify(alloc) });
   });
 
+  router.post('/trade/clear-logs', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    // Deletes trades involving this kingdom that are NOT pending
+    await db.run(`
+      DELETE FROM trades 
+      WHERE (sender_id = ? OR receiver_id = ?) 
+      AND status != 'pending'`, [k.id, k.id]);
+    res.json({ ok: true });
+  });
+
   router.post('/library-cancel', requireAuth, async (req, res) => {
     const { item } = req.body;
     const k = await db.get('SELECT id, library_allocation FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
