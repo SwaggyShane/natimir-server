@@ -95,7 +95,7 @@ module.exports = function(db, io) {
       library_progress = '{}', scrolls = '{}', active_effects = '{}',
       world_fragments = '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]',
       hybrid_blueprints = '{}', maps = 0, blueprints_stored = 1,
-      tools_hammers = 0, tools_scaffolding = 0, tools_blueprints = 0
+      scaffolding_stored = 0, hammers_stored = 0
     `);
     await db.run('DELETE FROM expeditions');
     await db.run('DELETE FROM news');
@@ -181,6 +181,7 @@ module.exports = function(db, io) {
       'gold','mana','land','population','morale','food','turn','turns_stored',
       'fighters','rangers','clerics','mages','thieves','ninjas','researchers','engineers','scribes',
       'war_machines','weapons_stockpile','armor_stockpile','maps','blueprints_stored',
+      'scaffolding_stored','hammers_stored',
       'bld_farms','bld_barracks','bld_outposts','bld_guard_towers','bld_schools',
       'bld_armories','bld_vaults','bld_smithies','bld_markets','bld_cathedrals',
       'bld_training','bld_colosseums','bld_castles','bld_libraries','bld_shrines','bld_housing',

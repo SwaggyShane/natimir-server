@@ -489,7 +489,7 @@ const config = {
     war_machines: 'war_machines', weapons: 'weapons_stockpile', armor: 'armor_stockpile',
   },
 
-  TOOL_COL: { hammers: 'tools_hammers', scaffolding: 'tools_scaffolding', blueprints: 'tools_blueprints' },
+  TOOL_COL: { hammers: 'hammers_stored', scaffolding: 'scaffolding_stored', blueprints: 'blueprints_stored' },
   TOOL_GOLD_COST: { hammers: 0, scaffolding: 2500, blueprints: 0 },
 
   BLUEPRINT_REQUIRED: ['vaults','smithies','markets','cathedrals','training','colosseums','castles','libraries'],

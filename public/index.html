@@ -4692,16 +4692,16 @@ function syncUI() {
   var th = document.getElementById('tools-hammers');
   var ts = document.getElementById('tools-scaffolding');
   var tb = document.getElementById('tools-blueprints');
-  if (th) th.textContent = fmt(state.tools_hammers || 0);
-  if (ts) ts.textContent = fmt(state.tools_scaffolding || 0);
+  if (th) th.textContent = fmt(state.hammers_stored || 0);
+  if (ts) ts.textContent = fmt(state.scaffolding_stored || 0);
   if (tb) tb.textContent = fmt(state.blueprints_stored || 0);
   var hc = document.getElementById('hammers-cap');     if (hc) hc.textContent = fmt(hammerCap);
   var sc = document.getElementById('scaffolding-cap'); if (sc) sc.textContent = fmt(scaffoldCap);
   var bc = document.getElementById('blueprints-cap');  if (bc) bc.textContent = fmt(bpCap);
   // Hammer durability display
   var hDur = document.getElementById('hammers-durability');
-  if (hDur && (state.tools_hammers || 0) > 0) {
-    var durPct = Math.max(0, Math.round(100 - ((state.hammer_turns_used || 0) / Math.max(1, state.tools_hammers)) * 5));
+  if (hDur && (state.hammers_stored || 0) > 0) {
+    var durPct = Math.max(0, Math.round(100 - ((state.hammer_turns_used || 0) / Math.max(1, state.hammers_stored)) * 5));
     hDur.textContent = durPct + '% durability';
     hDur.style.color = durPct > 50 ? 'var(--green)' : durPct > 20 ? 'var(--amber)' : 'var(--red)';
   } else if (hDur) { hDur.textContent = ''; }
@@ -5211,9 +5211,9 @@ async function loadKingdom() {
     race:  kingdom.race  || 'human',
     troop_levels:        (() => { try { return typeof kingdom.troop_levels === 'string' ? JSON.parse(kingdom.troop_levels||'{}') : (kingdom.troop_levels||{}); } catch { return {}; } })(),
     training_allocation: (() => { try { return typeof kingdom.training_allocation === 'string' ? JSON.parse(kingdom.training_allocation||'{}') : (kingdom.training_allocation||{}); } catch { return {}; } })(),
-    tools_hammers:     kingdom.tools_hammers     || 0,
-    tools_scaffolding: kingdom.tools_scaffolding || 0,
-    tools_blueprints:  kingdom.tools_blueprints  || 0,
+    blueprints_stored:  kingdom.blueprints_stored  || 0,
+    hammers_stored:     kingdom.hammers_stored      || 0,
+    scaffolding_stored: kingdom.scaffolding_stored  || 0,
     build_queue:    (() => { try { return typeof kingdom.build_queue === 'string' ? JSON.parse(kingdom.build_queue||'{}') : (kingdom.build_queue||{}); } catch { return {}; } })(),
     build_progress: (() => { try { return typeof kingdom.build_progress === 'string' ? JSON.parse(kingdom.build_progress||'{}') : (kingdom.build_progress||{}); } catch { return {}; } })(),
     build_allocation: (() => { try { return typeof kingdom.build_allocation === 'string' ? JSON.parse(kingdom.build_allocation||'{}') : (kingdom.build_allocation||{}); } catch { return {}; } })(),
@@ -6015,8 +6015,8 @@ function applyServerUpdates(u) {
   if (u.maps         !== undefined) state.maps          = u.maps;
   if (u.blueprints_stored !== undefined) state.blueprints_stored = u.blueprints_stored;
   if (u.hammer_turns_used !== undefined) state.hammer_turns_used = u.hammer_turns_used;
-  if (u.tools_hammers     !== undefined) state.tools_hammers     = u.tools_hammers;
-  if (u.tools_scaffolding !== undefined) state.tools_scaffolding = u.tools_scaffolding;
+  if (u.hammers_stored     !== undefined) state.hammers_stored     = u.hammers_stored;
+  if (u.scaffolding_stored !== undefined) state.scaffolding_stored = u.scaffolding_stored;
   if (u.defence_upgrades !== undefined) state.defence_upgrades = u.defence_upgrades;
   if (u.bld_walls        !== undefined) state.bld_walls        = u.bld_walls;
   if (u.wall_upgrades    !== undefined) state.wall_upgrades    = u.wall_upgrades;
@@ -6051,9 +6051,9 @@ function applyServerUpdates(u) {
   if (u.xp    !== undefined) state.xp    = u.xp;
   if (u.level !== undefined) state.level = u.level;
   if (u.troop_levels !== undefined) { try { state.troop_levels = typeof u.troop_levels === 'string' ? JSON.parse(u.troop_levels) : u.troop_levels; } catch { state.troop_levels = {}; } }
-  if (u.tools_hammers     !== undefined) state.tools_hammers     = u.tools_hammers;
-  if (u.tools_scaffolding !== undefined) state.tools_scaffolding = u.tools_scaffolding;
-  if (u.tools_blueprints  !== undefined) state.tools_blueprints  = u.tools_blueprints;
+  if (u.hammers_stored     !== undefined) state.hammers_stored     = u.hammers_stored;
+  if (u.scaffolding_stored !== undefined) state.scaffolding_stored = u.scaffolding_stored;
+  if (u.blueprints_stored  !== undefined) state.blueprints_stored  = u.blueprints_stored;
   if (u.build_queue    !== undefined) { try { state.build_queue    = typeof u.build_queue    === 'string' ? JSON.parse(u.build_queue)    : u.build_queue;    } catch { state.build_queue    = {}; } }
   if (u.build_progress !== undefined) { try { state.build_progress = typeof u.build_progress === 'string' ? JSON.parse(u.build_progress) : u.build_progress; } catch { state.build_progress = {}; } }
 }

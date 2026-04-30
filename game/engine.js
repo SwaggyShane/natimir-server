@@ -1124,6 +1124,9 @@ function processSmithyProduction(k, events) {
   const smithies = k.bld_smithies || 0;
   if (smithies === 0) return updates;
 
+  const hl = TOOL_COL.hammers;
+  const sl = TOOL_COL.scaffolding;
+
   const alloc = safeJsonParse(k.smithy_allocation, {}, 'processSmithyProduction:smithy_allocation');
 
   const hammerAlloc    = Math.min(Number(alloc.hammers)    || 0, smithies); // max 1 per smithy per turn
@@ -1133,21 +1136,21 @@ function processSmithyProduction(k, events) {
   const scaffoldCap = smithies * 10;
 
   // Produce hammers (1 per allocated engineer slot, max 1 per smithy, cap 25/smithy)
-  if (hammerAlloc > 0 && (k.tools_hammers || 0) < hammerCap) {
-    const canAdd = Math.min(hammerAlloc, hammerCap - (k.tools_hammers || 0));
+  if (hammerAlloc > 0 && (k[hl] || 0) < hammerCap) {
+    const canAdd = Math.min(hammerAlloc, hammerCap - (k[hl] || 0));
     if (canAdd > 0) {
-      updates.tools_hammers = (k.tools_hammers || 0) + canAdd;
+      updates[hl] = (k[hl] || 0) + canAdd;
       events.push({ type: 'system', message: `⚒️ Smithy produced ${canAdd} hammer${canAdd > 1 ? 's' : ''}.` });
     }
   }
 
   // Produce scaffolding (costs 2500 gold each, 1 per allocated engineer slot)
-  if (scaffoldAlloc > 0 && (k.tools_scaffolding || 0) < scaffoldCap) {
+  if (scaffoldAlloc > 0 && (k[sl] || 0) < scaffoldCap) {
     const goldAvail = updates.gold !== undefined ? updates.gold : (k.gold || 0);
     const canAfford = Math.floor(goldAvail / 2500);
-    const canAdd    = Math.min(scaffoldAlloc, scaffoldCap - (k.tools_scaffolding || 0), canAfford);
+    const canAdd    = Math.min(scaffoldAlloc, scaffoldCap - (k[sl] || 0), canAfford);
     if (canAdd > 0) {
-      updates.tools_scaffolding = (k.tools_scaffolding || 0) + canAdd;
+      updates[sl] = (k[sl] || 0) + canAdd;
       updates.gold = goldAvail - (canAdd * 2500);
       events.push({ type: 'system', message: `⚒️ Smithy produced ${canAdd} scaffolding for ${(canAdd * 2500).toLocaleString()} gold.` });
     } else if (canAfford === 0 && scaffoldAlloc > 0) {
@@ -1156,13 +1159,13 @@ function processSmithyProduction(k, events) {
   }
 
   // ── Hammer degradation — each active hammer decays 1 turn of durability ──────
-  const hammerCount = updates.tools_hammers !== undefined ? updates.tools_hammers : (k.tools_hammers || 0);
+  const hammerCount = updates[hl] !== undefined ? updates[hl] : (k[hl] || 0);
   if (hammerCount > 0) {
     const used = (k.hammer_turns_used || 0) + hammerCount; // each hammer used this turn
     const breaks = Math.floor(used / 20); // 1 hammer breaks every 20 turns of use
     if (breaks > 0) {
       const newCount = Math.max(0, hammerCount - breaks);
-      updates.tools_hammers = newCount;
+      updates[hl] = newCount;
       updates.hammer_turns_used = used - (breaks * 20);
       events.push({ type: 'system', message: `🔨 ${breaks} hammer${breaks > 1 ? 's' : ''} wore out and broke.` });
     } else {
@@ -1217,7 +1220,9 @@ function processBuildQueue(k, events) {
   const updates = {};
 
   // Tool bonuses
-  const hammerBonus  = 1 + (k.tools_hammers || 0) * 0.05;
+  const hl = TOOL_COL.hammers;
+  const sl = TOOL_COL.scaffolding;
+  const hammerBonus  = 1 + (k[hl] || 0) * 0.05;
   const smithyBonus  = 1 + (Math.floor((k.bld_smithies||0) / 15) * 0.02);
   const raceConstr   = raceBonus(k, 'construction');
   const engLevelMult = unitLevelMult(k, 'engineers');
@@ -1226,7 +1231,7 @@ function processBuildQueue(k, events) {
 
   // Consumable tool pools — tracked across the building loop this turn
   let blueprintsLeft  = k.blueprints_stored || 0;
-  let scaffoldingLeft = k.tools_scaffolding  || 0;
+  let scaffoldingLeft = k[sl]  || 0;
   let blueprintsUsed  = 0;
   let scaffoldingUsed = 0;
 
@@ -1363,7 +1368,7 @@ function processBuildQueue(k, events) {
 
   // Persist consumable tool totals
   if (blueprintsUsed  > 0) updates.blueprints_stored = Math.max(0, (k.blueprints_stored || 0) - blueprintsUsed);
-  if (scaffoldingUsed > 0) updates.tools_scaffolding  = Math.max(0, scaffoldingLeft);
+  if (scaffoldingUsed > 0) updates[sl]  = Math.max(0, scaffoldingLeft);
 
   // News notices for missing tools
   if (updates._blueprint_needed) {

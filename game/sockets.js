@@ -71,9 +71,9 @@ module.exports = function(io, db) {
         const defInfo = onlinePlayers.get(defender.player_id);
         if (defInfo) io.to(defInfo.socketId).emit('event:attack_received', { from: attacker.name, message: result.defEvent, report: result.report });
         ack?.({ ok: true, report: result.report, turns_stored: result.attackerUpdates.turns_stored });
-      } catch (e) {
+      } catch (_) {
         await db.run('ROLLBACK').catch(()=>{});
-        console.error(e);
+        console.error(_);
         ack?.({ error: 'Database error' });
       }
     });
@@ -98,7 +98,7 @@ module.exports = function(io, db) {
         const tgtInfo = onlinePlayers.get(target.player_id);
         if (tgtInfo && result.targetEvent) io.to(tgtInfo.socketId).emit('event:spell_received', { from: data.obscure?null:caster.name, spellId: data.spellId, message: result.targetEvent });
         ack?.({ ok: true, report: result.report, turns_stored: result.casterUpdates.turns_stored });
-      } catch (e) {
+      } catch (_) {
         await db.run('ROLLBACK').catch(()=>{});
         ack?.({ error: 'Database error' });
       }
@@ -119,7 +119,7 @@ module.exports = function(io, db) {
         if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
         await db.run('COMMIT');
         ack?.({ ok:true, success:result.success, report:result.report||null });
-      } catch (e) {
+      } catch (_) {
         await db.run('ROLLBACK').catch(()=>{});
         ack?.({ error: 'Database error' });
       }
@@ -141,7 +141,7 @@ module.exports = function(io, db) {
         if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
         await db.run('COMMIT');
         ack?.({ ok:true, success:result.success, stolen:result.stolen });
-      } catch (e) {
+      } catch (_) {
         await db.run('ROLLBACK').catch(()=>{});
         ack?.({ error: 'Database error' });
       }
@@ -163,7 +163,7 @@ module.exports = function(io, db) {
         if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
         await db.run('COMMIT');
         ack?.({ ok:true, success:result.success, killed:result.killed });
-      } catch (e) {
+      } catch (_) {
         await db.run('ROLLBACK').catch(()=>{});
         ack?.({ error: 'Database error' });
       }
@@ -347,7 +347,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'bld_colosseums','bld_castles','bld_vaults','bld_smithies','bld_armories',
     'bld_guard_towers','bld_outposts','bld_schools','bld_libraries',
     'bld_mage_towers','bld_shrines','bld_housing','bld_taverns',
-    'tools_hammers','tools_scaffolding','tools_blueprints','blueprints_stored',
+    'hammers_stored','scaffolding_stored','blueprints_stored',
     'hammer_turns_used','smithy_allocation','racial_bonuses_unlocked',
     'last_event_at','active_event','discovered_kingdoms','location_maps_wip',
     'bld_walls','wall_upgrades','tower_def_upgrades','outpost_upgrades','defense_upgrades',

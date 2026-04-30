@@ -89,6 +89,8 @@ async function initDb() {
       tools_hammers     INTEGER NOT NULL DEFAULT 0,
       tools_scaffolding INTEGER NOT NULL DEFAULT 0,
       tools_blueprints  INTEGER NOT NULL DEFAULT 0,
+      scaffolding_stored INTEGER NOT NULL DEFAULT 0,
+      hammers_stored     INTEGER NOT NULL DEFAULT 0,
       xp                INTEGER NOT NULL DEFAULT 0,
       level             INTEGER NOT NULL DEFAULT 1,
       troop_levels      TEXT NOT NULL DEFAULT '{}',
@@ -224,6 +226,8 @@ async function initDb() {
   if (!cols.includes('tools_hammers'))       await addColumn('kingdoms', 'tools_hammers',       'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('tools_scaffolding'))   await addColumn('kingdoms', 'tools_scaffolding',   'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('tools_blueprints'))    await addColumn('kingdoms', 'tools_blueprints',    'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('scaffolding_stored'))  await addColumn('kingdoms', 'scaffolding_stored',  'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('hammers_stored'))      await addColumn('kingdoms', 'hammers_stored',      'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('xp'))                  await addColumn('kingdoms', 'xp',                  'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('level'))               await addColumn('kingdoms', 'level',               'INTEGER NOT NULL DEFAULT 1');
   if (!cols.includes('troop_levels'))        await addColumn('kingdoms', 'troop_levels',        "TEXT NOT NULL DEFAULT '{}'");
@@ -379,6 +383,15 @@ async function initDb() {
 
   // Fix softlock: if a kingdom has no libraries and fewer than 1 blueprints, give them 1 blueprints
   await _db.run("UPDATE kingdoms SET blueprints_stored = 1 WHERE bld_libraries = 0 AND blueprints_stored < 1");
+
+  // Data migration: tools_* -> *_stored
+  if (cols.includes('tools_scaffolding') && cols.includes('scaffolding_stored')) {
+    await _db.run("UPDATE kingdoms SET scaffolding_stored = tools_scaffolding WHERE scaffolding_stored = 0 AND tools_scaffolding > 0");
+  }
+  if (cols.includes('tools_hammers') && cols.includes('hammers_stored')) {
+    await _db.run("UPDATE kingdoms SET hammers_stored = tools_hammers WHERE hammers_stored = 0 AND tools_hammers > 0");
+  }
+
   if (!cols.includes('food_shortage_turns')) await addColumn('kingdoms', 'food_shortage_turns', 'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('food_surplus_turns'))  await addColumn('kingdoms', 'food_surplus_turns',  'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('mercenaries'))         await addColumn('kingdoms', 'mercenaries',         "TEXT NOT NULL DEFAULT '[]'");

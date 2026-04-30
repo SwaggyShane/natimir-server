@@ -338,10 +338,10 @@ module.exports = function(db) {
     // Validate caps and cost before running turn
     if (toolType === 'hammers') {
       const cap = smithies * 25;
-      if ((k.tools_hammers || 0) >= cap) return res.status(400).json({ error: `Hammer storage full (${cap}/${cap})` });
+      if ((k.hammers_stored || 0) >= cap) return res.status(400).json({ error: `Hammer storage full (${cap}/${cap})` });
     } else if (toolType === 'scaffolding') {
       const cap = smithies * 10;
-      if ((k.tools_scaffolding || 0) >= cap) return res.status(400).json({ error: `Scaffolding storage full (${cap}/${cap})` });
+      if ((k.scaffolding_stored || 0) >= cap) return res.status(400).json({ error: `Scaffolding storage full (${cap}/${cap})` });
       if ((k.gold || 0) < 2500) return res.status(400).json({ error: 'Need 2,500 gold to make scaffolding' });
     }
     try {
