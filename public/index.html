@@ -109,6 +109,7 @@
   body.panel-exploration #kd-top { display: none; }
   body.panel-globalchat #kd-top { display: none; }
   body.panel-alliances #kd-top { display: none; }
+  body.panel-defense #kd-top { display: none !important; }
 
   body.panel-warfare .main,
   body.panel-news .main,
@@ -117,6 +118,7 @@
   body.panel-studies .main,
   body.panel-training .main,
   body.panel-alliances .main,
+  body.panel-defense .main,
   body.panel-hire .main { padding-top: 6px; }
 
 
@@ -673,7 +675,7 @@
       </div>
       <div class="metric" id="metric-defense">
         <div class="lbl">Defense</div>
-        <div class="val" style="font-size:14px" id="m-defence-rating">—</div>
+        <div class="val" style="font-size:14px" id="m-defense-rating">—</div>
         <div class="sub"><span id="m-walls">0</span> walls</div>
       </div>
       <div class="metric" id="metric-food">
@@ -875,13 +877,13 @@
         <!-- Col 3: Key buildings -->
         <div class="card">
           <div class="card-title">Key buildings</div>
-          <div class="trow"><span class="name">Farms</span><span class="count" id="kb-farms">0</span></div>
+          <div class="trow"><span class="name">Farm</span><span class="count" id="kb-farms">0</span></div>
           <div class="trow"><span class="name">Barracks</span><span class="count" id="kb-barracks">0</span></div>
           <div class="trow"><span class="name">Schools</span><span class="count" id="kb-schools">0</span></div>
           <div class="trow"><span class="name">Library</span><span class="count" id="kb-libraries">0</span></div>
           <div class="trow"><span class="name">Mage Towers</span><span class="count" id="kb-cathedrals">0</span></div>
           <div class="trow"><span class="name">Smithies</span><span class="count" id="kb-smithies">0</span></div>
-          <div class="trow"><span class="name">Markets</span><span class="count" id="kb-markets">0</span></div>
+          <div class="trow"><span class="name">Market</span><span class="count" id="kb-markets">0</span></div>
           <div class="trow"><span class="name">Guard towers</span><span class="count" id="kb-guard_towers">0</span></div>
           <div class="trow"><span class="name">Training fields</span><span class="count" id="kb-training">0</span></div>
           <div class="trow" style="border-bottom:none"><span class="name">Castles</span><span class="count" id="kb-castles">0</span></div>
@@ -1189,6 +1191,7 @@
               <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
                 <div id="st-lib-list"></div>
                 <div id="st-lib-hybrids" style="margin-top:10px;"></div>
+                <div id="st-lib-location-maps" style="margin-top:16px;"></div>
               </div>
             </div>
 
@@ -1235,7 +1238,7 @@
         <button class="btn" onclick="loadHeroes()">↻ Refresh</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+      <div class="r-grid-sidebar">
         <div>
           <div class="card" style="margin-top:0">
             <div class="card-title" style="margin-bottom:12px">Your Heroes</div>
@@ -1314,8 +1317,8 @@
 
   <!-- Tab nav -->
   <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border2);padding-bottom:0">
-    <button class="admin-tab active" id="econ-tab-farms"   onclick="showEconTab('farms',this)">🌾 Farms</button>
-    <button class="admin-tab"        id="econ-tab-markets" onclick="showEconTab('markets',this)">🏪 Markets</button>
+    <button class="admin-tab active" id="econ-tab-farms"   onclick="showEconTab('farms',this)">🌾 Farm</button>
+    <button class="admin-tab"        id="econ-tab-markets" onclick="showEconTab('markets',this)">🏪 Market</button>
     <button class="admin-tab"        id="econ-tab-tavern"  onclick="showEconTab('tavern',this)">🍺 Tavern</button>
   </div>
 
@@ -1324,7 +1327,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="card" style="margin:0">
         <div class="card-title" style="margin-bottom:10px">Farm overview</div>
-        <div class="trow"><span class="name">Farms</span><span class="count" id="econ-farms">0</span></div>
+        <div class="trow"><span class="name">Farm</span><span class="count" id="econ-farms">0</span></div>
         <div class="trow"><span class="name">Worked farms</span><span class="count" id="econ-worked-farms" style="color:var(--green)">0</span></div>
         <div class="trow"><span class="name">Production</span><span class="count" id="econ-production" style="color:var(--green)">0</span></div>
         <div class="trow"><span class="name">Consumption</span><span class="count" id="econ-consumption" style="color:var(--red)">0</span></div>
@@ -1351,7 +1354,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="card" style="margin:0">
         <div class="card-title" style="margin-bottom:10px">Market overview</div>
-        <div class="trow"><span class="name">Markets</span><span class="count" id="econ-markets">0</span></div>
+        <div class="trow"><span class="name">Market</span><span class="count" id="econ-markets">0</span></div>
         <div class="trow"><span class="name">Market income/turn</span><span class="count" id="econ-market-income" style="color:var(--gold)">0 GC</span></div>
         <div class="trow"><span class="name">Trade routes</span><span class="count" id="econ-trade-routes">0</span></div>
         <div class="trow"><span class="name">Trading unlocked</span><span class="count" id="econ-trade-unlocked">No</span></div>
@@ -1416,7 +1419,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="card" style="margin:0">
         <div class="card-title" style="margin-bottom:10px">Tavern overview</div>
-        <div class="trow"><span class="name">Taverns</span><span class="count" id="econ-taverns">0</span></div>
+        <div class="trow"><span class="name">Tavern</span><span class="count" id="econ-taverns">0</span></div>
         <div class="trow"><span class="name">Entertainment bonus</span><span class="count" id="econ-entertainment" style="color:var(--purple)">+0/turn</span></div>
       </div>
       <div class="card" style="margin:0">
@@ -1485,7 +1488,7 @@
 
         <div class="trow">
           <span class="bld-icon" style="background:#4a7c3f">🌾</span>
-          <span class="name">Farms</span><span class="desc">Produces food each turn · 1 land</span>
+          <span class="name">Farm</span><span class="desc">Produces food each turn · 1 land</span>
           <span class="count" id="bld-farms">0</span>
           <div style="display:flex;align-items:center;gap:4px">
             <input type="number"   id="ba-farm" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
@@ -1576,7 +1579,7 @@
         </div>
         <div class="trow">
           <span class="bld-icon" style="background:#1a5a5a">🏪</span>
-          <span class="name">Market places</span><span class="desc">Generates trade revenue · 2 land</span>
+          <span class="name">Market</span><span class="desc">Generates trade revenue · 2 land</span>
           <span class="count" id="bld-markets">0</span>
           <div style="display:flex;align-items:center;gap:4px">
             <input type="number"   id="ba-market" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
@@ -1603,7 +1606,7 @@
         </div>
         <div class="trow">
           <span class="bld-icon" style="background:#6a3a5a">🍺</span>
-          <span class="name">Taverns</span><span class="desc">Boosts morale recovery each turn · 2 land</span>
+          <span class="name">Tavern</span><span class="desc">Boosts morale recovery each turn · 2 land</span>
           <span class="count" id="bld-colosseums">0</span>
           <div style="display:flex;align-items:center;gap:4px">
             <input type="number"   id="ba-colosseum" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
@@ -1630,7 +1633,7 @@
         </div>
         <div class="trow">
           <span class="bld-icon" style="background:#3a2a1a">🍺</span>
-          <span class="name">Taverns</span><span class="desc">Entertainment · mercenary board · 1 land</span>
+          <span class="name">Tavern</span><span class="desc">Entertainment · mercenary board · 1 land</span>
           <span class="count" id="bld-taverns">0</span>
           <div style="display:flex;align-items:center;gap:4px">
             <input type="number"   id="ba-tavern" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
@@ -1683,7 +1686,7 @@
       <!-- Tools -->
       <div class="card" style="margin-top:0">
         <div class="card-title" style="margin-bottom:4px">⚒️ Smithy</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Hammers and scaffolding are produced here each turn. Blueprints are crafted in the Library by scribes.</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Hammers and scaffolding can be purchased here. Blueprints are crafted in the Library by scribes.</div>
 
         <!-- Stored tools -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;margin-bottom:16px">
@@ -4252,7 +4255,7 @@ function switchTab(id, btn) {
   // Handle kd-top visibility and context
   var kdTop = document.getElementById('kd-top');
   if (kdTop) {
-    if (['status','hire','heroes','studies','economy','build','training','exploration','defense','warfare'].includes(id)) {
+    if (['status','hire','heroes','studies','economy','build','training','exploration','warfare'].includes(id)) {
       kdTop.style.display = 'block';
       // Contextual visibility
       var metrics = ['metric-gold', 'metric-mana', 'metric-land', 'metric-pop', 'metric-morale', 'metric-defense', 'metric-food'];
@@ -4269,17 +4272,13 @@ function switchTab(id, btn) {
         ['metric-mana','metric-pop','metric-morale','metric-defense','metric-food'].forEach(function(m){
           var el = document.getElementById(m); if(el) el.style.display = 'none';
         });
-      } else if (id === 'studies' || id === 'training' || id === 'exploration' || id === 'warfare' || id === 'defense') {
+      } else if (id === 'studies' || id === 'training' || id === 'exploration' || id === 'warfare') {
         if (id !== 'status' && id !== 'economy') {
            metrics.forEach(function(m){
              var el = document.getElementById(m); if(el) el.style.display = 'none';
            });
            // Always show gold for context
            var gel = document.getElementById('metric-gold'); if(gel) gel.style.display = 'flex';
-           
-           if (id === 'defense') {
-             var del = document.getElementById('metric-defense'); if(del) del.style.display = 'flex';
-           }
         }
       }
     } else {
@@ -5699,6 +5698,8 @@ function renderWarLog(rows) {
           if (d.killed && d.unit) parts.push(fmt(d.killed) + ' ' + d.unit + ' assassinated');
         } else if (r.action_type === 'loot') {
           if (d.stolen && d.type) parts.push(fmt(d.stolen) + ' ' + d.type + ' stolen');
+        } else if (r.action_type === 'steal_map') {
+          if (d.stolen) parts.push('Stolen map for ' + d.stolen);
         } else {
           // Fallback: any numeric fields
           Object.entries(d).forEach(function(e) {
@@ -6519,6 +6520,8 @@ function parseWarDetail(r) {
       if (d.killed && d.unit) parts.push(fmt(d.killed) + ' ' + d.unit + ' killed');
     } else if (r.action_type === 'loot') {
       if (d.stolen && d.type) parts.push(fmt(d.stolen) + ' ' + d.type + ' stolen');
+    } else if (r.action_type === 'steal_map') {
+      if (d.stolen) parts.push('Location map stolen');
     }
     return parts.length ? '<div style="font-size:10px;color:var(--text3);margin-top:1px">' + parts.join(' · ') + '</div>' : '';
   } catch(e) { return ''; }
@@ -7826,6 +7829,19 @@ function updateTrainingDisplay() {
   var trA = document.getElementById('tr-armor');
   if (trW) trW.textContent = fmt(state.weapons_stockpile || 0);
   if (trA) trA.textContent = fmt(state.armor_stockpile || 0);
+
+  var rb = document.getElementById('tr-race-bonus');
+  if (rb && state.race) {
+    var texts = {
+      high_elf:  '+50% XP for Clerics & Mages<br>+30% XP for Researchers',
+      dwarf:     '+30% XP for Fighters<br>+50% XP for Engineers',
+      dire_wolf: '+80% XP for Fighters<br>+50% XP for Rangers',
+      dark_elf:  '+80% XP for Ninjas<br>+50% XP for Thieves<br>+30% XP for Rangers',
+      human:     '+10% XP for Fighters, Rangers, Clerics, Mages, Thieves, Ninjas',
+      orc:       '+60% XP for Fighters<br>+20% XP for Clerics'
+    };
+    rb.innerHTML = texts[state.race] || '—';
+  }
 }
 
 function setTrainingMax(unit) {
@@ -8052,6 +8068,27 @@ function renderLibraryPanel() {
   
   var el = document.getElementById('st-lib-list');
   if (el) el.innerHTML = html;
+
+  var mappedHtml = '';
+  var foundDisc = state.discovered_kingdoms || {};
+  if (typeof foundDisc === 'string') { try { foundDisc = JSON.parse(foundDisc); } catch(e){ foundDisc={}; } }
+  
+  var mappedKingdoms = Object.keys(foundDisc).filter(function(id) { return foundDisc[id].mapped; }).map(function(id) {
+    return foundDisc[id].name || ('Kingdom #' + id);
+  });
+  
+  var mappedEl = document.getElementById('st-lib-location-maps');
+  if (mappedEl) {
+    if (mappedKingdoms.length > 0) {
+      mappedHtml = '<div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:8px">📍 Stored Location Maps</div>'
+                 + '<div style="display:flex; flex-wrap:wrap; gap:6px;">'
+                 + mappedKingdoms.map(function(kname) { return '<span class="badge badge-purple" style="font-size:11px">' + escHtml(kname) + '</span>'; }).join('')
+                 + '</div>';
+    } else {
+      mappedHtml = '<div style="font-size:12px; color:var(--text3);">No location maps stored.</div>';
+    }
+    mappedEl.innerHTML = mappedHtml;
+  }
 
   var prog = state.library_progress || {};
   var craftEl = document.getElementById('st-lib-craft-progress');

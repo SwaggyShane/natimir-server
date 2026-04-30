@@ -211,7 +211,7 @@ module.exports = function(db) {
           const freshK = await db.get('SELECT discovered_kingdoms FROM kingdoms WHERE id=?', [k.id]);
           let disc = {}; try { disc = JSON.parse(freshK.discovered_kingdoms || '{}'); } catch {}
           if (!disc[other.id]) {
-            disc[other.id] = { found: true };
+            disc[other.id] = { found: true, name: other.name };
             await db.run('UPDATE kingdoms SET discovered_kingdoms = ? WHERE id = ?', [JSON.stringify(disc), k.id]);
             const turnNum = updates.turn || k.turn || 0;
             await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?, ?, ?, ?)', [k.id, 'system', `🔭 Your Surveyors discovered the kingdom of ${other.name}!`, turnNum]);
@@ -446,9 +446,11 @@ module.exports = function(db) {
         const others = await db.all(query, [...currentIds, baseFound]);
         
         let foundCount = 0;
+        let lastFoundName = "";
         others.forEach(o => {
-          disc[o.id] = { found: true };
+          disc[o.id] = { found: true, name: o.name };
           foundCount++;
+          lastFoundName = o.name;
         });
         
         if (foundCount > 0) {
@@ -457,7 +459,7 @@ module.exports = function(db) {
         
         searchResult = { found: foundCount, unit: 'kingdoms' };
         searchMessage = foundCount > 0 
-          ? `👁️ Rangers scouted ${foundCount} new target kingdoms.`
+          ? (foundCount === 1 ? `👁️ Rangers scouted a new target: ${lastFoundName}.` : `👁️ Rangers scouted ${foundCount} new target kingdoms.`)
           : `🔍 Rangers searched the area but found no new settlements.`;
       } else {
         return res.status(400).json({ error: 'Invalid search type' });
@@ -1249,7 +1251,7 @@ module.exports = function(db) {
     const result = engine.purchaseUpgrade(k, category, upgradeKey);
     if (result.error) return res.status(400).json({ error: result.error });
     await applyUpdates(db, k.id, result.updates);
-    const def = (engine.FARM_UPGRADES[upgradeKey] || engine.MARKET_UPGRADES[upgradeKey] || engine.TAVERN_UPGRADES[upgradeKey]);
+    const def = (engine.FARM_UPGRADES[upgradeKey] || engine.MARKET_UPGRADES[upgradeKey] || engine.TAVERN_UPGRADES[upgradeKey] || engine.TOWER_UPGRADES[upgradeKey] || engine.SCHOOL_UPGRADES[upgradeKey] || engine.SHRINE_UPGRADES[upgradeKey] || engine.LIBRARY_UPGRADES[upgradeKey] || engine.WALL_UPGRADES[upgradeKey] || engine.TOWER_DEF_UPGRADES[upgradeKey] || engine.OUTPOST_UPGRADES[upgradeKey]);
     await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)',
       [k.id, 'system', `✅ ${def?.name || upgradeKey} purchased.`, k.turn]);
     res.json({ ok: true, updates: result.updates });

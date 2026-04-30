@@ -570,6 +570,7 @@ function hireMercenaries(k, unitType, tier, count) {
 }
 
 function purchaseUpgrade(k, category, upgradeKey) {
+  category = (category || '').toLowerCase();
   const defs = {
     farm: FARM_UPGRADES, market: MARKET_UPGRADES, tavern: TAVERN_UPGRADES,
     tower: TOWER_UPGRADES, school: SCHOOL_UPGRADES, shrine: SHRINE_UPGRADES, library: LIBRARY_UPGRADES,
@@ -1126,37 +1127,6 @@ function processSmithyProduction(k, events) {
 
   const hl = TOOL_COL.hammers;
   const sl = TOOL_COL.scaffolding;
-
-  const alloc = safeJsonParse(k.smithy_allocation, {}, 'processSmithyProduction:smithy_allocation');
-
-  const hammerAlloc    = Math.min(Number(alloc.hammers)    || 0, smithies); // max 1 per smithy per turn
-  const scaffoldAlloc  = Math.min(Number(alloc.scaffolding) || 0, smithies);
-
-  const hammerCap   = smithies * 25;
-  const scaffoldCap = smithies * 10;
-
-  // Produce hammers (1 per allocated engineer slot, max 1 per smithy, cap 25/smithy)
-  if (hammerAlloc > 0 && (k[hl] || 0) < hammerCap) {
-    const canAdd = Math.min(hammerAlloc, hammerCap - (k[hl] || 0));
-    if (canAdd > 0) {
-      updates[hl] = (k[hl] || 0) + canAdd;
-      events.push({ type: 'system', message: `⚒️ Smithy produced ${canAdd} hammer${canAdd > 1 ? 's' : ''}.` });
-    }
-  }
-
-  // Produce scaffolding (costs 2500 gold each, 1 per allocated engineer slot)
-  if (scaffoldAlloc > 0 && (k[sl] || 0) < scaffoldCap) {
-    const goldAvail = updates.gold !== undefined ? updates.gold : (k.gold || 0);
-    const canAfford = Math.floor(goldAvail / 2500);
-    const canAdd    = Math.min(scaffoldAlloc, scaffoldCap - (k[sl] || 0), canAfford);
-    if (canAdd > 0) {
-      updates[sl] = (k[sl] || 0) + canAdd;
-      updates.gold = goldAvail - (canAdd * 2500);
-      events.push({ type: 'system', message: `⚒️ Smithy produced ${canAdd} scaffolding for ${(canAdd * 2500).toLocaleString()} gold.` });
-    } else if (canAfford === 0 && scaffoldAlloc > 0) {
-      events.push({ type: 'system', message: `⚠️ Not enough gold to produce scaffolding (need 2,500 GC each).` });
-    }
-  }
 
   // ── Hammer degradation — each active hammer decays 1 turn of durability ──────
   const hammerCount = updates[hl] !== undefined ? updates[hl] : (k[hl] || 0);
@@ -2329,7 +2299,7 @@ async function resolveExpeditions(db, k, engine) {
           let disc = {};
           try { disc = JSON.parse(freshK.discovered_kingdoms || '{}'); } catch {}
           if (!disc[other.id]) {
-            disc[other.id] = { found: true };
+            disc[other.id] = { found: true, name: other.name };
             updates.discovered_kingdoms = JSON.stringify(disc);
             rewards.push({ text: `🔭 Your rangers discovered the kingdom of ${other.name}!` });
           }
@@ -2413,9 +2383,10 @@ async function resolveExpeditions(db, k, engine) {
           const undiscovered = allKingdoms.filter(t => !disc[t.id]?.found);
           if (undiscovered.length > 0) {
             const found = undiscovered[Math.floor(Math.random()*undiscovered.length)];
-            disc[found.id] = { found: true, mapped: false };
+            disc[found.id] = { found: true, name: found.name, mapped: false };
             await db.run('UPDATE kingdoms SET discovered_kingdoms=? WHERE id=?', [JSON.stringify(disc), k.id]);
-            // No news event — only summary msg is shown
+            // Record reward
+            rewards.push({ text: `🔭 Your scouts discovered the kingdom of ${found.name}!` });
           }
         }
       }
@@ -2632,7 +2603,8 @@ function processLibrary(k, events) {
           disc[targetId].mapped = true;
           updates.discovered_kingdoms = JSON.stringify(disc);
           updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) - 1;
-          events.push({ type: 'system', message: `📍 Your scribes mapped a new location! You may now interact with them.` });
+          const targetName = disc[targetId].name || 'an unknown kingdom';
+          events.push({ type: 'system', message: `📍 Your scribes mapped a new location! You may now interact with ${targetName}.` });
         } else if (task === 'hybrid_blueprint') {
           let frags = []; try { frags = JSON.parse(updates.world_fragments || k.world_fragments || '[]'); } catch {}
           let hbp = {}; try { hbp = JSON.parse(updates.hybrid_blueprints || k.hybrid_blueprints || '{}'); } catch {}
