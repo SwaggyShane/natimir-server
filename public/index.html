@@ -5344,11 +5344,28 @@ function setMaxValue(inputId, sourceKey) {
   var val = 0;
   
   if (sourceKey === 'gold') {
-    var container = el.closest('.hire-row');
-    var priceEl = container ? container.querySelector('.hprice') : document.getElementById('hp-' + inputId.split('-')[1]);
-    var priceStr = priceEl ? priceEl.textContent : '250';
-    var price = parseInt(priceStr.replace(/[^0-9]/g, '')) || 250;
-    val = Math.floor((state.gold || 0) / price);
+    if (inputId === 'trade-offer-qty') {
+      var sel = document.getElementById('trade-offer-item');
+      if (sel) val = state[sel.value] || 0;
+    } else if (inputId === 'merc-count') {
+      var tier = document.getElementById('merc-tier')?.value || 'rabble';
+      var price = (MERC_TIERS && MERC_TIERS[tier]) ? MERC_TIERS[tier].costPer : 50;
+      val = Math.floor((state.gold || 0) / price);
+    } else {
+      var container = el.closest('.hire-row') || el.parentElement.parentElement;
+      var priceEl = container ? container.querySelector('.hprice') : document.getElementById('hp-' + inputId.split('-')[1]);
+      var priceStr = priceEl ? priceEl.textContent : '250';
+      var price = parseInt(priceStr.replace(/[^0-9]/g, '')) || 250;
+      val = Math.floor((state.gold || 0) / price);
+      
+      if (inputId.startsWith('hire-')) {
+        var freePop = Math.max(0, (state.population || 0) - (
+          (state.fighters||0)+(state.rangers||0)+(state.clerics||0)+(state.mages||0)+
+          (state.thieves||0)+(state.ninjas||0)+(state.researchers||0)+(state.engineers||0)+(state.scribes||0)
+        ));
+        val = Math.min(val, freePop);
+      }
+    }
   } else if (sourceKey === 'avail_units') {
     if (inputId.startsWith('ra-')) { // Research Allocation
       var total = state.researchers || 0;

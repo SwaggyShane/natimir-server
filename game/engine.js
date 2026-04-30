@@ -1337,10 +1337,28 @@ function processBuildQueue(k, events) {
     } else {
       progress[building] = totalProgress;
     }
+    
+    // Calculate estimated completion for news
+    if (!updates._build_estimates) updates._build_estimates = [];
+    if (actualWork > 0) {
+      if (actualWork >= cost) {
+        const nextTurn = Math.floor((progress[building] + actualWork) / cost);
+        updates._build_estimates.push(`${building.replace(/_/g, ' ')} (${nextTurn} next turn)`);
+      } else {
+        const turnsLeft = Math.ceil((cost - progress[building]) / actualWork);
+        updates._build_estimates.push(`${building.replace(/_/g, ' ')} (${turnsLeft} turns left)`);
+      }
+    }
   }
 
-  // Persist consumable tool totals
-  if (blueprintsUsed  > 0) updates.blueprints_stored = Math.max(0, (k.blueprints_stored || 0) - blueprintsUsed);
+  if (completedItems.length > 0) {
+    events.push({ type: 'system', message: `🔨 Your engineers constructed: ${completedItems.join(', ')}.` });
+  }
+  
+  if (updates._build_estimates && updates._build_estimates.length > 0) {
+    events.push({ type: 'system', message: `🏗️ Construction Est: ${updates._build_estimates.join(' · ')}.` });
+  }
+  delete updates._build_estimates;
   if (scaffoldingUsed > 0) updates[sl]  = Math.max(0, scaffoldingLeft);
 
   // News notices for missing tools
@@ -2467,7 +2485,19 @@ function processMageTower(k, events) {
       } else {
          progress[progKey] = newProg;
       }
+
+      if (workDone > 0 && alloc[task] > 0) {
+         if (!updates._mage_estimates) updates._mage_estimates = [];
+         const turnsLeft = Math.ceil((req.turns - (progress[progKey] || 0)) / workDone);
+         const displayTask = task === 'blank_scroll' ? 'Blank scroll' : task.replace(/_/g, ' ') + ' scroll';
+         updates._mage_estimates.push(`${displayTask} (${turnsLeft} turns left)`);
+      }
     });
+
+    if (updates._mage_estimates && updates._mage_estimates.length > 0) {
+      events.push({ type: 'system', message: `📜 Mage Tower Est: ${updates._mage_estimates.join(' · ')}.` });
+      delete updates._mage_estimates;
+    }
 
     if (completedAny) {
       updates.mage_tower_allocation = JSON.stringify(alloc);
@@ -2623,7 +2653,19 @@ function processLibrary(k, events) {
       } else {
         progress[progressKey] = newProg;
       }
+
+      if (workDone > 0 && alloc[task] > 0) {
+        if (!updates._scribe_estimates) updates._scribe_estimates = [];
+        const turnsLeft = Math.ceil((req.turns - (progress[progressKey] || 0)) / workDone);
+        const displayTask = task.replace(/_/g, ' ');
+        updates._scribe_estimates.push(`${displayTask} (${turnsLeft} turns left)`);
+      }
     });
+
+    if (updates._scribe_estimates && updates._scribe_estimates.length > 0) {
+      events.push({ type: 'system', message: `📚 Library Est: ${updates._scribe_estimates.join(' · ')}.` });
+      delete updates._scribe_estimates;
+    }
 
     if (completedAny) {
       updates.library_allocation = JSON.stringify(alloc);
