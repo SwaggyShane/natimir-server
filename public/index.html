@@ -1227,6 +1227,62 @@
 
     <!-- Status Bar -->
 
+    <!-- ═══════════════════════════════════════════ HEROES PANEL ══ -->
+    <div id="heroes" class="panel" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title">👑 Heroes</div>
+        <button class="btn" onclick="loadHeroes()">↻ Refresh</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+        <div>
+          <div class="card" style="margin-top:0">
+            <div class="card-title" style="margin-bottom:12px">Your Heroes</div>
+            <div id="hero-list" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:12px">
+              <div style="color:var(--text3);font-size:13px;padding:20px;text-align:center;grid-column:1/-1">No heroes recruited yet. Build a Castle to recruit your first hero!</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="position:sticky;top:0">
+          <div class="card" style="margin-top:0">
+            <div class="card-title" style="margin-bottom:12px">Recruit Hero</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">
+              Heroes are powerful unique units that provide passive bonuses to your kingdom and lead your armies in battle. 
+              You can have 1 hero base, and +1 for every 3 <strong>Castles</strong> you own.
+            </div>
+            
+            <div style="margin-bottom:14px">
+              <label style="font-size:11px;color:var(--text);font-weight:700;display:block;margin-bottom:6px">Hero Name</label>
+              <input type="text" id="recruit-hero-name" placeholder="Enter name..." style="width:100%;margin-bottom:12px">
+              
+              <label style="font-size:11px;color:var(--text);font-weight:700;display:block;margin-bottom:6px">Select Class</label>
+              <div id="hero-class-options" style="display:flex;flex-direction:column;gap:8px">
+                <!-- Class options injected here -->
+              </div>
+            </div>
+
+            <button class="btn btn-purple" id="btn-recruit-hero" style="width:100%;padding:10px;font-weight:700" onclick="recruitHeroAction()">Recruit Hero</button>
+          </div>
+
+          <div class="card">
+            <div class="card-title" style="font-size:14px">Hero Slots</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+              <span style="font-size:13px;color:var(--text2)">Occupied</span>
+              <span id="hero-slots-used" style="font-weight:700;color:var(--text)">0</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+              <span style="font-size:13px;color:var(--text2)">Total available</span>
+              <span id="hero-slots-total" style="font-weight:700;color:var(--gold)">1</span>
+            </div>
+            <div style="height:6px;background:var(--bg3);border-radius:3px;margin-top:10px;overflow:hidden">
+              <div id="hero-slots-bar" style="height:100%;width:0%;background:var(--purple);transition:width .3s"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- BUILD -->
     <!-- ECONOMY PANEL -->
     <div id="economy" class="panel" style="display:none">
@@ -4193,7 +4249,7 @@ function switchTab(id, btn) {
   // Handle kd-top visibility and context
   var kdTop = document.getElementById('kd-top');
   if (kdTop) {
-    if (['status','hire','studies','economy','build','training','exploration','defense','warfare'].includes(id)) {
+    if (['status','hire','heroes','studies','economy','build','training','exploration','defense','warfare'].includes(id)) {
       kdTop.style.display = 'block';
       // Contextual visibility
       var metrics = ['metric-gold', 'metric-mana', 'metric-land', 'metric-pop', 'metric-morale', 'metric-defense', 'metric-food'];
@@ -4246,6 +4302,9 @@ function switchTab(id, btn) {
   }
   if (id === 'studies') {
     loadStudies();
+  }
+  if (id === 'heroes') {
+    loadHeroes();
   }
   if (id === 'exploration') {
     loadExploration();
@@ -4716,6 +4775,7 @@ function updateTurnsDisplay() {
 <nav class="bottom-nav" id="bottom-nav">
   <button class="bnav-item active" onclick="switchTabMobile('status',this)"><span class="bicon" style="color:#4a90e2">🏰</span>Status</button>
   <button class="bnav-item" onclick="switchTabMobile('hire',this)"><span class="bicon" style="color:#7ed321">🤝</span>Hire</button>
+  <button class="bnav-item" onclick="switchTabMobile('heroes',this)"><span class="bicon" style="color:#d946ef">👑</span>Heroes</button>
   <button class="bnav-item" onclick="switchTabMobile('studies',this)"><span class="bicon" style="color:#d0021b">🏛️</span>Studies</button>
   <button class="bnav-item" onclick="switchTabMobile('build',this)"><span class="bicon" style="color:#8b572a">🏗️</span>Build</button>
   <button class="bnav-item" onclick="switchTabMobile('economy',this)"><span class="bicon" style="color:#f5a623">💰</span>Economy</button>
@@ -6002,24 +6062,24 @@ function applyServerUpdates(u) {
 // ── Build panel allocation ────────────────────────────────────────────────────
 
 var BUILD_FIELDS = [
-  { id:'b-farm',      key:'farm',        pieces:10,  alloc:'ba-farm'      },
+  { id:'b-farm',      key:'farms',        pieces:10,  alloc:'ba-farm'      },
   { id:'b-barracks',  key:'barracks',    pieces:2,   alloc:'ba-barracks'  },
   { id:'b-walls',     key:'walls',       pieces:5,   alloc:'ba-walls'     },
-  { id:'b-outpost',   key:'outpost',     pieces:2,   alloc:'ba-outpost'   },
-  { id:'b-tower',     key:'tower',       pieces:2,   alloc:'ba-tower'     },
-  { id:'b-school',    key:'school',      pieces:5,   alloc:'ba-school'    },
-  { id:'b-armory',    key:'armory',      pieces:5,   alloc:'ba-armory'    },
+  { id:'b-outpost',   key:'outposts',     pieces:2,   alloc:'ba-outpost'   },
+  { id:'b-tower',     key:'guard_towers', pieces:2,   alloc:'ba-tower'     },
+  { id:'b-school',    key:'schools',      pieces:5,   alloc:'ba-school'    },
+  { id:'b-armory',    key:'armories',      pieces:5,   alloc:'ba-armory'    },
   { id:'b-housing',   key:'housing',     pieces:50,  alloc:'ba-housing'   },
-  { id:'b-vault',     key:'vault',       pieces:5,   alloc:'ba-vault'     },
-  { id:'b-smithy',    key:'smithy',      pieces:15,  alloc:'ba-smithy'    },
-  { id:'b-market',    key:'market',      pieces:30,  alloc:'ba-market'    },
-  { id:'b-cathedral', key:'cathedral',   pieces:25,  alloc:'ba-cathedral' },
+  { id:'b-vault',     key:'vaults',       pieces:5,   alloc:'ba-vault'     },
+  { id:'b-smithy',    key:'smithies',      pieces:15,  alloc:'ba-smithy'    },
+  { id:'b-market',    key:'markets',      pieces:30,  alloc:'ba-market'    },
+  { id:'b-cathedral', key:'cathedrals',   pieces:25,  alloc:'ba-cathedral' },
   { id:'b-training',  key:'training',    pieces:50,  alloc:'ba-training'  },
-  { id:'b-colosseum', key:'colosseum',   pieces:25,  alloc:'ba-colosseum' },
-  { id:'b-shrine',    key:'shrine',      pieces:50,  alloc:'ba-shrine'    },
-  { id:'b-castle',    key:'castle',      pieces:500, alloc:'ba-castle'    },
-  { id:'b-library',   key:'library',     pieces:100, alloc:'ba-library'   },
-  { id:'b-tavern',    key:'tavern',       pieces:10,  alloc:'ba-tavern'    },
+  { id:'b-colosseum', key:'colosseums',   pieces:25,  alloc:'ba-colosseum' },
+  { id:'b-shrine',    key:'shrines',      pieces:50,  alloc:'ba-shrine'    },
+  { id:'b-castle',    key:'castles',      pieces:500, alloc:'ba-castle'    },
+  { id:'b-library',   key:'libraries',     pieces:100, alloc:'ba-library'   },
+  { id:'b-tavern',    key:'taverns',       pieces:10,  alloc:'ba-tavern'    },
   { id:'b-wm',        key:'war_machines', pieces:20,  alloc:'ba-wm'        },
   { id:'b-weapons',   key:'weapons',     pieces:1,   alloc:'ba-weapons'   },
   { id:'b-armor',     key:'armor',       pieces:1,   alloc:'ba-armor'     },
@@ -6044,8 +6104,8 @@ function updateBuildDisplay() {
   }
 
   // Blueprint/scaffolding requirement notices beside buildings
-  var BLUEPRINT_REQUIRED  = new Set(['vault','smithy','market','cathedral','training','colosseum','castle','library']);
-  var SCAFFOLDING_REQUIRED = new Set(['cathedral','training','castle']);
+  var BLUEPRINT_REQUIRED  = new Set(['vaults','smithies','markets','cathedrals','training','colosseums','castles','libraries']);
+  var SCAFFOLDING_REQUIRED = new Set(['cathedrals','training','castles']);
   var bp = state.blueprints_stored || 0;
   var sc = state.tools_scaffolding || 0;
 
@@ -8147,6 +8207,117 @@ function showXpModal() {
 function closeXpModal() {
   document.getElementById('xp-modal').style.display = 'none';
   document.body.style.overflow = '';
+}
+
+// ── Heroes ───────────────────────────────────────────────────────────────────
+var _heroClasses = {};
+async function loadHeroes() {
+  const [heroes, k, classes] = await Promise.all([
+    apiCall('GET', '/api/hero/list'),
+    apiCall('GET', '/api/kingdom/me'),
+    apiCall('GET', '/api/hero/classes')
+  ]);
+  
+  if (heroes.error || k.error || classes.error) return;
+  _heroClasses = classes;
+
+  const maxHeroes = 1 + Math.floor((k.bld_castles || 0) / 3);
+  const used = heroes.length;
+  
+  document.getElementById('hero-slots-used').textContent = used;
+  document.getElementById('hero-slots-total').textContent = maxHeroes;
+  const pct = Math.min(100, (used / maxHeroes) * 100);
+  document.getElementById('hero-slots-bar').style.width = pct + '%';
+  
+  // Render hero list
+  const list = document.getElementById('hero-list');
+  if (heroes.length === 0) {
+    list.innerHTML = `<div style="color:var(--text3);font-size:13px;padding:20px;text-align:center;grid-column:1/-1">No heroes recruited yet. Build a Castle to recruit your first hero!</div>`;
+  } else {
+    list.innerHTML = heroes.map(h => {
+      const cls = classes[h.class] || {};
+      const abilities = JSON.parse(h.abilities || '[]');
+      return `
+        <div class="card" style="margin:0;border:1px solid var(--border2);background:linear-gradient(135deg, var(--bg2), var(--bg3))">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div>
+              <div style="font-size:16px;font-weight:700;color:var(--gold)">${h.name}</div>
+              <div style="font-size:12px;color:var(--text3)">${h.class} · Level ${h.level}</div>
+            </div>
+            <div style="background:var(--bg4);padding:4px 8px;border-radius:4px;font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase">${h.status}</div>
+          </div>
+          
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">${cls.description || ''}</div>
+          
+          <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px">
+              <span>XP to next level</span>
+              <span>${h.xp} / ${h.level * 500}</span>
+            </div>
+            <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${Math.min(100, (h.xp / (h.level * 500)) * 100)}%;background:var(--purple)"></div>
+            </div>
+          </div>
+          
+          <div style="font-size:11px;color:var(--text);margin-bottom:10px">
+            <div style="font-weight:700;margin-bottom:4px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Abilities</div>
+            ${abilities.map(a => `<div style="margin-bottom:4px">✨ <strong>${a.name}:</strong> <span style="color:var(--text2)">${a.description}</span></div>`).join('')}
+          </div>
+          
+          <div style="display:flex;gap:8px;margin-top:auto">
+            <button class="btn btn-red" style="flex:1;padding:6px;font-size:11px" onclick="dismissHero(${h.id}, '${h.name}')">Dismiss</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  // Render recruitment options
+  const optWrap = document.getElementById('hero-class-options');
+  optWrap.innerHTML = Object.entries(classes).map(([id, c]) => `
+    <div style="display:flex;gap:10px;align-items:center;background:var(--bg3);padding:10px;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer" onclick="selectHeroClass('${id}')" id="hero-opt-${id}" class="hero-class-opt">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${c.name}</div>
+        <div style="font-size:11px;color:var(--text3)">Cost: ${c.recruitCost.toLocaleString()} GC · ${c.recruitMana} Mana</div>
+      </div>
+      <input type="radio" name="hero-class" value="${id}" id="radio-hero-${id}" style="margin:0">
+    </div>
+  `).join('');
+}
+
+let _selectedHeroClass = null;
+function selectHeroClass(id) {
+  _selectedHeroClass = id;
+  document.querySelectorAll('.hero-class-opt').forEach(el => el.style.borderColor = 'var(--border)');
+  document.getElementById('hero-opt-' + id).style.borderColor = 'var(--purple)';
+  document.getElementById('radio-hero-' + id).checked = true;
+}
+
+async function recruitHeroAction() {
+  const name = document.getElementById('recruit-hero-name').value;
+  if (!name) return alert('Hero name required');
+  if (!_selectedHeroClass) return alert('Select a hero class');
+  
+  const btn = document.getElementById('btn-recruit-hero');
+  btn.disabled = true;
+  
+  const res = await apiCall('POST', '/api/hero/recruit', { name, heroClass: _selectedHeroClass });
+  btn.disabled = false;
+  
+  if (res.error) {
+    alert(res.error);
+  } else {
+    document.getElementById('recruit-hero-name').value = '';
+    loadHeroes();
+    loadKingdom(); // Update status bar resources
+  }
+}
+
+async function dismissHero(id, name) {
+  if (!confirm(`Are you sure you want to dismiss ${name}? This cannot be undone.`)) return;
+  const res = await apiCall('POST', '/api/hero/dismiss', { heroId: id });
+  if (res.error) alert(res.error);
+  else loadHeroes();
 }
 
 // Boot — check auth then show modal or load kingdom

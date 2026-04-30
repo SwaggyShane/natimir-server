@@ -1342,6 +1342,25 @@ const XP_BASE = {
   covert_op:    150,   // per covert operation
 };
 
+const BUILDING_ALIASES = {
+  farm: 'farms',
+  outpost: 'outposts',
+  tower: 'guard_towers',
+  school: 'schools',
+  armory: 'armories',
+  vault: 'vaults',
+  smithy: 'smithies',
+  market: 'markets',
+  cathedral: 'cathedrals',
+  colosseum: 'colosseums',
+  shrine: 'shrines',
+  castle: 'castles',
+  library: 'libraries',
+  tavern: 'taverns',
+  weapon: 'weapons',
+  armour: 'armor'
+};
+
 // Award XP and check for level up — returns { xp, level, levelled, events }
 function awardXp(k, activity, amount) {
   const mult    = xpRaceBonus(k, activity);
@@ -1503,8 +1522,6 @@ function queueBuildings(k, orders) {
 // Process build queue each turn — engineers work on allocated buildings continuously
 function processBuildQueue(k, events) {
   const updates = {};
-  let progress = {};
-  try { progress = JSON.parse(k.build_progress || '{}'); } catch { progress = {}; }
 
   // Tool bonuses
   const hammerBonus  = 1 + (k.tools_hammers || 0) * 0.05;
@@ -1521,21 +1538,40 @@ function processBuildQueue(k, events) {
   let scaffoldingUsed = 0;
 
   // Get engineer allocation
+  let allocationRaw = {};
+  try { allocationRaw = JSON.parse(k.build_allocation || '{}'); } catch { allocationRaw = {}; }
   let allocation = {};
-  try { allocation = JSON.parse(k.build_allocation || '{}'); } catch { allocation = {}; }
+  for (const b of Object.keys(allocationRaw)) {
+    const key = BUILDING_ALIASES[b] || b;
+    allocation[key] = (allocation[key] || 0) + (Number(allocationRaw[b]) || 0);
+  }
 
   // Also check legacy build_queue for any manually queued items
+  let queueRaw = {};
+  try { queueRaw = JSON.parse(k.build_queue || '{}'); } catch { queueRaw = {}; }
   let queue = {};
-  try { queue = JSON.parse(k.build_queue || '{}'); } catch { queue = {}; }
+  for (const b of Object.keys(queueRaw)) {
+    const key = BUILDING_ALIASES[b] || b;
+    queue[key] = (queue[key] || 0) + (Number(queueRaw[b]) || 0);
+  }
+
+  // Normalize progress
+  let progressRaw = {};
+  try { progressRaw = JSON.parse(k.build_progress || '{}'); } catch { progressRaw = {}; }
+  let progress = {};
+  for (const b of Object.keys(progressRaw)) {
+    const key = BUILDING_ALIASES[b] || b;
+    progress[key] = (progress[key] || 0) + (Number(progressRaw[b]) || 0);
+  }
 
   // Merge: allocation drives continuous building, queue adds on top
-  const activeBuildings = new Set([...Object.keys(allocation).filter(b => Number(allocation[b]) > 0), ...Object.keys(queue).filter(b => (queue[b]||0) > 0)]);
+  const activeBuildings = new Set([...Object.keys(allocation).filter(b => allocation[b] > 0), ...Object.keys(queue).filter(b => queue[b] > 0)]);
   if (activeBuildings.size === 0) return updates;
 
   const completedItems = [];
 
   for (const building of activeBuildings) {
-    const engAssigned = Number(allocation[building]) || 0;
+    const engAssigned = allocation[building] || 0;
     if (engAssigned <= 0 && !(queue[building] > 0)) continue;
 
     const cost = BUILDING_COST[building];
@@ -1720,7 +1756,7 @@ function moraleMult(morale) {
   return Math.min(1.20, 1.00 + ((morale - 100) / 100) * 0.10); // 1.00–1.20 (capped at 1.20)
 }
 
-function resolveMilitaryAttack(attacker, defender, sentUnits) {
+function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [], defenderHeroes = []) {
   const attackerUpdates = {};
   const defenderUpdates = {};
   // sentUnits: { fighters, rangers, mages, warMachines, ninjas, thieves }
@@ -1818,8 +1854,12 @@ function resolveMilitaryAttack(attacker, defender, sentUnits) {
   const engAvail        = Math.max(0, (attacker.engineers || 0));
   const wmCrewable      = Math.min(sent.warMachines, Math.floor(engAvail / crewNeeded));
   const wmPower         = wmCrewable * 500 * ((attacker.res_war_machines || 100) / 100) * raceBonus(attacker, 'war_machines');
+  
+  // Hero power — attacker
+  let atkHeroPower = 0;
+  attackerHeroes.forEach(h => { atkHeroPower += getHeroPower(h); });
 
-  const atkPowerRaw = (atkFighterPower + atkRangerPower + atkMagePower + wmPower) * atkMoraleMult * bullyPenalty;
+  const atkPowerRaw = (atkFighterPower + atkRangerPower + atkMagePower + wmPower + atkHeroPower) * atkMoraleMult * bullyPenalty;
   const atkPower    = atkPowerRaw;
 
   // ── Step 5: Defense power ─────────────────────────────────────────────────
@@ -1856,7 +1896,11 @@ function resolveMilitaryAttack(attacker, defender, sentUnits) {
   let defCitadelMult = 1.0;
   try { if (JSON.parse(defender.defense_upgrades||'{}').citadel) defCitadelMult = 1.15; } catch {}
 
-  const defPower = (defFighterPower + defRangerPower + defMagePower + defWmPower + defEngBonus + defWallPower + defOutpostPower + defTowerPower + defStructures) * defMoraleMult * defCitadelMult;
+  // Hero power — defender
+  let defHeroPower = 0;
+  defenderHeroes.forEach(h => { defHeroPower += getHeroPower(h); });
+
+  const defPower = (defFighterPower + defRangerPower + defMagePower + defWmPower + defEngBonus + defWallPower + defOutpostPower + defTowerPower + defStructures + defHeroPower) * defMoraleMult * defCitadelMult;
 
   // ── Step 6: Battle resolution ─────────────────────────────────────────────
   const variance = 0.8 + Math.random() * 0.4;
@@ -3129,6 +3173,114 @@ function processLibrary(k, events) {
   return updates;
 }
 
+// ── Hero Units ────────────────────────────────────────────────────────────────
+
+const HERO_CLASSES = {
+  paladin: {
+    name: "Paladin",
+    description: "Holy warrior who protects troops and heals casualties.",
+    abilities: ["Protective Aura", "Holy Heal", "Unyielding Faith"],
+    recruitCost: 50000,
+    recruitMana: 10000,
+    statBonus: { military: 1.10, morale: 1.15 }
+  },
+  archmage: {
+    name: "Archmage",
+    description: "Master of the arcane who boosts mana and spell power.",
+    abilities: ["Arcane Infusion", "Mana Surge", "Elemental Storm"],
+    recruitCost: 50000,
+    recruitMana: 25000,
+    statBonus: { magic: 1.25, research: 1.10 }
+  },
+  warlord: {
+    name: "Warlord",
+    description: "Battle-hardened leader who maximizes military might.",
+    abilities: ["War Cry", "Tactical Mastery", "Bloodlust"],
+    recruitCost: 75000,
+    recruitMana: 5000,
+    statBonus: { military: 1.25, morale: 1.10 }
+  },
+  shadowblade: {
+    name: "Shadowblade",
+    description: "Lethal assassin who excels in covert operations.",
+    abilities: ["Deadly Strike", "Shadow Veil", "Infiltrator"],
+    recruitCost: 60000,
+    recruitMana: 15000,
+    statBonus: { covert: 1.30, stealth: 1.20 }
+  },
+  sovereign: {
+    name: "Sovereign",
+    description: "Charismatic leader who focuses on prosperity and growth.",
+    abilities: ["Royal Decree", "Golden Touch", "Inspiring Presence"],
+    recruitCost: 100000,
+    recruitMana: 10000,
+    statBonus: { economy: 1.20, morale: 1.20, population: 1.10 }
+  }
+};
+
+function heroXpForLevel(level) {
+  if (level <= 1) return 0;
+  return Math.floor(500 * Math.pow(1.5, level - 2));
+}
+
+function awardHeroXp(hero, xpAmount) {
+  const newXp = hero.xp + xpAmount;
+  let newLevel = hero.level;
+  while (newXp >= heroXpForLevel(newLevel + 1) && newLevel < 20) {
+    newLevel++;
+  }
+  return { level: newLevel, xp: newXp };
+}
+
+function getHeroPower(hero) {
+  return hero.level * 1000; // Base power for combat/expeditions
+}
+
+// ── Hero Abilities ────────────────────────────────────────────────────────────
+// Passives applied during turn or combat
+
+function applyHeroTurnBonuses(hero, k, updates) {
+  const cls = HERO_CLASSES[hero.class];
+  if (!cls || !cls.statBonus) return;
+
+  if (hero.class === 'sovereign') {
+    // Prosperity: Extra tax income
+    const bonus = Math.floor(hero.level * 250);
+    updates.gold = (updates.gold !== undefined ? updates.gold : k.gold || 0) + bonus;
+  } else if (hero.class === 'archmage') {
+    // Mana infusion: Extra mana
+    const bonus = Math.floor(hero.level * 100);
+    updates.mana = (updates.mana !== undefined ? updates.mana : k.mana || 0) + bonus;
+  } else if (hero.class === 'paladin') {
+    // Protective Aura: Health regeneration or morale boost
+    const currentMorale = (updates.morale !== undefined ? updates.morale : k.morale || 100);
+    updates.morale = Math.min(100, currentMorale + 1);
+  }
+}
+
+function recruitHero(k, heroName, heroClass) {
+  const cls = HERO_CLASSES[heroClass];
+  if (!cls) return { error: "Invalid hero class" };
+
+  if ((k.gold || 0) < cls.recruitCost) return { error: `Need ${cls.recruitCost.toLocaleString()} gold` };
+  if ((k.mana || 0) < cls.recruitMana) return { error: `Need ${cls.recruitMana.toLocaleString()} mana` };
+  if ((k.bld_castles || 0) < 1) return { error: "Requires a Castle to house a Hero" };
+
+  return {
+    hero: {
+      name: heroName,
+      class: heroClass,
+      level: 1,
+      xp: 0,
+      abilities: JSON.stringify(cls.abilities.slice(0, 1)), // Unlock first ability at lvl 1
+      hp: 200,
+      max_hp: 200,
+      status: 'idle'
+    },
+    cost: { gold: cls.recruitCost, mana: cls.recruitMana }
+  };
+}
+
 // ── Active effects processing — runs each turn ────────────────────────────────
 function processActiveEffects(k, events) {
   let effects = {};
@@ -3254,4 +3406,5 @@ module.exports = {
   SPELL_DEFS, SCROLL_REQUIREMENTS, SCRIBE_ITEMS, HOUSING_CAP_BY_RACE,
   TOOL_COL, TOOL_GOLD_COST, BLUEPRINT_REQUIRED, SCAFFOLDING_REQUIRED, SCAFFOLDING_BONUS_BUILDINGS,
   processSmithyProduction,
+  HERO_CLASSES, heroXpForLevel, awardHeroXp, getHeroPower, applyHeroTurnBonuses, recruitHero,
 };

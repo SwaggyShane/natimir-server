@@ -144,6 +144,30 @@ async function runAiKingdom(db, engine, playerId) {
     const { updates } = engine.processTurn(ai);
     updates.turns_stored = ai.turns_stored - 1;
 
+    // ── Process heroes ──
+    const heroes = await db.all('SELECT * FROM heroes WHERE kingdom_id = ? AND status = "idle"', [ai.id]);
+    for (const hero of heroes) {
+      const resHero = engine.awardHeroXp(hero, 10);
+      await db.run('UPDATE heroes SET level = ?, xp = ? WHERE id = ?', [resHero.level, resHero.xp, hero.id]);
+      engine.applyHeroTurnBonuses(hero, ai, updates);
+    }
+
+    // AI Hero Recruitment
+    if (heroes.length === 0 && (ai.gold || 0) > 150000 && (ai.bld_castles || 0) > 0) {
+      const classes = ['paladin', 'archmage', 'warlord', 'shadowblade', 'sovereign'];
+      const myClass = classes[Math.floor(Math.random() * classes.length)];
+      const { hero, cost, error } = engine.recruitHero(ai, `${ai.name}'s Hero`, myClass);
+      if (hero && !error) {
+        await db.run(
+          `INSERT INTO heroes (kingdom_id, name, class, level, xp, abilities, status, hp, max_hp)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [ai.id, hero.name, hero.class, hero.level, hero.xp, hero.abilities, hero.status, hero.hp, hero.max_hp]
+        );
+        updates.gold = (updates.gold || ai.gold) - cost.gold;
+        updates.mana = (updates.mana || ai.mana) - cost.mana;
+      }
+    }
+
     // ── Engineer allocation — race-aware ──
     const eng = ai.engineers || 0;
     if (eng > 0) {
@@ -492,6 +516,7 @@ async function start() {
   // ── Routes ────────────────────────────────────────────────────────────────────
   app.use('/api/auth',    authLimiter,  require('./routes/auth')(db));
   app.use('/api/kingdom', turnLimiter,  require('./routes/kingdom')(db));
+  app.use('/api/hero',    turnLimiter,  require('./routes/hero')(db));
   app.use('/api/admin',                 require('./routes/admin')(db, io));
 
   app.get('/api/alliance/list', requireAuth, async (req, res) => {

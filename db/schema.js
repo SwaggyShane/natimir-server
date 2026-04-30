@@ -172,6 +172,20 @@ async function initDb() {
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS heroes (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      kingdom_id  INTEGER NOT NULL REFERENCES kingdoms(id),
+      name        TEXT    NOT NULL,
+      class       TEXT    NOT NULL,
+      level       INTEGER NOT NULL DEFAULT 1,
+      xp          INTEGER NOT NULL DEFAULT 0,
+      abilities   TEXT    NOT NULL DEFAULT '[]',
+      status      TEXT    NOT NULL DEFAULT 'idle',
+      hp          INTEGER NOT NULL DEFAULT 100,
+      max_hp      INTEGER NOT NULL DEFAULT 100,
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_heroes_kingdom ON heroes(kingdom_id);
     CREATE INDEX IF NOT EXISTS idx_news_kingdom    ON news(kingdom_id, is_read);
     CREATE INDEX IF NOT EXISTS idx_combat_attacker ON combat_log(attacker_id);
     CREATE INDEX IF NOT EXISTS idx_combat_defender ON combat_log(defender_id);

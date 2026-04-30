@@ -112,7 +112,19 @@ module.exports = function(db) {
     k._region_owned_by_my_alliance = (regionStatus && myAlliance && regionStatus.owner_alliance_id === myAlliance.alliance_id);
     k._region_bonus_type = regionStatus?.bonus_type;
 
+    // Heroes processing
+    const heroes = await db.all('SELECT * FROM heroes WHERE kingdom_id = ? AND status = "idle"', [k.id]);
     const { updates, events } = engine.processTurn(k);
+
+    for (const hero of heroes) {
+      // Award passive XP
+      const xpResult = engine.awardHeroXp(hero, 10); // 10 XP per turn
+      await db.run('UPDATE heroes SET level = ?, xp = ? WHERE id = ?', [xpResult.level, xpResult.xp, hero.id]);
+
+      // Apply turn bonuses
+      engine.applyHeroTurnBonuses(hero, k, updates);
+    }
+
     updates.turns_stored = (k.turns_stored || 0) - 1;
 
     // Apply kingdom updates in a transaction
@@ -517,6 +529,10 @@ module.exports = function(db) {
     if (target.id === k.id) return res.status(400).json({ error: 'Cannot attack yourself' });
     if ((k.turn || 0) < 400) return res.status(400).json({ error: `You are under newbie protection until Turn 400. You cannot attack yet.` });
     if ((target.turn || 0) < 400) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 400` });
+    
+    // Fetch heroes
+    const attackerHeroes = await db.all('SELECT * FROM heroes WHERE kingdom_id = ? AND status = ?', [k.id, 'idle']);
+    const defenderHeroes = await db.all('SELECT * FROM heroes WHERE kingdom_id = ? AND status = ?', [target.id, 'idle']);
 
     // Location system — must have mapped this kingdom (warn but don't block during transition)
     try { JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
@@ -528,8 +544,18 @@ module.exports = function(db) {
       await db.run('UPDATE kingdoms SET discovered_kingdoms=? WHERE id=?', [JSON.stringify(defDisc), target.id]);
     }
 
-    const result = engine.resolveMilitaryAttack(k, target, sentUnits);
+    const result = engine.resolveMilitaryAttack(k, target, sentUnits, attackerHeroes, defenderHeroes);
     if (result.error) return res.status(400).json({ error: result.error });
+
+    // Update heroes in DB
+    for (const h of attackerHeroes) {
+      const resHero = engine.awardHeroXp(h, result.win ? 100 : 50);
+      await db.run('UPDATE heroes SET xp = ?, level = ? WHERE id = ?', [resHero.xp, resHero.level, h.id]);
+    }
+    for (const h of defenderHeroes) {
+      const resHero = engine.awardHeroXp(h, result.win ? 50 : 100);
+      await db.run('UPDATE heroes SET xp = ?, level = ? WHERE id = ?', [resHero.xp, resHero.level, h.id]);
+    }
 
     const VALID = new Set([
       'gold','mana','land','population','morale','food','fighters','rangers','clerics',
