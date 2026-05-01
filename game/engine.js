@@ -742,8 +742,7 @@ function processTurn(k) {
       updates.morale = Math.max(0, (k.morale||100) - penalty);
       events.push({ type: 'system', message: `😡 Morale fell by ${penalty} — citizens angry over ${k.tax}% taxation.` });
     } else {
-      const tavernBonus = Math.floor((k.bld_colosseums||0) / 25);
-      const recovery = 1 + Math.floor((k.res_entertainment||0) / 200) + tavernBonus;
+      const recovery = 1 + Math.floor((k.res_entertainment||0) / 200);
       const natCap = naturalMoraleCap(k);
       let newMorale = Math.min(natCap, (k.morale||100) + recovery);
       

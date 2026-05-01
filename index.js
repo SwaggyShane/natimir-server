@@ -80,7 +80,7 @@ async function runAiKingdom(db, engine, playerId) {
     'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
     'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
     'bld_farms','bld_barracks','bld_schools','bld_armories','bld_vaults','bld_smithies',
-    'bld_markets','bld_mage_towers','bld_training','bld_colosseums','bld_castles',
+    'bld_markets','bld_mage_towers','bld_training','bld_castles',
     'bld_shrines','bld_libraries',
     'build_allocation','build_progress','research_allocation','research_progress','mage_tower_allocation',
     'build_queue','xp','level','troop_levels','maps','scrolls','active_effects',
