@@ -25,6 +25,26 @@ const BLUEPRINT_REQUIRED = new Set(BP_REQ);
 const SCAFFOLDING_REQUIRED = new Set(SCAFF_REQ);
 const SCAFFOLDING_BONUS_BUILDINGS = new Set(SCAFF_BONUS);
 
+const LEGENDARY_NAMES = {
+  human: { fighters: 'Lionheart Champions' },
+  orc:   { fighters: 'Blood-God Berserkers' },
+  high_elf: { rangers: 'Starfall Guardians' },
+  dark_elf: { ninjas: 'Void Assassins' },
+  dwarf: { engineers: 'Runic Siege-Masters' },
+  dire_wolf: { fighters: 'Fenris Alphas' }
+};
+
+function getUnitName(race, unit, prestigeLevel = 0) {
+  if (prestigeLevel > 0 && LEGENDARY_NAMES[race]?.[unit]) {
+    return `🌟 ${LEGENDARY_NAMES[race][unit]}`;
+  }
+  const labels = {
+    fighters:'Fighters', rangers:'Rangers', mages:'Mages', clerics:'Clerics',
+    thieves:'Thieves', ninjas:'Ninjas', scribes:'Scribes', researchers:'Researchers', engineers:'Engineers'
+  };
+  return labels[unit] || unit;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const _parseCache = new Map();
@@ -194,7 +214,9 @@ function awardTroopXp(k, unit, xpAmount) {
 // Returns effectiveness multiplier: +0.5% per level above 1, caps at +50% at level 100
 function unitLevelMult(k, unit) {
   const level = effectiveTroopLevel(k, unit);
-  return 1 + Math.min(0.50, (level - 1) * 0.005);
+  const prestigeBonus = (k.prestige_level || 0) * 0.05;
+  const isLegendary = (k.prestige_level || 0) > 0 && LEGENDARY_NAMES[k.race]?.[unit] ? 1.15 : 1.0;
+  return (1 + Math.min(0.50, (level - 1) * 0.005)) * (1 + prestigeBonus) * isLegendary;
 }
 
 // ── Racial unique bonuses (unlocked at unit level 5+) ─────────────────────────
@@ -850,6 +872,15 @@ function processTurn(k) {
   // ── 8b. Library — mages produce mana, scribes craft maps/blueprints, mages craft scrolls ──
   const libUpdates = processLibrary({ ...k, ...updates }, events);
   Object.assign(updates, libUpdates);
+
+  // ── 8d. Trade & Prestige ─────────────────────────────────────────────────────
+  const prestigeLevel = k.prestige_level || 0;
+  const tradeRoutes   = (k.trade_routes || 0);
+  const tradeIncome   = tradeRoutes * 100 * (1 + prestigeLevel * 0.1);
+  if (tradeIncome > 0) {
+    updates.gold = (updates.gold || k.gold || 0) + tradeIncome;
+    events.push({ type: 'system', message: `🚢 Trade Routes generated ${tradeIncome.toLocaleString()} gold.` });
+  }
 
   // ── 8d. Defence — citadel check ───────────────────────────────────────────────
   const citadelUpdates = checkCitadel({ ...k, ...updates }, events);
@@ -1753,6 +1784,93 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
     : `⚔️ ${attacker.name} attacked but was repelled. You lost ${defFightersLost} fighters defending.${ninjaKills > 0 ? ` ${ninjaKills} fighters were killed in a pre-battle ninja strike.` : ''}`;
 
   return { win, report, attackerUpdates, defenderUpdates, atkEvent, defEvent, shameEvent };
+}
+
+// ── Orc Trade Route Raiding ──────────────────────────────────────────────
+function raidTradeRoute(attacker, defender, unitCount) {
+  if (attacker.race !== 'orc') return { error: 'Only Orcs can raid trade routes' };
+  const currentAttackerThieves = attacker.thieves || 0;
+  if (currentAttackerThieves < 500) return { error: 'Need at least 500 thieves to raid trade routes' };
+  const defenderTradeRoutes = defender.trade_routes || 0;
+  if (defenderTradeRoutes < 1) return { error: 'Target has no trade routes to raid' };
+
+  const atkLvl = unitLevelMult(attacker, 'thieves');
+  const defLvl = unitLevelMult(defender, 'thieves');
+  const successChance = 0.4 + (atkLvl - defLvl) * 0.2;
+  const roll = Math.random();
+
+  if (roll < successChance) {
+    const raided = Math.min(defenderTradeRoutes, Math.floor(unitCount / 500));
+    const loot   = raided * 5000;
+    const losses = Math.floor(unitCount * 0.05);
+
+    return {
+      success: true,
+      looted: loot,
+      raidedRoutes: raided,
+      attackerUpdates: {
+        gold: (attacker.gold || 0) + loot,
+        thieves: Math.max(0, (attacker.thieves || 0) - losses)
+      },
+      defenderUpdates: {
+        trade_routes: Math.max(0, (defender.trade_routes || 0) - raided)
+      },
+      atkEvent: `🏴‍☠️ SUCCESS: You raided ${raided} trade routes of ${defender.name} and looted ${loot.toLocaleString()} gold! (Losses: ${losses} thieves)`,
+      defEvent: `🛶 RAIDED: ${attacker.name}'s Orcs raided your trade routes! You lost ${raided} routes and ${loot.toLocaleString()} gold was stolen!`
+    };
+  } else {
+    const losses = Math.floor(unitCount * 0.15);
+    return {
+      success: false,
+      attackerUpdates: {
+        thieves: Math.max(0, (attacker.thieves || 0) - losses)
+      },
+      atkEvent: `💀 FAILURE: Your raid on ${defender.name}'s trade routes failed. You lost ${losses} thieves in the ambush.`,
+      defEvent: `🛡️ Your guards repelled an Orc raid from ${attacker.name} on your trade routes!`
+    };
+  }
+}
+
+// ── Prestige System ──────────────────────────────────────────────────────
+function canPrestige(k) {
+  return (k.level || 0) >= 50; // Prestige at Level 50
+}
+
+function processPrestige(k) {
+  if (!canPrestige(k)) return { error: 'Kingdom level 50 required for Prestige' };
+
+  const currentLevel = k.prestige_level || 0;
+  const nextLevel    = currentLevel + 1;
+
+  // New Kingdom defaults
+  return {
+    prestige_level: nextLevel,
+    level: 1,
+    xp: 0,
+    gold: 50000 * nextLevel, // Bonus starting gold
+    land: 500,
+    population: 5000,
+    food: 25000,
+    mana: 1000,
+    fighters: 0,
+    rangers: 0,
+    clerics: 0,
+    mages: 0,
+    thieves: 0,
+    war_machines: 0,
+    bld_farms: 5,
+    bld_barracks: 2,
+    bld_schools: 1,
+    bld_housing: 100,
+    build_queue: '{}',
+    build_progress: '{}',
+    research_progress: '{}',
+    trade_routes: 0,
+    training_allocation: '{}',
+    smithy_allocation: '{}',
+    mage_tower_allocation: '{}',
+    shrine_allocation: '{}'
+  };
 }
 
 // ── Magic ─────────────────────────────────────────────────────────────────────
@@ -2899,4 +3017,5 @@ module.exports = {
   SPELL_DEFS, SCROLL_REQUIREMENTS, SCRIBE_ITEMS, HOUSING_CAP_BY_RACE,
   TOOL_COL, TOOL_GOLD_COST, BLUEPRINT_REQUIRED, SCAFFOLDING_REQUIRED, SCAFFOLDING_BONUS_BUILDINGS,
   HERO_CLASSES, heroXpForLevel, awardHeroXp, getHeroPower, applyHeroTurnBonuses, recruitHero,
+  raidTradeRoute, canPrestige, processPrestige, getUnitName
 };

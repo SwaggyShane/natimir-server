@@ -625,6 +625,7 @@
     <button class="nav-item" onclick="switchTab('hire',this)"><span class="icon" style="color:#7ed321">🤝</span>Hire</button>
     <button class="nav-item" onclick="switchTab('studies',this)"><span class="icon" style="color:#d0021b">🏛️</span>Studies</button>
     <button class="nav-item" onclick="switchTab('economy',this)"><span class="icon" style="color:#f5a623">💰</span>Economy</button>
+    <button class="nav-item" onclick="switchTab('market',this)"><span class="icon" style="color:#f8e71c">⚖️</span>Market</button>
     <button class="nav-item" onclick="switchTab('build',this)"><span class="icon" style="color:#8b572a">🔨</span>Build</button>
     <button class="nav-item" onclick="switchTab('training',this)"><span class="icon" style="color:#fbbf24">🎯</span>Training</button>
     <button class="nav-item" onclick="switchTab('exploration',this)"><span class="icon" style="color:#417505">🧭</span>Exploration</button>
@@ -824,56 +825,56 @@
           </div>
           <!-- Combat units -->
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;color:var(--text)">Fighters</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-fighters">Fighters</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-fighters">0</span>
             <span style="text-align:center;font-size:11px;font-weight:600" id="s-lv-fighters">—</span>
             <span class="badge badge-red" style="text-align:center;font-size:9px">Combat</span>
           </div>
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;color:var(--text)">Rangers</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-rangers">Rangers</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-rangers">0</span>
             <span style="text-align:center;font-size:11px;font-weight:600" id="s-lv-rangers">—</span>
             <span class="badge badge-blue" style="text-align:center;font-size:9px">Ranged</span>
           </div>
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;color:var(--text)">Clerics</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-clerics">Clerics</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-clerics">0</span>
             <span style="text-align:center;font-size:11px;font-weight:600" id="s-lv-clerics">—</span>
             <span class="badge badge-green" style="text-align:center;font-size:9px">Heal</span>
           </div>
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;color:var(--text)">Mages</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-mages">Mages</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-mages">0</span>
             <span style="text-align:center;font-size:11px;font-weight:600" id="s-lv-mages">—</span>
             <span class="badge badge-amber" style="text-align:center;font-size:9px">Magic</span>
           </div>
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;color:var(--text)">Thieves</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-thieves">Thieves</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-thieves">0</span>
             <span style="text-align:center;font-size:11px;font-weight:600" id="s-lv-thieves">—</span>
             <span class="badge badge-amber" style="text-align:center;font-size:9px">Covert</span>
           </div>
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border2)">
-            <span style="font-size:13px;color:var(--text)">Ninjas</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-ninjas">Ninjas</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-ninjas">0</span>
             <span style="text-align:center;font-size:11px;font-weight:600" id="s-lv-ninjas">—</span>
             <span class="badge badge-amber" style="text-align:center;font-size:9px">Covert</span>
           </div>
           <!-- Support units — no level shown -->
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;color:var(--text)">Engineers</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-engineers">Engineers</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-engineers">0</span>
             <span style="text-align:center;font-size:11px;color:var(--text3)" id="s-lv-engineers">—</span>
             <span class="badge badge-blue" style="text-align:center;font-size:9px">Build</span>
           </div>
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;color:var(--text)">Scribes</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-scribes">Scribes</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-scribes">0</span>
             <span style="text-align:center;font-size:11px;color:var(--text3)" id="s-lv-scribes">—</span>
             <span class="badge badge-blue" style="text-align:center;font-size:9px">Library</span>
           </div>
           <div style="display:grid;grid-template-columns:100px 1fr 52px 52px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:13px;color:var(--text)">Researchers</span>
+            <span style="font-size:13px;color:var(--text)" id="s-label-researchers">Researchers</span>
             <span style="font-size:13px;font-weight:600;text-align:right;color:var(--text)" id="s-researchers">0</span>
             <span style="text-align:center;font-size:11px;color:var(--text3)" id="s-lv-researchers">—</span>
             <span class="badge badge-blue" style="text-align:center;font-size:9px">Study</span>
@@ -1797,6 +1798,24 @@
           </div>
           <button class="btn btn-red" onclick="toast('Vacation mode is currently disabled by admin','warn')">Request vacation mode</button>
         </div>
+      </div>
+
+      <div class="card" style="border: 2px solid var(--purple); margin-top: 20px;">
+        <div class="card-title" style="color:var(--purple);font-size:18px">🌌 Empire Rebirth (Kingdom Prestige)</div>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:16px;line-height:1.6">
+          When your kingdom reaches <strong style="color:var(--gold)">Level 50</strong>, you can choose to transcend. 
+          Your buildings, research, and army will be reset, but you will retain your <strong style="color:var(--purple)">Prestige Level</strong> (currently: <span id="cur-prestige-lvl">0</span>).
+          <br><br>
+          <strong style="color:var(--gold)">Permanent Bonuses:</strong>
+          <ul style="margin: 10px 0; padding-left: 20px;">
+            <li>+10% starting Gold per prestige level</li>
+            <li>+5% effectiveness for ALL units per prestige level</li>
+            <li>Unlock <strong style="color:var(--purple)">Legendary Unit Archetypes</strong> for your race</li>
+            <li>Economic efficiency multiplier for trade routes</li>
+          </ul>
+        </div>
+        <div id="rebirth-req-msg" style="color:var(--red);font-size:12px;margin-bottom:12px">Require Kingdom Level 50 to Rebirth.</div>
+        <button class="btn btn-purple" id="rebirth-btn" onclick="initiateRebirth()" disabled style="padding:12px 24px; font-weight:700">ASCEND EMPIRE</button>
       </div>
     </div>
 
@@ -3999,19 +4018,111 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-async function submitSuggestion() {
-  var inp = document.getElementById('suggestion-input');
-  var msg = (inp.value || '').trim();
-  if (msg.length < 5) return toast('Please enter a longer suggestion!', 'error');
-  
-  var res = await apiCall('POST', '/api/suggestions', { message: msg });
-  if (res.error) {
-    toast(res.error, 'error');
+function getUnitName(unit) {
+  var prestige = state.prestige_level || 0;
+  if (prestige > 0) {
+    var LEGENDARY_NAMES = {
+      human: { fighters: 'Lionheart Champions' },
+      orc:   { fighters: 'Blood-God Berserkers' },
+      high_elf: { rangers: 'Starfall Guardians' },
+      dark_elf: { ninjas: 'Void Assassins' },
+      dwarf: { engineers: 'Runic Siege-Masters' },
+      dire_wolf: { fighters: 'Fenris Alphas' }
+    };
+    if (LEGENDARY_NAMES[state.race] && LEGENDARY_NAMES[state.race][unit]) {
+      return '🌟 ' + LEGENDARY_NAMES[state.race][unit];
+    }
+  }
+  var labels = {
+    fighters:'Fighters', rangers:'Rangers', mages:'Mages', clerics:'Clerics',
+    thieves:'Thieves', ninjas:'Ninjas', scribes:'Scribes', researchers:'Researchers', engineers:'Engineers'
+  };
+  return labels[unit] || unit;
+}
+
+async function loadMarket() {
+  const prices = await apiCall('GET', '/api/kingdom/market/prices');
+  const marketList = document.getElementById('market-list');
+  if (!marketList || !Array.isArray(prices)) return;
+
+  marketList.innerHTML = prices.map(p => {
+    const icon = { food: '🌾', mana: '✨', hammers: '🔨' }[p.id] || '📦';
+    const label = p.id.charAt(0).toUpperCase() + p.id.slice(1);
+    const sellPrice = Math.floor(p.current_price * 0.7);
+
+    return `
+      <div class="card" style="margin:0; border:1px solid var(--border)">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+          <div style="display:flex; align-items:center; gap:8px">
+            <span style="font-size:24px">${icon}</span>
+            <div style="font-size:16px; font-weight:700; color:var(--text)">${label}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px; font-weight:700; color:var(--gold)">${fmt(p.current_price)} <span style="font-size:10px">GC</span></div>
+            <div style="font-size:11px; color:var(--text3)">Current Price</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px">
+          <div style="background:rgba(0,255,0,0.05); padding:8px; border-radius:4px; text-align:center">
+            <div style="font-size:10px; color:var(--green)">BUY</div>
+            <div style="font-size:14px; font-weight:700; color:var(--text)">${fmt(Math.ceil(p.current_price))}</div>
+          </div>
+          <div style="background:rgba(255,165,0,0.05); padding:8px; border-radius:4px; text-align:center">
+            <div style="font-size:10px; color:var(--amber)">SELL (Spread)</div>
+            <div style="font-size:14px; font-weight:700; color:var(--text)">${fmt(sellPrice)}</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:6px">
+          <input type="number" id="mkt-qty-${p.id}" style="width:70px; font-size:12px" placeholder="Qty" min="1">
+          <button class="btn btn-gold" style="flex:1; font-size:11px" onclick="marketTrade('${p.id}', 'buy')">BUY</button>
+          <button class="btn" style="flex:1; font-size:11px" onclick="marketTrade('${p.id}', 'sell')">SELL</button>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:5px">
+            <button class="btn" onclick="setMktMax('${p.id}', 'buy', ${p.current_price})" style="flex:1; font-size:9px; padding:3px">Max Buy</button>
+            <button class="btn" onclick="setMktMax('${p.id}', 'sell', 0)" style="flex:1; font-size:9px; padding:3px">Max Sell</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function marketTrade(resource, op) {
+  const qty = parseInt(document.getElementById('mkt-qty-' + resource).value);
+  if (!qty || qty <= 0) return toast('Enter a valid quantity', 'error');
+
+  const res = await apiCall('POST', '/api/kingdom/market/' + op, { resource, amount: qty });
+  if (res.error) return toast(res.error, 'error');
+
+  toast(`${op.toUpperCase()} successful: ${qty.toLocaleString()} ${resource}`, 'success');
+  loadMarket();
+  syncAll(); // refresh gold/resources
+}
+
+function setMktMax(resource, op, price) {
+  const input = document.getElementById('mkt-qty-' + resource);
+  if (op === 'buy') {
+    const max = Math.floor(state.gold / price);
+    input.value = max;
   } else {
-    toast(res.message, 'success');
-    inp.value = '';
+    input.value = state[resource] || 0;
   }
 }
+
+async function initiateRebirth() {
+  if (state.level < 50) return toast('Level 50 required for Rebirth', 'error');
+  if (!confirm('Are you sure you want to ASCEND? Your kingdom will reset but you will gain permanent prestige and a new title!')) return;
+
+  const res = await apiCall('POST', '/api/kingdom/rebirth');
+  if (res.error) return toast(res.error, 'error');
+
+  toast('🌌 THE WORLD SHAKES. YOU HAVE TRANSCENDED!', 'success');
+  setTimeout(() => window.location.reload(), 3000);
+}
+
+// Ensure loadMarket is hooked into tab switching
+// We'll need to update switchTab to handle special loadings
 
 async function loadGlobalChatHistory() {
   var msgs = await apiCall('GET', '/api/chat/global');
@@ -4253,12 +4364,29 @@ function showNewsBadge(count) {
 }
 
 function toast(msg, type) {
+  // Attack insult logic
+  if (msg && (msg.includes('attacked and') || msg.includes('raided your'))) {
+    playInsult();
+  }
+
   var el = document.getElementById('toast');
   el.textContent = msg;
   el.className = type || '';
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+}
+
+function playInsult() {
+  if (typeof SpeechSynthesisUtterance !== 'undefined' && window.speechSynthesis) {
+    try {
+      var utterance = new SpeechSynthesisUtterance("I fart in your general direction!");
+      utterance.pitch = 1.2;
+      utterance.rate = 1.0;
+      utterance.volume = 0.8;
+      window.speechSynthesis.speak(utterance);
+    } catch(e) { console.error('Audio fail:', e); }
+  }
 }
 
 function openDirectMessage(otherId, otherName) {
@@ -4331,6 +4459,21 @@ function switchTab(id, btn) {
   }
   if (id === 'messages') {
     loadMessages();
+  }
+  if (id === 'market') {
+    loadMarket();
+  }
+  if (id === 'options') {
+     document.getElementById('cur-prestige-lvl').textContent = state.prestige_level || 0;
+     var rbBtn = document.getElementById('rebirth-btn');
+     var rbMsg = document.getElementById('rebirth-req-msg');
+     if (state.level >= 50) {
+        rbBtn.disabled = false;
+        rbMsg.style.display = 'none';
+     } else {
+        rbBtn.disabled = true;
+        rbMsg.style.display = 'block';
+     }
   }
   if (id === 'training') {
     loadTrainingAllocation();
@@ -4634,6 +4777,9 @@ function syncUI() {
   ['fighters','rangers','clerics','mages','thieves','ninjas','researchers','engineers','scribes'].forEach(function(u){
     var el = document.getElementById('s-' + u);
     if (el) el.textContent = fmt(state[u]||0);
+    // Update label for legendary
+    var labelEl = document.getElementById('s-label-' + u);
+    if (labelEl) labelEl.textContent = getUnitName(u);
   });
   var wmEl = document.getElementById('s-war_machines');
   if (wmEl) wmEl.textContent = fmt(state.war_machines || 0);
@@ -4825,6 +4971,7 @@ function updateTurnsDisplay() {
   <button class="bnav-item" onclick="switchTabMobile('studies',this)"><span class="bicon" style="color:#d0021b">🏛️</span>Studies</button>
   <button class="bnav-item" onclick="switchTabMobile('build',this)"><span class="bicon" style="color:#8b572a">🏗️</span>Build</button>
   <button class="bnav-item" onclick="switchTabMobile('economy',this)"><span class="bicon" style="color:#f5a623">💰</span>Economy</button>
+  <button class="bnav-item" onclick="switchTabMobile('market',this)"><span class="bicon" style="color:#f8e71c">⚖️</span>Market</button>
   <button class="bnav-item" onclick="switchTabMobile('training',this)"><span class="bicon" style="color:#fbbf24">🎯</span>Train</button>
   <button class="bnav-item" onclick="switchTabMobile('exploration',this)"><span class="bicon" style="color:#417505">🗺️</span>Explore</button>
   <button class="bnav-item" onclick="switchTabMobile('defense',this)"><span class="bicon" style="color:#9b9b9b">🛡️</span>Defense</button>

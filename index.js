@@ -478,6 +478,22 @@ async function runRegen(db) {
   try { await processAiTurns(db); } catch(e) { console.error('[ai] turn error:', e.message); }
 }
 
+async function updateMarketPrices(db) {
+  try {
+    const prices = await db.all('SELECT * FROM market_prices');
+    for (const p of prices) {
+      const drift = (p.base_price - p.current_price) / p.base_price * 0.1;
+      const change = 1 + (Math.random() * 0.04 - 0.02) + drift;
+      let newPrice = p.current_price * change;
+      newPrice = Math.max(p.base_price * 0.6, Math.min(p.base_price * 1.4, newPrice));
+      await db.run('UPDATE market_prices SET current_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newPrice, p.id]);
+    }
+    console.log('[market] Prices fluctuated');
+  } catch (e) {
+    console.error('[market] Fluctuation failed:', e.message);
+  }
+}
+
 async function start() {
   const db = await initDb();
   console.log('[db] SQLite initialised');
@@ -512,6 +528,10 @@ async function start() {
   // Schedule ongoing regen
   setInterval(() => runRegen(db), REGEN_MS);
   console.log('[turns] Regen timer started — +' + REGEN_AMOUNT + ' every 25 min (max ' + REGEN_MAX + ')');
+
+  // Market pulse
+  setInterval(() => updateMarketPrices(db), 3600000); 
+  updateMarketPrices(db);
 
   // ── Routes ────────────────────────────────────────────────────────────────────
   app.use('/api/auth',    authLimiter,  require('./routes/auth')(db));

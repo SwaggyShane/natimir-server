@@ -815,7 +815,7 @@ module.exports = function(db) {
     let result;
     const VALID_COLS = new Set([
       'gold','mana','land','population','morale','food','fighters','rangers','clerics',
-      'mages','thieves','ninjas','researchers','engineers','war_machines',
+      'mages','thieves','ninjas','researchers','engineers','war_machines','trade_routes','prestige_level',
       'weapons_stockpile','armor_stockpile',
       'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
       'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
@@ -913,6 +913,24 @@ module.exports = function(db) {
         success ? 1 : 0,
       ]);
       return res.json({ ok: true, success, destroyed, ninjasLost, event: sabMsg });
+
+    } else if (op === 'raid_trade_route') {
+      const thievesSent = Math.max(1, parseInt(units) || 0);
+      if (thievesSent > k.thieves) return res.status(400).json({ error: 'Not enough thieves' });
+      result = engine.raidTradeRoute(k, target, thievesSent);
+      if (result.error) return res.status(400).json({ error: result.error });
+      await applyCovert(k, result.attackerUpdates || {});
+      await applyCovert(target, result.defenderUpdates || {});
+      await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
+      if (result.atkEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [k.id, 'covert', result.atkEvent, k.turn]);
+      if (result.defEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [target.id, 'covert', result.defEvent, target.turn]);
+      await db.run(`INSERT INTO war_log (action_type, attacker_id, attacker_name, defender_id, defender_name, outcome, detail, obscured) VALUES (?,?,?,?,?,?,?,?)`, [
+        'raid_trade_route', k.id, k.name, target.id, target.name,
+        result.success ? 'success' : 'failed',
+        result.success ? `Raided ${result.raidedRoutes} routes` : 'Raid repelled',
+        0, // Raiding is public
+      ]);
+      return res.json({ ok: true, success: result.success, looted: result.looted, event: result.atkEvent });
 
     } else {
       return res.status(400).json({ error: 'Unknown covert operation' });
@@ -1193,6 +1211,56 @@ module.exports = function(db) {
     } else {
       res.json({ ok:true, success:false, message:'Thieves failed to steal a location map.' });
     }
+  });
+
+  // ── Market — Buying resources ─────────────────────────────────────────────────
+  router.get('/market/prices', requireAuth, async (_req, res) => {
+    const prices = await db.all('SELECT * FROM market_prices');
+    res.json(prices);
+  });
+
+  router.post('/market/buy', requireAuth, async (req, res) => {
+    const { resource, amount } = req.body;
+    const qty = Math.max(0, parseInt(amount) || 0);
+    if (!qty) return res.status(400).json({ error: 'Quantity required' });
+
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+
+    const priceRow = await db.get('SELECT * FROM market_prices WHERE id = ?', [resource]);
+    if (!priceRow) return res.status(400).json({ error: 'Invalid resource' });
+
+    const cost = Math.ceil(qty * priceRow.current_price);
+    if ((k.gold || 0) < cost) return res.status(400).json({ error: `Need ${cost.toLocaleString()} GC` });
+
+    // Update kingdom and market demand
+    await db.run(`UPDATE kingdoms SET gold = gold - ?, ${resource} = ${resource} + ? WHERE id = ?`, [cost, qty, k.id]);
+    
+    // Impact market: increased demand raises price slightly
+    await db.run('UPDATE market_prices SET current_price = current_price * (1 + ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?', [0.0001 * qty, resource]);
+
+    res.json({ ok: true, bought: qty, cost, new_gold: (k.gold || 0) - cost });
+  });
+
+  router.post('/market/sell', requireAuth, async (req, res) => {
+    const { resource, amount } = req.body;
+    const qty = Math.max(0, parseInt(amount) || 0);
+    if (!qty) return res.status(400).json({ error: 'Quantity required' });
+
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    if ((k[resource] || 0) < qty) return res.status(400).json({ error: 'Not enough resource' });
+
+    const priceRow = await db.get('SELECT * FROM market_prices WHERE id = ?', [resource]);
+    if (!priceRow) return res.status(400).json({ error: 'Invalid resource' });
+
+    const gain = Math.floor(qty * priceRow.current_price * 0.7); // 30% spread
+    await db.run(`UPDATE kingdoms SET gold = gold + ?, ${resource} = ${resource} - ? WHERE id = ?`, [gain, qty, k.id]);
+    
+    // Impact market: increased supply lowers price slightly
+    await db.run('UPDATE market_prices SET current_price = current_price * (1 - ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?', [0.0001 * qty, resource]);
+
+    res.json({ ok: true, sold: qty, gain, new_gold: (k.gold || 0) + gain });
   });
 
   // ── Research focus ────────────────────────────────────────────────────────────
