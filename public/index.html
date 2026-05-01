@@ -1305,14 +1305,14 @@
             </div>
 
           </div>
-          <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:12px;grid-column:1/-1;">
             <div class="card" style="margin:0">
               <div class="card-title">Lore</div>
               <div id="library-lore-list" style="font-size:13px;color:var(--text2);display:flex;flex-direction:column;gap:8px">Loading lore...</div>
             </div>
             <div class="card" style="margin:0">
               <div class="card-title">Achievements</div>
-              <div id="library-achievements" style="margin-bottom:12px;font-size:12px;color:var(--gold);font-weight:bold;"></div>
+              <div id="library-achievements" style="margin-bottom:12px;font-size:12px;display:flex;flex-direction:column;gap:8px"></div>
             </div>
           </div>
         </div>
@@ -7977,6 +7977,25 @@ function closeKingdomProfile() {
   document.getElementById('kingdom-profile-modal').style.display = 'none';
 }
 
+// ── Lore Entry Modal ──────────────────────────────────────────────────────────
+
+function openLoreModal(title, msg) {
+  var modal = document.getElementById('lore-entry-modal');
+  var content = document.getElementById('lore-entry-content');
+  modal.style.display = 'flex';
+  content.innerHTML = '<div style="text-align:center;margin-bottom:20px">'
+    + '<div style="font-size:32px;margin-bottom:8px">📜</div>'
+    + '<h2 style="color:var(--gold);margin:0 0 4px;font-size:20px">' + escHtml(title) + '</h2>'
+    + '</div>'
+    + '<div style="font-size:14px;color:var(--text2);line-height:1.6;padding:12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)">'
+    + escHtml(msg)
+    + '</div>';
+}
+
+function closeLoreModal() {
+  document.getElementById('lore-entry-modal').style.display = 'none';
+}
+
 // ── XP & Level system ─────────────────────────────────────────────────────────
 
 function xpForLevel(level) {
@@ -8312,20 +8331,31 @@ function renderLibraryPanel() {
       if (res && res.lore) {
         var aList = res.achievements || [];
         var achStr = [];
-        if (aList.includes('ach_grandmaster')) achStr.push('🏆 Grandmaster (100+ Mage Towers & Castles) [+1000 Land, +1000 Maps]');
-        if (aList.includes('ach_warlord')) achStr.push('🏆 Warlord (10,000+ Population) [+5000 Land]');
-        if (aList.includes('ach_wealthy')) achStr.push('🏆 Merchant King (10,000,000+ Gold) [+5000 Scaffolding]');
-        if (aList.includes('ach_arcane')) achStr.push('🏆 Arcane Overlord (1,000,000+ Mana) [+10,000 Scrolls]');
-        if (aList.includes('historian')) achStr.push('🏆 Historian (Found all library lore) [+5000 Maps]');
-        if (aList.includes('collector')) achStr.push('🏆 Field Collector (Found all expedition random events) [+5000 Maps]');
+        const achDefs = [
+          { id: 'ach_grandmaster', text: '🏆 Grandmaster (100+ Mage Towers & Castles) [+1000 Land, +1000 Maps]' },
+          { id: 'ach_warlord', text: '🏆 Warlord (10,000+ Population) [+5000 Land]' },
+          { id: 'ach_wealthy', text: '🏆 Merchant King (10,000,000+ Gold) [+5000 Scaffolding]' },
+          { id: 'ach_arcane', text: '🏆 Arcane Overlord (1,000,000+ Mana) [+10,000 Scrolls]' },
+          { id: 'historian', text: '🏆 Historian (Found all library lore) [+5000 Maps]' },
+          { id: 'collector', text: '🏆 Field Collector (Found all expedition random events) [+5000 Maps]' }
+        ];
+
+        achDefs.forEach(function(ach) {
+          if (aList.includes(ach.id)) {
+             achStr.push('<div style="color:var(--gold);font-weight:bold;">' + ach.text + '</div>');
+          } else {
+             achStr.push('<div style="color:var(--text3);font-size:11px;">' + ach.text.replace('🏆', '🔒') + '</div>');
+          }
+        });
+        
         var achEl = el('library-achievements');
-        if (achEl) achEl.innerHTML = achStr.length > 0 ? achStr.join('<br>') : '';
+        if (achEl) achEl.innerHTML = achStr.join('');
 
         var listEl = el('library-lore-list');
         if (listEl) {
           if (res.lore.length === 0) listEl.innerHTML = 'No lore discovered yet. Assign scribes to research.';
           else {
-            listEl.innerHTML = res.lore.map(l => '<div style="background:var(--bg3);padding:8px;border-radius:4px;border:1px solid var(--border)">' + l + '</div>').join('');
+            listEl.innerHTML = res.lore.map(l => '<div onclick="openLoreModal(\'' + l.title.replace(/'/g, "\\'") + '\', \'' + l.msg.replace(/'/g, "\\'") + '\')" style="background:var(--bg3);padding:8px;border-radius:4px;border:1px solid var(--border);cursor:pointer;color:var(--gold);font-weight:600">📜 ' + l.title + '</div>').join('');
           }
         }
       }
@@ -8833,6 +8863,14 @@ document.addEventListener('DOMContentLoaded', function() {
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:28px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;position:relative">
     <button onclick="closeKingdomProfile()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">✕</button>
     <div id="kingdom-profile-content"><div style="text-align:center;color:var(--text3);padding:40px">Loading...</div></div>
+  </div>
+</div>
+
+<!-- LORE ENTRY MODAL -->
+<div id="lore-entry-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeLoreModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:28px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;position:relative">
+    <button onclick="closeLoreModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">✕</button>
+    <div id="lore-entry-content"><div style="text-align:center;color:var(--text3);padding:40px">Loading...</div></div>
   </div>
 </div>
 

@@ -412,38 +412,41 @@ const config = {
 
   EXPEDITION_TURNS: { scout: 10, deep: 25, dungeon: 50 },
 
-  LORE_EVENTS: {
-    high_elf: [
-      "A rare lunar eclipse has bathed the Silverwood in violet light. Your mages report that the Ley Lines are thrumming with ancient resonance.",
-      "The High Council of Elders has shared a vision of the First Age. Immersion in history has bolstered your kingdom's prestige.",
-      "A diplomatic envoy from the Hidden Glade has arrived, bringing scrolls of forgotten poetry and architectural secrets."
-    ],
-    dwarf: [
-      "Deep-scouts have uncovered a vein of 'Living Granite' in the lower depths of the Iron Holds. Ancient runic carvings confirm it was intended for a Great Gate.",
-      "The Brewmaster's Guild has declared a week of Remembrance. Hammers fall silent as the songs of the ancestors fill the great caverns.",
-      "A massive steam-burst in the Geyser-Works revealed a cached archive of steam-engine blueprints from the Era of Industry."
-    ],
-    dire_wolf: [
-      "A great pack-gathering occurred under the Ashfang moon. The elders spoke of the 'First Hunt' and the blood-ties that bind the wilds.",
-      "A blizzard has unearthed an ancient monolith of bone. Your trackers sense a lingering aura of the Great Pack-Mother.",
-      "The winds from the northern peaks carry the scent of old magic. Your rangers find signs of the spirit-kin returning to the Ash-Tainted groves."
-    ],
-    dark_elf: [
-      "The Night-Market in Underspire was unusually quiet tonight. Rumors of the 'Silent Treaty' are circulating among the shadow-cloaks.",
-      "A collapse in the lower tunnels revealed a mural depicting the descent of the First Matriarch. The historical weight is palpable.",
-      "The Poisoner's Guild has decoded a cipher from the Age of Betrayal. Subtle shifts in the power balance follow."
-    ],
-    human: [
-      "A traveling troupe of bards in the Heartlands is performing the 'Saga of the Unbroken Kingdom'. Loyalty to the throne swells.",
-      "A hidden cellar in a crossroads inn yielded a collection of antique trade ledgers dating back to the Merchant-King's reign.",
-      "The harvest festival this year is particularly vibrant. Eldest villagers recount tales of the land's bounty before the Great Sundering."
-    ],
-    orc: [
-      "The war-drums of the Bloodplains beat with a rhythm not heard for generations. The spirit of the Great Khan is said to be stirring.",
-      "A trial by combat near the Scarred Monolith ended in a draw, with both warriors claiming they saw the ghosts of the Old Guard.",
-      "Your scouts found a buried cache of obsidian axe-heads. The craftsmanship predates even the earliest known Orcish settlements."
-    ]
-  },
+  LORE_EVENTS: (function() {
+    const events = {
+      high_elf: [
+        { id: "he_1", title: "Lunar Eclipse", msg: "A rare lunar eclipse has bathed the Silverwood in violet light. Your mages report that the Ley Lines are thrumming with ancient resonance." },
+        { id: "he_2", title: "Vision of the First Age", msg: "The High Council of Elders has shared a vision of the First Age. Immersion in history has bolstered your kingdom's prestige." },
+        { id: "he_3", title: "Envoy from Hidden Glade", msg: "A diplomatic envoy from the Hidden Glade has arrived, bringing scrolls of forgotten poetry and architectural secrets." }
+      ],
+      dwarf: [
+        { id: "dw_1", title: "Living Granite Vein", msg: "Deep-scouts have uncovered a vein of 'Living Granite' in the lower depths of the Iron Holds. Ancient runic carvings confirm it was intended for a Great Gate." },
+        { id: "dw_2", title: "Week of Remembrance", msg: "The Brewmaster's Guild has declared a week of Remembrance. Hammers fall silent as the songs of the ancestors fill the great caverns." },
+        { id: "dw_3", title: "Archive of Steam", msg: "A massive steam-burst in the Geyser-Works revealed a cached archive of steam-engine blueprints from the Era of Industry." }
+      ],
+      dire_wolf: [
+        { id: "di_1", title: "Gathering under Ashfang", msg: "A great pack-gathering occurred under the Ashfang moon. The elders spoke of the 'First Hunt' and the blood-ties that bind the wilds." },
+        { id: "di_2", title: "Monolith of Bone", msg: "A blizzard has unearthed an ancient monolith of bone. Your trackers sense a lingering aura of the Great Pack-Mother." },
+        { id: "di_3", title: "Scent of Old Magic", msg: "The winds from the northern peaks carry the scent of old magic. Your rangers find signs of the spirit-kin returning to the Ash-Tainted groves." }
+      ],
+      dark_elf: [
+        { id: "da_1", title: "Quiet Night-Market", msg: "The Night-Market in Underspire was unusually quiet tonight. Rumors of the 'Silent Treaty' are circulating among the shadow-cloaks." },
+        { id: "da_2", title: "Mural of Matriarch", msg: "A collapse in the lower tunnels revealed a mural depicting the descent of the First Matriarch. The historical weight is palpable." },
+        { id: "da_3", title: "Cipher Decoded", msg: "The Poisoner's Guild has decoded a cipher from the Age of Betrayal. Subtle shifts in the power balance follow." }
+      ],
+      human: [
+        { id: "hu_1", title: "Saga of the Unbroken", msg: "A traveling troupe of bards in the Heartlands is performing the 'Saga of the Unbroken Kingdom'. Loyalty to the throne swells." },
+        { id: "hu_2", title: "Antique Ledgers", msg: "A hidden cellar in a crossroads inn yielded a collection of antique trade ledgers dating back to the Merchant-King's reign." },
+        { id: "hu_3", title: "Harvest Festival", msg: "The harvest festival this year is particularly vibrant. Eldest villagers recount tales of the land's bounty before the Great Sundering." }
+      ],
+      orc: [
+        { id: "or_1", title: "War-drums of Bloodplains", msg: "The war-drums of the Bloodplains beat with a rhythm not heard for generations. The spirit of the Great Khan is said to be stirring." },
+        { id: "or_2", title: "Ghosts of Old Guard", msg: "A trial by combat near the Scarred Monolith ended in a draw, with both warriors claiming they saw the ghosts of the Old Guard." },
+        { id: "or_3", title: "Cache of Axe-heads", msg: "Your scouts found a buried cache of obsidian axe-heads. The craftsmanship predates even the earliest known Orcish settlements." }
+      ]
+    };
+    return events;
+  })(),
 
   CAPS: {
     fighters:  { base: 500,    max: 5000000  },

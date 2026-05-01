@@ -1542,7 +1542,7 @@ module.exports = function(db) {
   });
 
   router.get('/lore-and-achievements', requireAuth, async (req, res) => {
-    const k = await db.get('SELECT collected_lore, achievements FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    const k = await db.get('SELECT race, collected_lore, achievements FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
     
     let collectedLore = [];
@@ -1553,14 +1553,9 @@ module.exports = function(db) {
 
     const config = require('../game/config');
     // Extract lore strings based on IDs
-    let allLore = [];
-    // We pushed objects to LORE_EVENTS[race]. 
-    // Actually, `refreshLore` put all lore into each race's array.
-    if (config.LORE_EVENTS['high_elf']) {
-       allLore = config.LORE_EVENTS['high_elf'];
-    }
+    let allLore = config.LORE_EVENTS[k.race] || [];
     
-    const unLockedLoreTexts = allLore.filter(l => collectedLore.includes(l.id)).map(l => l.msg);
+    const unLockedLoreTexts = allLore.filter(l => collectedLore.includes(l.id)).map(l => ({ id: l.id, title: l.title, msg: l.msg }));
 
     res.json({ lore: unLockedLoreTexts, achievements });
   });
