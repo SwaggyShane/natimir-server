@@ -3498,7 +3498,8 @@ async function loadActiveExpeditions() {
     var rewards = [];
     try { rewards = JSON.parse(exp.rewards || '[]'); } catch(e) {}
 
-    var liveSpan = document.getElementById('exp-log-live-' + exp.type);
+    var liveId = 'exp-log-live-' + exp.id;
+    var liveSpan = document.getElementById(liveId);
     var entry = liveSpan ? liveSpan.closest('.exp-log-entry') : null;
 
     // If no log entry exists (e.g. page was refreshed), create one
@@ -3544,6 +3545,9 @@ async function loadActiveExpeditions() {
           : '<div style="margin-top:4px;font-size:12px;color:var(--text3)">Expedition complete — check news for details.</div>')
         + '</div>';
     }
+    // Remove the live ID since it is now completed
+    if (liveSpan) liveSpan.id = '';
+    
     // Acknowledge so it doesn't show again on next poll
     apiCall('POST', '/api/kingdom/expedition/acknowledge', { id: exp.id });
   });
@@ -3597,11 +3601,6 @@ async function loadActiveExpeditions() {
     if (btn) {
       btn.disabled = !!exp;
       btn.textContent = exp ? 'Underway — ' + exp.turns_left + ' turn' + (exp.turns_left===1?'':'s') + ' left' : (t==='dungeon'?'Launch raid':'Launch expedition');
-    }
-    var liveSpan = document.getElementById('exp-log-live-' + t);
-    if (liveSpan && exp) {
-      liveSpan.textContent = exp.turns_left + ' turn' + (exp.turns_left===1?'':'s') + ' remaining';
-      liveSpan.style.color = '';
     }
   });
 }

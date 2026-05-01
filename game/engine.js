@@ -2419,26 +2419,31 @@ function expeditionRewards(type, rangers, fighters, k) {
 }
 
 async function resolveExpeditions(db, k, engine) {
-  const exps = await db.all('SELECT * FROM expeditions WHERE kingdom_id = ? AND turns_left > 0', [k.id]);
-  console.log(`[expedition] kingdom=${k.id} active: ${exps.map(e => `${e.type}(${e.turns_left}t)`).join(', ') || 'none'}`);
+  // Pick up active ones AND stuck ones (turns_left=0 but no rewards yet)
+  const exps = await db.all('SELECT * FROM expeditions WHERE kingdom_id = ? AND (turns_left > 0 OR (turns_left = 0 AND rewards IS NULL))', [k.id]);
+  console.log(`[expedition] kingdom=${k.id} active/stuck: ${exps.map(e => `${e.type}(${e.turns_left}t)`).join(', ') || 'none'}`);
   const expeditionEvents = [];
   for (const exp of exps) {
-    // Fetch fresh k for racial bonus check
-    const freshKCheck = await db.get('SELECT race, troop_levels FROM kingdoms WHERE id = ?', [k.id]) || k;
-    const direWolfBonus = racialUnitBonus(freshKCheck, 'rangers');
-    const tickDown = direWolfBonus.earlyReturn ? 2 : 1;
-    const newTurns = exp.turns_left - tickDown;
-    console.log(`[expedition] kingdom=${k.id} id=${exp.id} type=${exp.type} turns_left=${exp.turns_left} → ${newTurns}`);
+    if (exp.turns_left > 0) {
+      // Fetch fresh k for racial bonus check
+      const freshKCheck = await db.get('SELECT race, troop_levels FROM kingdoms WHERE id = ?', [k.id]) || k;
+      const direWolfBonus = racialUnitBonus(freshKCheck, 'rangers');
+      const tickDown = direWolfBonus.earlyReturn ? 2 : 1;
+      const newTurns = Math.max(0, exp.turns_left - tickDown);
+      console.log(`[expedition] kingdom=${k.id} id=${exp.id} type=${exp.type} turns_left=${exp.turns_left} → ${newTurns}`);
 
-    if (newTurns > 0) {
-      await db.run('UPDATE expeditions SET turns_left = ? WHERE id = ?', [newTurns, exp.id]);
-      continue;
+      if (newTurns > 0) {
+        await db.run('UPDATE expeditions SET turns_left = ? WHERE id = ?', [newTurns, exp.id]);
+        continue;
+      }
+      // newTurns <= 0 means this expedition completes now
+      console.log(`[expedition] COMPLETING kingdom=${k.id} id=${exp.id} type=${exp.type}`);
+
+      // Mark expedition complete FIRST so it can never get stuck at turns_left=1
+      await db.run('UPDATE expeditions SET turns_left = 0 WHERE id = ?', [exp.id]);
+    } else {
+      console.log(`[expedition] RETRYING completion for kingdom=${k.id} id=${exp.id} type=${exp.type}`);
     }
-    // newTurns <= 0 means this expedition completes now
-    console.log(`[expedition] COMPLETING kingdom=${k.id} id=${exp.id} type=${exp.type}`);
-
-    // Mark expedition complete FIRST so it can never get stuck at turns_left=1
-    await db.run('UPDATE expeditions SET turns_left = 0 WHERE id = ?', [exp.id]);
 
     try {
       // Fetch fresh kingdom state to avoid stale merged values
