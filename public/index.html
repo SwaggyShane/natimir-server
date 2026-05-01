@@ -103,17 +103,18 @@
     overflow-x: hidden; 
     position: relative; 
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
   }
   #kd-top {
     position: sticky;
     top: 64px;
     z-index: 100;
     background: var(--bg);
-    padding-bottom: 8px;
+    padding-top: 12px;
+    padding-bottom: 12px;
     margin-bottom: 12px;
     border-bottom: 1px solid var(--border);
-    margin-top: -12px;
-    padding-top: 12px;
     margin-left: -10px;
     margin-right: -10px;
     padding-left: 10px;
@@ -123,20 +124,25 @@
   @media (min-width: 700px) {
     #kd-top {
       top: 56px;
-      margin-top: -24px;
-      padding-top: 24px;
       margin-left: -24px;
       margin-right: -24px;
       padding-left: 24px;
       padding-right: 24px;
+      padding-top: 12px;
+      padding-bottom: 12px;
     }
   }
-  body.panel-news #kd-top { display: none; }
-  body.panel-rankings #kd-top { display: none; }
-  body.panel-exploration #kd-top { display: none; }
-  body.panel-globalchat #kd-top { display: none; }
-  body.panel-alliances #kd-top { display: none; }
+  body.panel-news #kd-top,
+  body.panel-rankings #kd-top,
+  body.panel-exploration #kd-top,
+  body.panel-globalchat #kd-top,
+  body.panel-alliances #kd-top,
+  body.panel-stats #kd-top { display: none; }
   body.panel-defense #kd-top { display: none !important; }
+
+  /* Ensure content doesn't jump when top header is hidden or shown */
+  .panel { width: 100%; flex: 1; display: none; }
+  .panel.active { display: block; }
 
   body.panel-warfare .main,
   body.panel-news .main,
@@ -146,7 +152,7 @@
   body.panel-training .main,
   body.panel-alliances .main,
   body.panel-defense .main,
-  body.panel-hire .main { padding-top: 6px; }
+  body.panel-hire .main { padding-top: 12px; }
 
 
 
@@ -502,10 +508,24 @@
   @media (min-width: 900px) and (max-width: 1099px) { .r-grid-sidebar { grid-template-columns: minmax(0, 1fr) 260px; } }
 
   /* ── Hire rows responsiveness ── */
-  .hire-row { display: grid; grid-template-columns: 1fr 60px 70px auto; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: center; justify-items: end; }
-  @media (max-width: 480px) {
-    .hire-row { grid-template-columns: 1fr 1fr; gap: 12px; justify-items: stretch; }
-    .hire-row > div:nth-child(2) { text-align: left; } 
+  .hire-row { 
+    display: grid; 
+    grid-template-columns: 1fr 100px 120px 240px; 
+    gap: 16px; 
+    padding: 12px 0; 
+    border-bottom: 1px solid var(--border); 
+    align-items: center; 
+  }
+  .hire-row > div:first-child, .hire-row > span:first-child { justify-self: start; text-align: left; }
+  .hire-row > *:not(:first-child) { justify-self: end; text-align: right; }
+
+  @media (max-width: 900px) {
+    .hire-row { grid-template-columns: 1fr 80px 100px minmax(180px, auto); gap: 12px; }
+  }
+
+  @media (max-width: 768px) {
+    .hire-row { grid-template-columns: 1fr 1fr; gap: 8px; justify-items: stretch; }
+    .hire-row > div:nth-child(2) { text-align: left; justify-self: start; } 
     .hire-row > div:nth-child(3) { text-align: right; justify-self: end; }
     .hire-row > div:first-child { grid-column: 1 / -1; }
     .hire-row .hcount { text-align: left; }
@@ -943,20 +963,36 @@
     <!-- HIRE -->
     <div id="hire" class="panel">
       <div class="card">
-        <div class="card-title">Hire units · Population: <span id="hire-pop">50,000</span></div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.8">
-          Barracks: <span id="hire-barracks-cap" style="color:var(--gold)">0</span> cap (<span id="hire-barracks-used" style="color:var(--text2)">0</span> used) ·
-          Schools: <span id="hire-school-cap" style="color:var(--gold)">0</span> cap (<span id="hire-school-used" style="color:var(--text2)">0</span> used) ·
-          Smithies: <span id="hire-smithy-cap" style="color:var(--gold)">0</span> cap (<span id="hire-smithy-used" style="color:var(--text2)">0</span> used) ·
-          Library: <span id="hire-library-cap" style="color:var(--gold)">0</span> cap (<span id="hire-library-used" style="color:var(--text2)">0</span> used)
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center">
+          <span>Hire units</span>
+          <span style="color:var(--text2); text-transform:none">Population: <strong id="hire-pop" style="color:var(--gold)">0</strong></span>
+        </div>
+
+        <div id="hire-caps-container" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-bottom:20px; background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; border:1px solid var(--border)">
+          <div style="padding:4px 8px">
+            <div style="font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:1px">Barracks</div>
+            <div style="font-size:13px; font-weight:700"><span id="hire-barracks-used">0</span> <span style="color:var(--text3);font-weight:400">/</span> <span id="hire-barracks-cap" style="color:var(--gold)">0</span></div>
+          </div>
+          <div style="padding:4px 8px">
+            <div style="font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:1px">Schools</div>
+            <div style="font-size:13px; font-weight:700"><span id="hire-school-used">0</span> <span style="color:var(--text3);font-weight:400">/</span> <span id="hire-school-cap" style="color:var(--gold)">0</span></div>
+          </div>
+          <div style="padding:4px 8px">
+            <div style="font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:1px">Smithies</div>
+            <div style="font-size:13px; font-weight:700"><span id="hire-smithy-used">0</span> <span style="color:var(--text3);font-weight:400">/</span> <span id="hire-smithy-cap" style="color:var(--gold)">0</span></div>
+          </div>
+          <div style="padding:4px 8px">
+            <div style="font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:1px">Library</div>
+            <div style="font-size:13px; font-weight:700"><span id="hire-library-used">0</span> <span style="color:var(--text3);font-weight:400">/</span> <span id="hire-library-cap" style="color:var(--gold)">0</span></div>
+          </div>
         </div>
 
         <!-- Header row -->
-        <div class="hire-row" style="border-bottom:2px solid var(--border2); font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; padding-bottom:8px">
-          <span style="text-align:left">Unit</span>
-          <span style="text-align:right">Count</span>
-          <span style="text-align:right">Price</span>
-          <span style="text-align:right">Action</span>
+        <div class="hire-row" style="border-bottom:2px solid var(--border2); font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; padding-bottom:8px; margin-bottom:8px">
+          <span>Unit</span>
+          <span>In service</span>
+          <span>Price</span>
+          <span>Action</span>
         </div>
 
         <!-- Unit rows -->
