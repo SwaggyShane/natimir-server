@@ -123,7 +123,7 @@
   }
   @media (min-width: 700px) {
     #kd-top {
-      top: 56px;
+      top: 64px;
       margin-left: -24px;
       margin-right: -24px;
       padding-left: 24px;
@@ -510,21 +510,22 @@
   /* ── Hire rows responsiveness ── */
   .hire-row { 
     display: grid; 
-    grid-template-columns: 1fr 100px 120px 240px; 
+    grid-template-columns: 1fr 120px 120px 320px; 
     gap: 16px; 
     padding: 12px 0; 
     border-bottom: 1px solid var(--border); 
     align-items: center; 
   }
-  .hire-row > div:first-child, .hire-row > span:first-child { justify-self: start; text-align: left; }
-  .hire-row > *:not(:first-child) { justify-self: end; text-align: right; }
+  .hire-row > div, .hire-row > span { justify-self: start; text-align: left; }
+  .hire-row > .hbtns, .hire-row > div:last-child, .hire-row > span:last-child { justify-self: end; text-align: right; }
 
-  @media (max-width: 900px) {
-    .hire-row { grid-template-columns: 1fr 80px 100px minmax(180px, auto); gap: 12px; }
+  @media (max-width: 1100px) {
+    .hire-row { grid-template-columns: 1fr 100px 100px 240px; gap: 12px; }
   }
 
   @media (max-width: 768px) {
     .hire-row { grid-template-columns: 1fr 1fr; gap: 8px; justify-items: stretch; }
+    .hire-row > div { justify-self: stretch; }
     .hire-row > div:nth-child(2) { text-align: left; justify-self: start; } 
     .hire-row > div:nth-child(3) { text-align: right; justify-self: end; }
     .hire-row > div:first-child { grid-column: 1 / -1; }
