@@ -201,8 +201,8 @@ module.exports = function(io, db) {
           const newColor = args[0];
           if (!newColor) return ack?.({ error: 'Usage: /color <hex_code or css_color>' });
           // Basic validation (hex or simple names)
-          if (!newColor.match(/^#[0-9a-fA-F]{3,6}$/) && !newColor.match(/^[a-z]+$/i)) {
-            return ack?.({ error: 'Invalid color format. Use #hex or name.' });
+          if (!newColor.match(/^#[0-9a-fA-F]{3,6}$/)) {
+            return ack?.({ error: 'Invalid color format. Use a hex code like #ff6600.' });
           }
           await db.run('UPDATE players SET chat_color = ? WHERE id = ?', [newColor, playerId]);
           const info = onlinePlayers.get(playerId);
