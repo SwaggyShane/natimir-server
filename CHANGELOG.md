@@ -179,8 +179,6 @@ Training fields award passive XP with equipment bonuses.
 ---
 
 ### Social & Communication
-- **BOUNTY BOARD** — Place gold bounties on rival kingdoms from the Bounties panel or a kingdom's profile. Rewards are claimed automatically upon a successful attack.
-- **DIRECT MESSAGING** — Private 1-on-1 conversations between kingdoms. Accessible via the Messages panel or by clicking the ✉️ icon in the rankings.
 - Global chat with Socket.io — real-time, username-based (not kingdom name)
 - Online users sidebar with race icons and MOD badges
 - IRC commands for all users: `/me <action>`, `/msg <username> <text>`
@@ -210,7 +208,10 @@ Training fields award passive XP with equipment bonuses.
 ### Wishlist — Future Additions
 
 **Gameplay**
+- Seasons & weather — affects food production and troop movement
+- Trade system — player-to-player commodity exchange
 - Spell casting target history — remember last target per spell
+- Bounty board — place gold bounties on other kingdoms
 - Diplomacy — formal non-aggression pacts and tribute
 - Prestige / reset system — kingdoms that reach max level can prestige for a permanent bonus
 - Named hero units — single high-level units with unique abilities
@@ -225,6 +226,7 @@ Training fields award passive XP with equipment bonuses.
 - More races — Gnome (inventor), Vampire (undead mage), Troll (regenerating fighter)
 
 **Polish**
+- Custom kingdom banner/sigil generator
 - iOS layout testing and fixes
 - Sound effects — combat, level up, expedition return
 - Dark/light theme toggle
