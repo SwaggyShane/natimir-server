@@ -40,7 +40,8 @@ const authLimiter   = makeRateLimiter(10, 60 * 1000);      // 10 auth attempts/m
 const turnLimiter   = makeRateLimiter(300, 60 * 1000);     // 300 turn/action requests/min (5/sec)
 const generalLimiter= makeRateLimiter(500, 60 * 1000);     // 500 general requests/min
 
-app.use(express.json());
+app.set('trust proxy', 1); // trust first proxy so req.ip reflects the real client IP
+app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
 app.use(generalLimiter);
 app.use(express.static(path.join(__dirname, 'public')));
@@ -652,6 +653,7 @@ async function start() {
     try {
       const { recipient_id, content } = req.body;
       if (!recipient_id || !content) return res.status(400).json({ error: 'Missing recipient or content' });
+      if (typeof content !== 'string' || content.length > 2000) return res.status(400).json({ error: 'Message too long (max 2000 chars)' });
       const myId = req.player.playerId;
       if (myId === recipient_id) return res.status(400).json({ error: 'Cannot message yourself' });
 
@@ -701,14 +703,16 @@ async function start() {
   app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: Math.floor(process.uptime()) }));
 
   // Admin: seed or reset AI kingdoms
-  app.post('/api/admin/seed-ai', async (req, res) => {
+  app.post('/api/admin/seed-ai', requireAuth, async (req, res) => {
+    if (!req.player.isAdmin) return res.status(403).json({ error: 'Admin access required' });
     try {
       const seeded = await seedAiKingdoms(db);
       res.json({ ok: true, seeded, message: seeded > 0 ? `Seeded ${seeded} AI kingdoms` : 'All AI kingdoms already exist' });
     } catch(e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/admin/reset-ai', async (req, res) => {
+  app.post('/api/admin/reset-ai', requireAuth, async (req, res) => {
+    if (!req.player.isAdmin) return res.status(403).json({ error: 'Admin access required' });
     try {
       const aiPlayers = await db.all('SELECT id FROM players WHERE is_ai = 1');
       for (const p of aiPlayers) {
