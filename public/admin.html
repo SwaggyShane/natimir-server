@@ -109,6 +109,7 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <button class="admin-tab" onclick="showAdminTab('kingdoms',this)">🏰 Kingdoms</button>
     <button class="admin-tab" onclick="showAdminTab('events',this)">📅 Events</button>
     <button class="admin-tab" onclick="showAdminTab('config',this)">🛠️ Configs</button>
+    <button class="admin-tab" onclick="showAdminTab('lore',this)">📖 Lore & Trips</button>
     <button class="admin-tab" onclick="showAdminTab('changelog',this)">📋 Changelog</button>
   </div>
 
@@ -329,6 +330,31 @@ textarea{width:100%;resize:vertical;min-height:60px}
   </div>
   <div id="config-editor" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
     <div style="padding:24px;color:var(--text3);grid-column:1/-1;">Loading...</div>
+  </div>
+</div>
+
+<!-- TAB: Lore & Trips -->
+<div id="atab-lore" class="atab" style="display:none">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+    
+    <!-- Lore Entries -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0;color:var(--gold)">📜 Lore Entries</h2>
+        <button class="btn btn-gold" onclick="addLoreEntry()" style="padding:4px 8px;font-size:12px">+ Add Lore</button>
+      </div>
+      <div id="lore-list" style="display:flex;flex-direction:column;gap:10px">Loading lore...</div>
+    </div>
+
+    <!-- Random Expedition Events -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0;color:var(--gold)">🏕️ Random Expedition Events</h2>
+        <button class="btn btn-gold" onclick="addRandomEvent()" style="padding:4px 8px;font-size:12px">+ Add Event</button>
+      </div>
+      <div id="random-events-list" style="display:flex;flex-direction:column;gap:10px">Loading events...</div>
+    </div>
+
   </div>
 </div>
 
@@ -971,6 +997,60 @@ function showAdminTab(id, btn) {
   if (id === 'events') { loadEventLog(); loadEventList(); }
   if (id === 'changelog') { loadSuggestions(); }
   if (id === 'config') { loadGameConfigs(); }
+  if (id === 'lore') { loadLoreList(); loadRandomEventsList(); }
+}
+
+async function loadLoreList() {
+  const result = await api('GET', '/api/admin/lore');
+  if (result.error) return;
+  const list = document.getElementById('lore-list');
+  list.innerHTML = result.list.map(l => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:8px">
+      <div style="font-size:12px;color:var(--text);margin-bottom:6px">${l.content}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-red" onclick="deleteLore(${l.id})" style="padding:2px 6px;font-size:11px">Delete</button>
+      </div>
+    </div>
+  `).join('');
+  if (!result.list.length) list.innerHTML = '<div style="color:var(--text3);font-size:12px">No lore found.</div>';
+}
+
+async function loadRandomEventsList() {
+  const result = await api('GET', '/api/admin/random_events');
+  if (result.error) return;
+  const list = document.getElementById('random-events-list');
+  list.innerHTML = result.list.map(l => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:8px">
+      <div style="font-size:12px;color:var(--text);margin-bottom:6px">${l.content}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-red" onclick="deleteRandomEvent(${l.id})" style="padding:2px 6px;font-size:11px">Delete</button>
+      </div>
+    </div>
+  `).join('');
+  if (!result.list.length) list.innerHTML = '<div style="color:var(--text3);font-size:12px">No random events found.</div>';
+}
+
+async function addLoreEntry() {
+  const c = prompt('Enter new lore content:');
+  if (!c) return;
+  await api('POST', '/api/admin/lore', { content: c });
+  loadLoreList();
+}
+async function deleteLore(id) {
+  if (!confirm('Delete this lore entry?')) return;
+  await api('DELETE', '/api/admin/lore/'+id);
+  loadLoreList();
+}
+async function addRandomEvent() {
+  const c = prompt('Enter new random expedition event text:');
+  if (!c) return;
+  await api('POST', '/api/admin/random_events', { content: c });
+  loadRandomEventsList();
+}
+async function deleteRandomEvent(id) {
+  if (!confirm('Delete this event?')) return;
+  await api('DELETE', '/api/admin/random_events/'+id);
+  loadRandomEventsList();
 }
 
 async function loadSuggestions() {

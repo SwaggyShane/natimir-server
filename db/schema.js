@@ -237,6 +237,9 @@ async function initDb() {
   if (!cols.includes('weapons_stockpile'))   await addColumn('kingdoms', 'weapons_stockpile',   'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('armor_stockpile'))     await addColumn('kingdoms', 'armor_stockpile',     'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('description'))         await addColumn('kingdoms', 'description',         'TEXT');
+  if (!cols.includes('collected_lore'))      await addColumn('kingdoms', 'collected_lore',      'TEXT NOT NULL DEFAULT "[]"');
+  if (!cols.includes('collected_events'))    await addColumn('kingdoms', 'collected_events',    'TEXT NOT NULL DEFAULT "[]"');
+  if (!cols.includes('achievements'))        await addColumn('kingdoms', 'achievements',        'TEXT NOT NULL DEFAULT "[]"');
 
   await _db.run(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -266,6 +269,22 @@ async function initDb() {
 
   await _db.run(`CREATE INDEX IF NOT EXISTS idx_bounties_target ON bounties(target_id, status)`);
   await _db.run(`CREATE INDEX IF NOT EXISTS idx_bounties_active ON bounties(status, amount DESC)`);
+
+  await _db.run(`
+    CREATE TABLE IF NOT EXISTS lore_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
+
+  await _db.run(`
+    CREATE TABLE IF NOT EXISTS random_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
 
   await _db.run(`
     CREATE TABLE IF NOT EXISTS regions (
@@ -562,6 +581,58 @@ async function initDb() {
   for (const [key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive] of defaultEvents) {
     await _db.run(`INSERT OR IGNORE INTO events (key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive) VALUES (?,?,?,?,?,?,?,?,?)`,
       [key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive]);
+  }
+
+  const hasEvents = await _db.get("SELECT 1 FROM random_events LIMIT 1");
+  if (!hasEvents) {
+    const defaultRandomEvents = [
+      'a suspiciously damp sock',
+      'a map to a location that no longer exists',
+      'a very confident fortune cookie with no fortune inside',
+      'a half-eaten ration bar of unknown vintage',
+      'a decorative rock (it does nothing)',
+      'a pamphlet titled "10 Reasons Orcs Are Actually Quite Misunderstood"',
+      'a jar of mysterious grey paste (do not eat)',
+      'a slightly bent sword that the previous owner called "Destiny"',
+      'a tiny flag from a kingdom that fell 300 years ago',
+      'a love letter addressed to someone named Grimbold',
+      'a collection of 47 different types of dirt',
+      'a boot (just the one)',
+      'a certificate of participation from the Third Annual Swamp Festival',
+      'a wheel of cheese that has achieved sentience (probably)',
+      'a bag of magic beans that are, on closer inspection, just beans',
+      'a very thorough guide to knitting (no one in your kingdom knows how to read)',
+      'a suspicious smell that follows rangers home',
+      'a crystal ball showing only static',
+      'an extremely detailed painting of a cloud',
+      'a dwarf\'s shopping list (mostly cheese)',
+      'a torch that only works in daylight',
+      'a book called "How To Stop Being Poor" — all pages blank',
+      'a rusty key to an unknown lock',
+      'a proclamation declaring your kingdom "pretty good, probably"',
+      'a coupon for 10% off at an inn that burned down decades ago',
+    ];
+    for (const e of defaultRandomEvents) {
+      await _db.run("INSERT INTO random_events (content) VALUES (?)", [e]);
+    }
+  }
+
+  const hasLore = await _db.get("SELECT 1 FROM lore_entries LIMIT 1");
+  if (!hasLore) {
+    const defaultLore = [
+      "A rare lunar eclipse has bathed the Silverwood in violet light. Your mages report that the Ley Lines are thrumming with ancient resonance.",
+      "The High Council of Elders has shared a vision of the First Age. Immersion in history has bolstered your kingdom's prestige.",
+      "A diplomatic envoy from the Hidden Glade has arrived, bringing scrolls of forgotten poetry and architectural secrets.",
+      "Deep-scouts have uncovered a vein of 'Living Granite' in the lower depths of the Iron Holds. Ancient runic carvings confirm it was intended for a Great Gate.",
+      "The Brewmaster's Guild has declared a week of Remembrance. Hammers fall silent as the songs of the ancestors fill the great caverns.",
+      "A massive steam-burst in the Geyser-Works revealed a cached archive of steam-engine blueprints from the Era of Industry.",
+      "A great pack-gathering occurred under the Ashfang moon. The elders spoke of the 'First Hunt' and the blood-ties that bind the wilds.",
+      "A blizzard has unearthed an ancient monolith of bone. Your trackers sense a lingering aura of the Great Pack-Mother.",
+      "The winds from the northern peaks carry the scent of old magic. Your rangers find signs of the spirit-kin returning to the Ash-Tainted groves."
+    ];
+    for (const e of defaultLore) {
+      await _db.run("INSERT INTO lore_entries (content) VALUES (?)", [e]);
+    }
   }
 
   // Seed default server_state row for regen tracking

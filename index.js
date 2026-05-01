@@ -5,9 +5,26 @@ const { Server }   = require('socket.io');
 const cookieParser = require('cookie-parser');
 const path         = require('path');
 
-const { initDb }      = require('./db/schema');
+const { initDb, getDb } = require('./db/schema');
 const setupSockets    = require('./game/sockets');
 const { requireAuth } = require('./routes/middleware');
+const config = require('./game/config');
+
+async function refreshLore() {
+  try {
+    const db = getDb();
+    const loreRows = await db.all("SELECT id, content FROM lore_entries");
+    // Ensure all race keys exist natively, or just store all lore entries in a flat array for now?
+    // Wait, let's just make it a single array for all lore since the admin panel isn't specifying race
+    const defaultRaces = ['high_elf', 'dwarf', 'dire_wolf', 'human', 'dark_elf', 'orc'];
+    const allLore = loreRows.map(r => ({id: r.id, msg: r.content}));
+    defaultRaces.forEach(r => config.LORE_EVENTS[r] = allLore);
+
+    const junkRows = await db.all("SELECT id, content FROM random_events");
+    config.JUNK_PRIZES.length = 0;
+    junkRows.forEach(r => config.JUNK_PRIZES.push(r));
+  } catch(e) {}
+}
 
 const app    = express();
 const server = http.createServer(app);
@@ -497,6 +514,9 @@ async function updateMarketPrices(db) {
 async function start() {
   const db = await initDb();
   console.log('[db] SQLite initialised');
+  
+  await refreshLore();
+  console.log('[lore] Lore and Random events refreshed');
 
   // ── Crash-safe regen on boot ─────────────────────────────────────────────────
   // Calculate how many 15-min windows passed since last regen and apply them now
@@ -837,3 +857,5 @@ start().catch(err => {
   console.error('Failed to start:', err);
   process.exit(1);
 });
+
+module.exports = { refreshLore };

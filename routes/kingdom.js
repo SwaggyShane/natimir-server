@@ -53,6 +53,9 @@ module.exports = function(db) {
     k.market_upgrades        = safeJsonParse(k.market_upgrades, {}, 'me:market_upgrades');
     k.tavern_upgrades        = safeJsonParse(k.tavern_upgrades, {}, 'me:tavern_upgrades');
     k.mercenaries            = safeJsonParse(k.mercenaries, [], 'me:mercenaries');
+    k.collected_lore         = safeJsonParse(k.collected_lore, [], 'me:collected_lore');
+    k.collected_events       = safeJsonParse(k.collected_events, [], 'me:collected_events');
+    k.achievements           = safeJsonParse(k.achievements, [], 'me:achievements');
     res.json(k);
   });
 
@@ -1538,6 +1541,30 @@ module.exports = function(db) {
     res.json({ ok: true, prestige_level: result.updates.prestige_level });
   });
 
+  router.get('/lore-and-achievements', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT collected_lore, achievements FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    
+    let collectedLore = [];
+    try { collectedLore = JSON.parse(k.collected_lore || '[]'); } catch(e){}
+    
+    let achievements = [];
+    try { achievements = JSON.parse(k.achievements || '[]'); } catch(e){}
+
+    const config = require('../game/config');
+    // Extract lore strings based on IDs
+    let allLore = [];
+    // We pushed objects to LORE_EVENTS[race]. 
+    // Actually, `refreshLore` put all lore into each race's array.
+    if (config.LORE_EVENTS['high_elf']) {
+       allLore = config.LORE_EVENTS['high_elf'];
+    }
+    
+    const unLockedLoreTexts = allLore.filter(l => collectedLore.includes(l.id)).map(l => l.msg);
+
+    res.json({ lore: unLockedLoreTexts, achievements });
+  });
+
   return router;
 };
 
@@ -1572,6 +1599,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'research_allocation','training_allocation',
     'library_allocation','library_progress','tower_progress',
     'mage_tower_allocation','shrine_allocation',
+    'collected_lore','last_lore_id','collected_events','last_event_id','achievements',
     'updated_at',
   ]);
   const safe = Object.fromEntries(

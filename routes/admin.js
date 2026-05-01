@@ -415,5 +415,45 @@ module.exports = function(db, io) {
     res.json({ ok: true });
   });
 
+  router.get('/lore', async (_req, res) => {
+    const list = await db.all("SELECT * FROM lore_entries ORDER BY id ASC");
+    res.json({ ok:true, list });
+  });
+  router.post('/lore', async (req, res) => {
+    await db.run("INSERT INTO lore_entries (content) VALUES (?)", [req.body.content||'']);
+    await require('../../index').refreshLore();
+    res.json({ ok:true });
+  });
+  router.put('/lore/:id', async (req, res) => {
+    await db.run("UPDATE lore_entries SET content=? WHERE id=?", [req.body.content||'', req.params.id]);
+    await require('../../index').refreshLore();
+    res.json({ ok:true });
+  });
+  router.delete('/lore/:id', async (req, res) => {
+    await db.run("DELETE FROM lore_entries WHERE id=?", [req.params.id]);
+    await require('../../index').refreshLore();
+    res.json({ ok:true });
+  });
+
+  router.get('/random_events', async (_req, res) => {
+    const list = await db.all("SELECT * FROM random_events ORDER BY id ASC");
+    res.json({ ok:true, list });
+  });
+  router.post('/random_events', async (req, res) => {
+    await db.run("INSERT INTO random_events (content) VALUES (?)", [req.body.content||'']);
+    await require('../../index').refreshLore();
+    res.json({ ok:true });
+  });
+  router.put('/random_events/:id', async (req, res) => {
+    await db.run("UPDATE random_events SET content=? WHERE id=?", [req.body.content||'', req.params.id]);
+    await require('../../index').refreshLore();
+    res.json({ ok:true });
+  });
+  router.delete('/random_events/:id', async (req, res) => {
+    await db.run("DELETE FROM random_events WHERE id=?", [req.params.id]);
+    await require('../../index').refreshLore();
+    res.json({ ok:true });
+  });
+
   return router;
 };

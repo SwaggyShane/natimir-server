@@ -64,6 +64,7 @@
     max-width: 100%;
     margin: 0;
     padding: 0;
+    padding-top: 64px; /* Ensure space for fixed topbar */
     overflow-x: hidden;
   }
   .topbar {
@@ -77,15 +78,15 @@
     border-bottom: 1px solid var(--border);
     gap: 4px;
     flex-shrink: 0;
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 1000;
+    left: 0;
+    right: 0;
+    z-index: 2000;
     width: 100%;
     box-sizing: border-box;
   }
   @media (max-width: 768px) {
-    .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 2000; }
-    .app { padding-top: 64px; }
     #kd-top { 
       background: var(--bg);
       border-bottom: 2px solid var(--border2);
@@ -516,7 +517,9 @@
     border-bottom: 1px solid var(--border); 
     align-items: center; 
   }
-  .hire-row > div, .hire-row > span { justify-self: start; text-align: left; }
+  .hire-row > div:nth-child(1), .hire-row > span:nth-child(1) { justify-self: stretch; text-align: left; }
+  .hire-row > div:nth-child(2), .hire-row > span:nth-child(2) { justify-self: start; text-align: left; }
+  .hire-row > div:nth-child(3), .hire-row > span:nth-child(3) { justify-self: start; text-align: left; }
   .hire-row > .hbtns, .hire-row > div:last-child, .hire-row > span:last-child { justify-self: end; text-align: right; }
 
   @media (max-width: 1100px) {
@@ -524,6 +527,7 @@
   }
 
   @media (max-width: 768px) {
+    .hire-header { display: none !important; }
     .hire-row { grid-template-columns: 1fr 1fr; gap: 8px; justify-items: stretch; }
     .hire-row > div { justify-self: stretch; }
     .hire-row > div:nth-child(2) { text-align: left; justify-self: start; } 
@@ -989,7 +993,7 @@
         </div>
 
         <!-- Header row -->
-        <div class="hire-row" style="border-bottom:2px solid var(--border2); font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; padding-bottom:8px; margin-bottom:8px">
+        <div class="hire-row hire-header" style="border-bottom:2px solid var(--border2); font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; padding-bottom:8px; margin-bottom:8px">
           <span>Unit</span>
           <span>In service</span>
           <span>Price</span>
@@ -1298,6 +1302,12 @@
             <div class="card" style="margin:0">
               <div class="card-title">Library upgrades</div>
               <div id="library-upgrade-list"></div>
+            </div>
+
+            <div class="card" style="margin:0">
+              <div class="card-title">Lore & Achievements</div>
+              <div id="library-achievements" style="margin-bottom:12px;font-size:12px;color:var(--gold);font-weight:bold;"></div>
+              <div id="library-lore-list" style="font-size:13px;color:var(--text2);display:flex;flex-direction:column;gap:8px">Loading lore...</div>
             </div>
           </div>
         </div>
@@ -5761,6 +5771,7 @@ async function clearNews() {
   if (result.error) return toast(result.error, 'error');
   var list = document.getElementById('news-list');
   if (list) list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">News cleared.</div>';
+  newsCache = [];
   toast('News cleared', 'success');
 }
 
@@ -6403,7 +6414,7 @@ function updateBuildDisplay() {
   var BLUEPRINT_REQUIRED  = new Set(['vaults','smithies','markets','mage_towers','training','castles','libraries']);
   var SCAFFOLDING_REQUIRED = new Set(['mage_towers','training','castles']);
   var bp = state.blueprints_stored || 0;
-  var sc = state.tools_scaffolding || 0;
+  var sc = state.scaffolding_stored || 0;
 
   BUILD_FIELDS.forEach(function(f) {
     var noticeId = 'tool-notice-' + f.key;
@@ -6728,7 +6739,7 @@ async function forgeScaffolding() {
   var smithies = state.bld_smithies || 0;
   if (smithies === 0) return toast('You need at least 1 smithy', 'error');
   var cap = smithies * 10;
-  if ((state.tools_scaffolding || 0) >= cap) return toast('Scaffolding storage full (' + cap + '/' + cap + ')', 'error');
+  if ((state.scaffolding_stored || 0) >= cap) return toast('Scaffolding storage full (' + cap + '/' + cap + ')', 'error');
   if ((state.gold || 0) < 2500) return toast('Need 2,500 gold to make scaffolding', 'error');
   var result = await apiCall('POST', '/api/kingdom/forge-tools', { toolType: 'scaffolding', quantity: 1 });
   if (result.error) return toast(result.error, 'error');
@@ -8288,6 +8299,28 @@ async function clearTowerItem(id) {
 function renderLibraryPanel() {
   if (!studiesData) return;
   var el = function(id){ return document.getElementById(id); };
+
+  // Fetch lore asynchronously
+  if (el('stab-slibrary').style.display !== 'none') {
+    apiCall('GET', '/api/kingdom/lore-and-achievements').then(res => {
+      if (res && res.lore) {
+        var aList = res.achievements || [];
+        var achStr = [];
+        if (aList.includes('historian')) achStr.push('🏆 Historian (All Lore)');
+        if (aList.includes('collector')) achStr.push('🏆 Field Collector (All Events)');
+        var achEl = el('library-achievements');
+        if (achEl) achEl.innerHTML = achStr.length > 0 ? achStr.join('<br>') : '';
+
+        var listEl = el('library-lore-list');
+        if (listEl) {
+          if (res.lore.length === 0) listEl.innerHTML = 'No lore discovered yet. Assign scribes to research.';
+          else {
+            listEl.innerHTML = res.lore.map(l => '<div style="background:var(--bg3);padding:8px;border-radius:4px;border:1px solid var(--border)">' + l + '</div>').join('');
+          }
+        }
+      }
+    });
+  }
 
   // Render Map Visualization
   var canvas = el('survey-map-canvas');
