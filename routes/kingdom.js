@@ -1555,7 +1555,8 @@ module.exports = function(db) {
     // Extract lore strings based on IDs
     let allLore = config.LORE_EVENTS[k.race] || [];
     
-    const unLockedLoreTexts = allLore.filter(l => collectedLore.includes(l.id)).map(l => ({ id: l.id, title: l.title, msg: l.msg }));
+    // Always show the first lore entry as a default blurb
+    const unLockedLoreTexts = allLore.filter((l, idx) => idx === 0 || collectedLore.includes(l.id)).map(l => ({ id: l.id, title: l.title, msg: l.msg }));
 
     res.json({ lore: unLockedLoreTexts, achievements });
   });

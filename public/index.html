@@ -8342,9 +8342,9 @@ function renderLibraryPanel() {
 
         achDefs.forEach(function(ach) {
           if (aList.includes(ach.id)) {
-             achStr.push('<div style="color:var(--gold);font-weight:bold;">' + ach.text + '</div>');
+             achStr.push('<div style="background:rgba(232,184,75,.05);padding:8px 12px;border-radius:4px;border:1px solid rgba(232,184,75,.3);color:var(--gold);font-weight:bold;">' + ach.text + '</div>');
           } else {
-             achStr.push('<div style="color:var(--text3);font-size:11px;">' + ach.text.replace('🏆', '🔒') + '</div>');
+             achStr.push('<div style="background:var(--bg3);padding:8px 12px;border-radius:4px;border:1px solid var(--border);color:var(--text3);font-size:11px;">' + ach.text.replace('🏆', '🔒') + '</div>');
           }
         });
         
@@ -8355,9 +8355,16 @@ function renderLibraryPanel() {
         if (listEl) {
           if (res.lore.length === 0) listEl.innerHTML = 'No lore discovered yet. Assign scribes to research.';
           else {
-            listEl.innerHTML = res.lore.map(l => '<div onclick="openLoreModal(\'' + l.title.replace(/'/g, "\\'") + '\', \'' + l.msg.replace(/'/g, "\\'") + '\')" style="background:var(--bg3);padding:8px;border-radius:4px;border:1px solid var(--border);cursor:pointer;color:var(--gold);font-weight:600">📜 ' + l.title + '</div>').join('');
+            try {
+              listEl.innerHTML = res.lore.map(l => '<div onclick="openLoreModal(\'' + l.title.replace(/'/g, "\\'") + '\', \'' + l.msg.replace(/'/g, "\\'") + '\')" style="background:var(--bg3);padding:8px;border-radius:4px;border:1px solid var(--border);cursor:pointer;color:var(--gold);font-weight:600">📜 ' + l.title + '</div>').join('');
+            } catch (err) {
+              listEl.innerHTML = '<span style="color:var(--red)">Failed to display lore. Error: ' + err.message + '</span>';
+            }
           }
         }
+      } else {
+        var listEl = el('library-lore-list');
+        if (listEl) listEl.innerHTML = '<span style="color:var(--red)">Failed to load lore: ' + (res ? res.error : 'unknown error') + '</span>';
       }
     });
   }
