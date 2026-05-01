@@ -1527,6 +1527,21 @@ module.exports = function(db) {
     }
   });
 
+  router.post('/rebirth', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+    
+    if (!engine.canPrestige(k)) return res.status(400).json({ error: 'Require Kingdom Level 50 to Rebirth.' });
+    
+    const result = engine.processPrestige(k);
+    await applyUpdates(db, k.id, result.updates);
+    
+    await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', 
+      [k.id, 'system', '🌌 YOU HAVE TRANSCENDED. A new era begins for your empire!', result.updates.turn]);
+    
+    res.json({ ok: true, prestige_level: result.updates.prestige_level });
+  });
+
   return router;
 };
 

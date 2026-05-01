@@ -1474,6 +1474,27 @@
   </div>
     </div><!-- end economy panel -->
 
+    <!-- MARKET PANEL -->
+    <div id="market" class="panel" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title">⚖️ Commodity Market</div>
+        <button class="btn" onclick="loadMarket()">↻ Refresh Prices</button>
+      </div>
+
+      <div class="card" style="margin-top:0; margin-bottom:16px; background:rgba(244,166,35,0.1); border:1px solid rgba(244,166,35,0.2)">
+        <div style="font-size:14px; color:var(--text); font-weight:700; margin-bottom:8px">⚖️ Marketplace Trading</div>
+        <div style="font-size:12px; color:var(--text2); line-height:1.5">
+          Buy and sell resources at global prices. 
+          <strong style="color:var(--gold)">Price Volatility:</strong> Constant trading shift prices in real-time.
+          <br><strong style="color:var(--purple)">Prestige Bonus:</strong> Elite kingdoms get +10% sell value on all commodities.
+        </div>
+      </div>
+
+      <div id="market-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px">
+        <div style="color:var(--text3); padding:40px; text-align:center; grid-column:1/-1">Loading market data...</div>
+      </div>
+    </div>
+
     <div id="build" class="panel">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
@@ -2552,6 +2573,19 @@
             </div>
           </div>
           <button class="btn btn-red" style="align-self:flex-end" onclick="covertOp('sabotage')">Sabotage</button>
+        </div>
+      </div>
+
+      <div class="covert-op" id="op-raid-trade" style="display:none">
+        <div class="op-title">🏴‍☠️ Raid Trade Route</div>
+        <div class="op-desc" style="color:var(--gold)">Orc Exclusive: Raid target's trade routes to steal massive amounts of gold. Requires: 500+ Thieves. High risk of losses if detected.</div>
+        <div class="op-row">
+          <span style="font-size:12px;color:var(--text2);flex:1">Thieves: <strong style="color:var(--text)" id="raid-thieves-avail">0</strong></span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" id="raid-thieves" min="0" value="0" style="text-align:right;width:80px" placeholder="Qty">
+            <button class="btn" style="font-size:10px;padding:3px 6px" onclick="setMaxValue('raid-thieves')">Max</button>
+          </div>
+          <button class="btn btn-gold" onclick="covertOp('raid_trade_route')">RAID</button>
         </div>
       </div>
     </div>
@@ -3782,6 +3816,11 @@ async function covertOp(op) {
     if (sninja > state.ninjas) return toast('Not enough ninjas', 'error');
     body.units = sninja;
     body.bldType = document.getElementById('sab-target-type').value;
+  } else if (op === 'raid_trade_route') {
+    var rthieves = parseInt(document.getElementById('raid-thieves').value) || 0;
+    if (rthieves < 500) return toast('Need at least 500 thieves to raid!', 'error');
+    if (rthieves > state.thieves) return toast('Not enough thieves', 'error');
+    body.units = rthieves;
   }
 
   var result = await apiCall('POST', '/api/kingdom/covert', body);
@@ -3814,6 +3853,12 @@ async function covertOp(op) {
     }
     if (result.ninjasLost) {
       state.ninjas = Math.max(0, (state.ninjas || 0) - result.ninjasLost);
+    }
+  } else if (op === 'raid_trade_route') {
+    if (result.success) {
+      toast(result.event || 'Trade raid successful!', 'success');
+    } else {
+      toast(result.event || 'Trade raid failed!', 'error');
     }
   }
 
@@ -4760,6 +4805,10 @@ function syncUI() {
   if (assnAvail) assnAvail.textContent = fmt(state.ninjas||0);
   var sabAvail = document.getElementById('sab-ninjas-avail');
   if (sabAvail) sabAvail.textContent = fmt(state.ninjas||0);
+  var raidAvail = document.getElementById('raid-thieves-avail');
+  if (raidAvail) raidAvail.textContent = fmt(state.thieves||0);
+  var opRaid = document.getElementById('op-raid-trade');
+  if (opRaid) opRaid.style.display = (state.race === 'orc') ? 'block' : 'none';
   var covMapWarn = document.getElementById('cov-map-warn');
   if (covMapWarn) covMapWarn.style.display = (state.maps||0) < 1 ? 'block' : 'none';
   var atkMapWarn = document.getElementById('atk-map-warn');

@@ -433,6 +433,27 @@ async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_mercs_kingdom ON mercenaries(kingdom_id);
   `);
+
+  // Market Prices table
+  await _db.exec(`
+    CREATE TABLE IF NOT EXISTS market_prices (
+      id            TEXT PRIMARY KEY,
+      current_price REAL NOT NULL,
+      base_price    REAL NOT NULL,
+      updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Seed default market prices
+  const defaultPrices = [
+    ['food',    0.5, 0.5],
+    ['mana',    2.0, 2.0],
+    ['hammers', 50.0, 50.0]
+  ];
+  for (const [id, current, base] of defaultPrices) {
+    await _db.run('INSERT OR IGNORE INTO market_prices (id, current_price, base_price) VALUES (?, ?, ?)', [id, current, base]);
+  }
+
   await _db.exec(`
     CREATE TABLE IF NOT EXISTS war_log (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
