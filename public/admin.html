@@ -339,6 +339,14 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <div class="card">
       <h2 style="margin-top:0;color:var(--green)">✅ Completed Features</h2>
 
+      <div class="cl-section" style="color:var(--gold); font-size: 13px">🔒 SECURITY & HYGIENE (MAY 2026)</div>
+      <div class="cl-item">✅ <b>Admin route protection</b> — /api/admin/seed-ai and /api/admin/reset-ai now require a valid admin JWT (were unauthenticated)</div>
+      <div class="cl-item">✅ <b>Hardened JWT secret</b> — server refuses to start if JWT_SECRET env var is missing; hardcoded fallback removed</div>
+      <div class="cl-item">✅ <b>Token no longer in response body</b> — login and register return only httpOnly cookie; token stripped from JSON response</div>
+      <div class="cl-item">✅ <b>Rate limiter trust proxy</b> — app now sets trust proxy so req.ip resolves correctly behind Render's load balancer</div>
+      <div class="cl-item">✅ <b>Payload size limits</b> — 50kb JSON body cap; direct messages capped at 2,000 chars</div>
+      <div class="cl-item">✅ <b>Orphan file cleanup</b> — removed update_inputs.js, public/fix.js, public/client.js, and unused app/ directory</div>
+
       <div class="cl-section" style="color:var(--gold); font-size: 13px">🔥 LATEST UPDATES (APRIL 2026)</div>
       <div class="cl-item">✅ <b>System Hygiene & Efficiency</b> — Cleaned orphan React files, converted to lean ES Modules, added SQL indexes for DMs/Bounties</div>
       <div class="cl-item">✅ <b>Real-time Direct Messages</b> — Sockets added for instant persistent message delivery and badges</div>
@@ -561,6 +569,7 @@ textarea{width:100%;resize:vertical;min-height:60px}
       <div class="cl-item">✅ Promote to admin</div>
       <div class="cl-item">✅ Admin notes textarea — saves to localStorage</div>
       <div class="cl-item">✅ Changelog and wishlist panel (this panel)</div>
+      <div class="cl-item">✅ <b>Admin route auth</b> — seed-ai and reset-ai endpoints require admin JWT (May 2026)</div>
     </div>
 
     <!-- Wishlist -->
@@ -581,13 +590,15 @@ textarea{width:100%;resize:vertical;min-height:60px}
 
         <div class="cl-section">Gameplay</div>
         <div class="cl-item wish">⬜ Spell casting target history — remember last target per spell</div>
+        <div class="cl-item wish">✅ Bounty board — COMPLETED</div>
         <div class="cl-item wish">⬜ Diplomacy — formal non-aggression pacts and tribute</div>
+        <div class="cl-item wish">✅ Seasons — COMPLETED (spring/summer/fall/winter cycle with daily events, farm yield multipliers, race-specific events)</div>
         <div class="cl-item wish">⬜ Prestige / reset system — kingdoms that reach max level can prestige for a permanent bonus</div>
         <div class="cl-item wish">⬜ Named hero units — single high-level units with unique abilities</div>
 
         <div class="cl-section">Combat</div>
         <div class="cl-item wish">⬜ Alliance war — alliances can declare war on each other</div>
-        <div class="cl-item wish">⬜ Siege mechanics — castle walls reduce land capture percentage</div>
+        <div class="cl-item wish">✅ Siege mechanics — COMPLETED (castle walls, guard towers, outposts, citadel — wall damage on attack, castle defence bonus, full Defence panel)</div>
         <div class="cl-item wish">⬜ Battle replay — animated step-by-step battle report</div>
 
         <div class="cl-section">Economy</div>

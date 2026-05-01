@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx index.js",
+    "dev": "node --watch index.js",
     "start": "node index.js",
     "build": "echo 'No build step required — static files in public/'",
     "lint": "eslint . --ext js --report-unused-disable-directives"
@@ -21,7 +21,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.0",
     "eslint": "^10.2.1",
-    "globals": "^15.0.0",
-    "tsx": "^4.21.0"
+    "globals": "^15.0.0"
   }
 }
