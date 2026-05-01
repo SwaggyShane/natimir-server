@@ -816,7 +816,7 @@ module.exports = function(db) {
       'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
       'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
       'bld_farms','bld_barracks','bld_schools','bld_armories','bld_vaults','bld_smithies',
-      'bld_markets','bld_mage_towers','bld_colosseums','bld_castles','bld_libraries','bld_shrines',
+      'bld_markets','bld_mage_towers','bld_castles','bld_libraries','bld_shrines',
     ]);
 
     async function applyCovert(kingdom, updates) {
@@ -1553,7 +1553,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'res_attack_magic','res_defense_magic','res_entertainment',
     'res_construction','res_war_machines',
     'bld_farms','bld_barracks','bld_markets','bld_mage_towers','bld_training',
-    'bld_colosseums','bld_castles','bld_vaults','bld_smithies','bld_armories',
+    'bld_castles','bld_vaults','bld_smithies','bld_armories',
     'bld_guard_towers','bld_outposts','bld_schools','bld_libraries',
     'bld_mage_towers','bld_shrines','bld_housing','bld_taverns',
     'tools_hammers','tools_scaffolding','tools_blueprints','blueprints_stored',

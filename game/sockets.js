@@ -344,7 +344,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'res_attack_magic','res_defense_magic','res_entertainment',
     'res_construction','res_war_machines',
     'bld_farms','bld_barracks','bld_markets','bld_mage_towers','bld_training',
-    'bld_colosseums','bld_castles','bld_vaults','bld_smithies','bld_armories',
+    'bld_castles','bld_vaults','bld_smithies','bld_armories',
     'bld_guard_towers','bld_outposts','bld_schools','bld_libraries',
     'bld_mage_towers','bld_shrines','bld_housing','bld_taverns',
     'hammers_stored','scaffolding_stored','blueprints_stored',

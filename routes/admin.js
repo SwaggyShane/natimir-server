@@ -103,7 +103,7 @@ module.exports = function(db, io) {
         war_machines = 0, weapons_stockpile = 0, armor_stockpile = 0,
         bld_farms = ?, bld_barracks = ?, bld_outposts = ?, bld_guard_towers = 0,
         bld_schools = ?, bld_armories = ?, bld_vaults = 0, bld_smithies = ?,
-        bld_markets = ?, bld_mage_towers = ?, bld_training = ?, bld_colosseums = 0,
+        bld_markets = ?, bld_mage_towers = ?, bld_training = ?,
         bld_castles = 0, bld_shrines = ?, bld_libraries = 0, bld_taverns = 0, bld_housing = ?,
         bld_walls = 0,
         res_economy = 100, res_weapons = 100, res_armor = 100, res_military = 100,

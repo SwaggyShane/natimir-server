@@ -155,7 +155,7 @@ const config = {
   BUILDING_COST: {
     farms: 2500, barracks: 5000, outposts: 7500, guard_towers: 2500,
     schools: 7500, armories: 2500, vaults: 10000, smithies: 10000,
-    markets: 10000, mage_towers: 15000, shrines: 500, training: 20000, colosseums: 5000,
+    markets: 10000, mage_towers: 15000, shrines: 500, training: 20000,
     castles: 100000, libraries: 10000, housing: 5000, walls: 500, taverns: 3000,
     war_machines: 1000, weapons: 10, armor: 10,
   },
@@ -163,14 +163,14 @@ const config = {
   BUILDING_GOLD_COST: {
     farms: 50, barracks: 200, outposts: 150, guard_towers: 150,
     schools: 500, armories: 400, vaults: 400, smithies: 800,
-    markets: 2000, mage_towers: 3000, shrines: 1000, training: 10000, colosseums: 1500,
+    markets: 2000, mage_towers: 3000, shrines: 1000, training: 10000,
     castles: 25000, libraries: 2000, housing: 500, walls: 300, taverns: 1000,
     war_machines: 100, weapons: 100, armor: 150,
   },
 
   BUILDING_LAND_COST: {
     farms: 1, barracks: 1, outposts: 1, guard_towers: 1, armories: 1, vaults: 1,
-    schools: 2, smithies: 2, markets: 2, colosseums: 2, shrines: 2, libraries: 2,
+    schools: 2, smithies: 2, markets: 2, shrines: 2, libraries: 2,
     housing: 1,
     mage_towers: 5, training: 5,
     castles: 10,
@@ -259,7 +259,6 @@ const config = {
     smithy: 'smithies',
     market: 'markets',
     mage_tower: 'mage_towers',
-    colosseum: 'colosseums',
     shrine: 'shrines',
     castle: 'castles',
     library: 'libraries',
@@ -464,7 +463,6 @@ const config = {
     bld_markets:      { base: 3,     max: 5000    },
     bld_mage_towers:   { base: 3,     max: 5000    },
     bld_training:     { base: 2,     max: 2000    },
-    bld_colosseums:   { base: 2,     max: 2000    },
     bld_castles:      { base: 1,     max: 500     },
     war_machines:     { base: 1000,  max: 10000   },
     res_economy:       { base: 100,  max: 10000 },
@@ -484,7 +482,7 @@ const config = {
     guard_towers: 'bld_guard_towers', schools: 'bld_schools', armories: 'bld_armories',
     vaults: 'bld_vaults', smithies: 'bld_smithies', markets: 'bld_markets',
     mage_towers: 'bld_mage_towers', shrines: 'bld_shrines', training: 'bld_training',
-    colosseums: 'bld_colosseums', castles: 'bld_castles', libraries: 'bld_libraries',
+    castles: 'bld_castles', libraries: 'bld_libraries',
     housing: 'bld_housing', walls: 'bld_walls', taverns: 'bld_taverns',
     war_machines: 'war_machines', weapons: 'weapons_stockpile', armor: 'armor_stockpile',
   },
@@ -492,9 +490,9 @@ const config = {
   TOOL_COL: { hammers: 'hammers_stored', scaffolding: 'scaffolding_stored', blueprints: 'blueprints_stored' },
   TOOL_GOLD_COST: { hammers: 0, scaffolding: 2500, blueprints: 0 },
 
-  BLUEPRINT_REQUIRED: ['vaults','smithies','markets','mage_towers','training','colosseums','castles','libraries'],
+  BLUEPRINT_REQUIRED: ['vaults','smithies','markets','mage_towers','training','castles','libraries'],
   SCAFFOLDING_REQUIRED: ['mage_towers','training','castles'],
-  SCAFFOLDING_BONUS_BUILDINGS: ['farms','barracks','outposts','guard_towers','schools','armories','shrines','housing','colosseums'],
+  SCAFFOLDING_BONUS_BUILDINGS: ['farms','barracks','outposts','guard_towers','schools','armories','shrines','housing'],
 
   HERO_CLASSES: {
     paladin: {
