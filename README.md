@@ -18,8 +18,8 @@ A browser-based multiplayer kingdom management game with real-time chat, turn-ba
 | Runtime | Node.js |
 | Framework | Express |
 | Real-time | Socket.io |
-| Database | SQLite (via `sqlite` + `sqlite3` packages) |
-| Auth | JWT — httpOnly cookie |
+| Database | SQLite (via `better-sqlite3` wrapper) |
+| Auth | JWT — httpOnly cookie + localStorage fallback |
 | Frontend | Vanilla JS, single-file HTML/CSS |
 | Hosting | Render (persistent disk at `/data/narmir.db`) |
 

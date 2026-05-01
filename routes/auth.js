@@ -4,8 +4,7 @@ const jwt     = require('jsonwebtoken');
 const engine  = require('../game/engine');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_12345';
 
 module.exports = function(db) {
 
@@ -75,7 +74,7 @@ module.exports = function(db) {
         secure:   process.env.NODE_ENV === 'production',
       };
       res.cookie('token', token, cookieOpts);
-      res.json({ ok: true, username, kingdomName });
+      res.json({ ok: true, username, kingdomName, token });
     } catch (err) {
       await db.run('ROLLBACK').catch(()=>{});
       if (err.message.includes('UNIQUE'))
@@ -108,7 +107,7 @@ module.exports = function(db) {
       secure:   process.env.NODE_ENV === 'production',
     };
     res.cookie('token', token, cookieOpts);
-    res.json({ ok: true, username, isAdmin: player.is_admin === 1 });
+    res.json({ ok: true, username, isAdmin: player.is_admin === 1, token });
   });
 
   router.post('/logout', (_req, res) => {

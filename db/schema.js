@@ -209,72 +209,197 @@ async function initDb() {
     }
   }
 
+  // Ensure key indexes exist
   await _db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_news_created ON news(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_exp_turns    ON expeditions(turns_left);
+    CREATE INDEX IF NOT EXISTS idx_kingdoms_player ON kingdoms(player_id);
+    CREATE INDEX IF NOT EXISTS idx_kingdoms_land   ON kingdoms(land DESC);
+    CREATE INDEX IF NOT EXISTS idx_news_created    ON news(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_exp_turns       ON expeditions(turns_left);
   `);
 
-  // ── Additional tables ────────────────────────────────────────────────────────
+  const cols = (await _db.all('PRAGMA table_info(kingdoms)')).map(c => c.name);
+  if (!cols.includes('turns_stored'))        await addColumn('kingdoms', 'turns_stored',        'INTEGER NOT NULL DEFAULT 400');
+  if (!cols.includes('research_allocation')) await addColumn('kingdoms', 'research_allocation', "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('build_queue'))         await addColumn('kingdoms', 'build_queue',         "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('build_progress'))      await addColumn('kingdoms', 'build_progress',      "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('research_progress'))   await addColumn('kingdoms', 'research_progress',   "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('build_allocation'))    await addColumn('kingdoms', 'build_allocation',    "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('prestige_level'))      await addColumn('kingdoms', 'prestige_level',      'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('trade_routes'))       await addColumn('kingdoms', 'trade_routes',       'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('tools_hammers'))       await addColumn('kingdoms', 'tools_hammers',       'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('tools_scaffolding'))   await addColumn('kingdoms', 'tools_scaffolding',   'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('tools_blueprints'))    await addColumn('kingdoms', 'tools_blueprints',    'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('scaffolding_stored'))  await addColumn('kingdoms', 'scaffolding_stored',  'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('hammers_stored'))      await addColumn('kingdoms', 'hammers_stored',      'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('xp'))                  await addColumn('kingdoms', 'xp',                  'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('level'))               await addColumn('kingdoms', 'level',               'INTEGER NOT NULL DEFAULT 1');
+  if (!cols.includes('troop_levels'))        await addColumn('kingdoms', 'troop_levels',        "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('training_allocation')) await addColumn('kingdoms', 'training_allocation', "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('weapons_stockpile'))   await addColumn('kingdoms', 'weapons_stockpile',   'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('armor_stockpile'))     await addColumn('kingdoms', 'armor_stockpile',     'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('description'))         await addColumn('kingdoms', 'description',         'TEXT');
+
   await _db.run(`
     CREATE TABLE IF NOT EXISTS messages (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      sender_id    INTEGER NOT NULL REFERENCES players(id),
-      recipient_id INTEGER NOT NULL REFERENCES players(id),
-      content      TEXT NOT NULL,
-      is_read      INTEGER NOT NULL DEFAULT 0,
-      created_at   INTEGER NOT NULL DEFAULT (unixepoch())
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id         INTEGER NOT NULL REFERENCES players(id),
+      recipient_id      INTEGER NOT NULL REFERENCES players(id),
+      content           TEXT NOT NULL,
+      is_read           INTEGER NOT NULL DEFAULT 0,
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch())
     )
   `);
-  await _db.run(`CREATE INDEX IF NOT EXISTS idx_messages_sender    ON messages(sender_id)`);
+
+  await _db.run(`CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id)`);
   await _db.run(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id)`);
 
   await _db.run(`
     CREATE TABLE IF NOT EXISTS bounties (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      placer_id     INTEGER NOT NULL REFERENCES players(id),
-      target_id     INTEGER NOT NULL REFERENCES kingdoms(id),
-      amount        INTEGER NOT NULL,
-      status        TEXT NOT NULL DEFAULT 'active',
-      claimed_by_id INTEGER REFERENCES kingdoms(id),
-      created_at    INTEGER NOT NULL DEFAULT (unixepoch())
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      placer_id         INTEGER NOT NULL REFERENCES players(id),
+      target_id         INTEGER NOT NULL REFERENCES kingdoms(id),
+      amount            INTEGER NOT NULL,
+      status            TEXT NOT NULL DEFAULT 'active',
+      claimed_by_id     INTEGER REFERENCES kingdoms(id),
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch())
     )
   `);
+
   await _db.run(`CREATE INDEX IF NOT EXISTS idx_bounties_target ON bounties(target_id, status)`);
   await _db.run(`CREATE INDEX IF NOT EXISTS idx_bounties_active ON bounties(status, amount DESC)`);
 
   await _db.run(`
     CREATE TABLE IF NOT EXISTS regions (
-      name                TEXT PRIMARY KEY,
-      owner_alliance_id   INTEGER REFERENCES alliances(id),
+      name              TEXT PRIMARY KEY,
+      owner_alliance_id INTEGER REFERENCES alliances(id),
       contest_alliance_id INTEGER REFERENCES alliances(id),
-      contest_progress    INTEGER NOT NULL DEFAULT 0,
-      bonus_type          TEXT,
-      lore                TEXT,
-      created_at          INTEGER NOT NULL DEFAULT (unixepoch()),
-      updated_at          INTEGER NOT NULL DEFAULT (unixepoch())
+      contest_progress  INTEGER NOT NULL DEFAULT 0,
+      bonus_type        TEXT,
+      lore              TEXT,
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at        INTEGER NOT NULL DEFAULT (unixepoch())
     )
   `);
-  for (const [name, bonus] of [
-    ['The Iron Holds',    'construction'],
-    ['The Silverwood',    'magic'],
-    ['The Bloodplains',   'military'],
-    ['The Underspire',    'stealth'],
-    ['The Heartlands',    'economy'],
-    ['The Ashfang Wilds', 'military'],
-  ]) {
+
+  // Initialize regions if they don't exist
+  const REGION_DATA_LOCAL = [
+    ['The Iron Holds',      'construction'],
+    ['The Silverwood',      'magic'],
+    ['The Bloodplains',     'military'],
+    ['The Underspire',      'stealth'],
+    ['The Heartlands',      'economy'],
+    ['The Ashfang Wilds',   'military']
+  ];
+  for (const [name, bonus] of REGION_DATA_LOCAL) {
     await _db.run('INSERT OR IGNORE INTO regions (name, bonus_type) VALUES (?, ?)', [name, bonus]);
   }
 
+  const pCols = (await _db.all('PRAGMA table_info(players)')).map(c => c.name);
+  if (!pCols.includes('is_admin'))   await addColumn('players', 'is_admin',   'INTEGER NOT NULL DEFAULT 0');
+  if (!pCols.includes('is_banned'))  await addColumn('players', 'is_banned',  'INTEGER NOT NULL DEFAULT 0');
+  if (!pCols.includes('ban_reason')) await addColumn('players', 'ban_reason', 'TEXT');
+  if (!pCols.includes('is_ai'))      await addColumn('players', 'is_ai',      'INTEGER NOT NULL DEFAULT 0');
+
+  const nCols = (await _db.all('PRAGMA table_info(news)')).map(c => c.name);
+  if (!nCols.includes('turn_num')) await addColumn('news', 'turn_num', 'INTEGER NOT NULL DEFAULT 0');
+
+  if (!pCols.includes('is_chat_mod'))  await addColumn('players', 'is_chat_mod',  'INTEGER NOT NULL DEFAULT 0');
+  if (!pCols.includes('chat_banned'))  await addColumn('players', 'chat_banned',  'INTEGER NOT NULL DEFAULT 0');
+  if (!pCols.includes('chat_ban_reason')) await addColumn('players', 'chat_ban_reason', 'TEXT');
+  if (!pCols.includes('chat_color'))  await addColumn('players', 'chat_color',  "TEXT DEFAULT NULL");
+  if (!pCols.includes('chat_name'))   await addColumn('players', 'chat_name',   "TEXT DEFAULT NULL");
+
   await _db.run(`
     CREATE TABLE IF NOT EXISTS suggestions (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      player_id  INTEGER,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_id INTEGER,
       kingdom_id INTEGER,
-      message    TEXT,
+      message TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  
+  const cmCols = (await _db.all('PRAGMA table_info(chat_messages)')).map(c => c.name);
+  if (!cmCols.includes('username')) await addColumn('chat_messages', 'username', 'TEXT NOT NULL DEFAULT \'\'');
+  if (!cmCols.includes('player_id')) await addColumn('chat_messages', 'player_id', 'INTEGER NOT NULL DEFAULT 0');
+  if (!cmCols.includes('deleted'))  await addColumn('chat_messages', 'deleted',  'INTEGER NOT NULL DEFAULT 0');
 
+  if (!cols.includes('region')) {
+    await addColumn('kingdoms', 'region', "TEXT NOT NULL DEFAULT ''");
+    // Backfill existing kingdoms
+    const RACE_REGIONS = {
+      dwarf:'The Iron Holds', high_elf:'The Silverwood', orc:'The Bloodplains',
+      dark_elf:'The Underspire', human:'The Heartlands', dire_wolf:'The Ashfang Wilds',
+    };
+    const existing = await _db.all('SELECT id, race FROM kingdoms');
+    for (const k of existing) {
+      await _db.run('UPDATE kingdoms SET region = ? WHERE id = ?', [RACE_REGIONS[k.race] || 'The Unknown Lands', k.id]);
+    }
+  }
+  if (!cols.includes('smithy_allocation'))          await addColumn('kingdoms', 'smithy_allocation',          "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('hammer_turns_used'))          await addColumn('kingdoms', 'hammer_turns_used',          'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('racial_bonuses_unlocked'))    await addColumn('kingdoms', 'racial_bonuses_unlocked',    "TEXT NOT NULL DEFAULT '{}'");
+
+  // Expeditions — seen flag so completed rows persist until frontend acknowledges
+  const expCols = (await _db.all('PRAGMA table_info(expeditions)')).map(c => c.name);
+  if (!expCols.includes('seen')) {
+    await addColumn('expeditions', 'seen', 'INTEGER NOT NULL DEFAULT 0');
+    // Clean up any old stuck completed rows that predate the seen column
+    await _db.run('DELETE FROM expeditions WHERE turns_left = 0');
+  }
+  if (!cols.includes('bld_housing'))             await addColumn('kingdoms', 'bld_housing',             'INTEGER NOT NULL DEFAULT 100');
+  if (!cols.includes('mage_tower_allocation'))   await addColumn('kingdoms', 'mage_tower_allocation',   "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('shrine_allocation'))       await addColumn('kingdoms', 'shrine_allocation',       "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('scribes'))             await addColumn('kingdoms', 'scribes',             'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('bld_libraries'))       await addColumn('kingdoms', 'bld_libraries',       'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('bld_taverns'))         await addColumn('kingdoms', 'bld_taverns',         'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('bld_mage_towers'))     await addColumn('kingdoms', 'bld_mage_towers',     'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('world_fragments'))      await addColumn('kingdoms', 'world_fragments',     "TEXT NOT NULL DEFAULT '[]'");
+  if (!cols.includes('hybrid_blueprints'))    await addColumn('kingdoms', 'hybrid_blueprints',   "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('library_allocation'))  await addColumn('kingdoms', 'library_allocation',  "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('library_progress'))    await addColumn('kingdoms', 'library_progress',    "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('tower_progress'))      await addColumn('kingdoms', 'tower_progress',      "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('scrolls'))             await addColumn('kingdoms', 'scrolls',             "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('maps'))                await addColumn('kingdoms', 'maps',                'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('blueprints_stored'))   await addColumn('kingdoms', 'blueprints_stored',   'INTEGER NOT NULL DEFAULT 1');
+  if (!cols.includes('active_effects'))      await addColumn('kingdoms', 'active_effects',      "TEXT NOT NULL DEFAULT '{}'");
+
+  if (!cols.includes('bld_walls'))          await addColumn('kingdoms', 'bld_walls',          'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('wall_upgrades'))      await addColumn('kingdoms', 'wall_upgrades',      "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('tower_def_upgrades')) await addColumn('kingdoms', 'tower_def_upgrades', "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('outpost_upgrades'))   await addColumn('kingdoms', 'outpost_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('defense_upgrades'))   await addColumn('kingdoms', 'defense_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
+
+  // Legacy data migration: if defence_upgrades exists but defense_upgrades is empty, copy it
+  if (cols.includes('defence_upgrades') && cols.includes('defense_upgrades')) {
+    await _db.run(`UPDATE kingdoms SET defense_upgrades = defence_upgrades WHERE defense_upgrades = '{}' AND defence_upgrades != '{}'`);
+  }
+  if (!cols.includes('tower_upgrades'))    await addColumn('kingdoms', 'tower_upgrades',    "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('school_upgrades'))   await addColumn('kingdoms', 'school_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('shrine_upgrades'))   await addColumn('kingdoms', 'shrine_upgrades',   "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('library_upgrades'))  await addColumn('kingdoms', 'library_upgrades',  "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('research_focus'))    await addColumn('kingdoms', 'research_focus',     "TEXT NOT NULL DEFAULT '[]'");
+  if (!cols.includes('divine_sanctuary_used')) await addColumn('kingdoms', 'divine_sanctuary_used', 'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('farm_upgrades'))       await addColumn('kingdoms', 'farm_upgrades',       "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('market_upgrades'))     await addColumn('kingdoms', 'market_upgrades',     "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('tavern_upgrades'))     await addColumn('kingdoms', 'tavern_upgrades',     "TEXT NOT NULL DEFAULT '{}'");
+
+  // Fix softlock: if a kingdom has no libraries and fewer than 1 blueprints, give them 1 blueprints
+  await _db.run("UPDATE kingdoms SET blueprints_stored = 1 WHERE bld_libraries = 0 AND blueprints_stored < 1");
+
+  // Data migration: tools_* -> *_stored
+  if (cols.includes('tools_scaffolding') && cols.includes('scaffolding_stored')) {
+    await _db.run("UPDATE kingdoms SET scaffolding_stored = tools_scaffolding WHERE scaffolding_stored = 0 AND tools_scaffolding > 0");
+  }
+  if (cols.includes('tools_hammers') && cols.includes('hammers_stored')) {
+    await _db.run("UPDATE kingdoms SET hammers_stored = tools_hammers WHERE hammers_stored = 0 AND tools_hammers > 0");
+  }
+
+  if (!cols.includes('food_shortage_turns')) await addColumn('kingdoms', 'food_shortage_turns', 'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('food_surplus_turns'))  await addColumn('kingdoms', 'food_surplus_turns',  'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('mercenaries'))         await addColumn('kingdoms', 'mercenaries',         "TEXT NOT NULL DEFAULT '[]'");
+
+  // Trade offers table
   await _db.exec(`
     CREATE TABLE IF NOT EXISTS trade_offers (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -292,6 +417,7 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_trade_offers_sender   ON trade_offers(sender_id, status);
   `);
 
+  // Mercenaries table
   await _db.exec(`
     CREATE TABLE IF NOT EXISTS mercenaries (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -308,6 +434,7 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_mercs_kingdom ON mercenaries(kingdom_id);
   `);
 
+  // Market Prices table
   await _db.exec(`
     CREATE TABLE IF NOT EXISTS market_prices (
       id            TEXT PRIMARY KEY,
@@ -316,207 +443,133 @@ async function initDb() {
       updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
-  for (const [id, current, base] of [['food', 0.5, 0.5], ['mana', 2.0, 2.0], ['hammers', 50.0, 50.0]]) {
+
+  // Seed default market prices
+  const defaultPrices = [
+    ['food',    0.5, 0.5],
+    ['mana',    2.0, 2.0],
+    ['hammers', 50.0, 50.0]
+  ];
+  for (const [id, current, base] of defaultPrices) {
     await _db.run('INSERT OR IGNORE INTO market_prices (id, current_price, base_price) VALUES (?, ?, ?)', [id, current, base]);
   }
 
   await _db.exec(`
+    CREATE TABLE IF NOT EXISTS war_log (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      action_type     TEXT    NOT NULL,
+      attacker_id     INTEGER REFERENCES kingdoms(id),
+      attacker_name   TEXT,
+      defender_id     INTEGER REFERENCES kingdoms(id),
+      defender_name   TEXT,
+      outcome         TEXT    NOT NULL,
+      detail          TEXT,
+      obscured        INTEGER NOT NULL DEFAULT 0,
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_war_log_time ON war_log(created_at DESC);
+  `);
+
+  // ── Season & events migrations ────────────────────────────────────────────────
+  if (!cols.includes('last_event_at'))         await addColumn('kingdoms', 'last_event_at',         'INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('active_event'))          await addColumn('kingdoms', 'active_event',          "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('discovered_kingdoms'))   await addColumn('kingdoms', 'discovered_kingdoms',   "TEXT NOT NULL DEFAULT '{}'");
+  if (!cols.includes('location_maps_wip'))     await addColumn('kingdoms', 'location_maps_wip',     "TEXT NOT NULL DEFAULT '[]'");
+  
+  // Market Prices table procedural check
+  await _db.exec(`
+    CREATE TABLE IF NOT EXISTS market_prices (
+      id            TEXT PRIMARY KEY,
+      current_price REAL NOT NULL,
+      base_price    REAL NOT NULL,
+      updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  const freshDefaultPrices = [
+    ['food',    0.5, 0.5],
+    ['mana',    2.0, 2.0],
+    ['hammers', 50.0, 50.0]
+  ];
+  for (const [id, current, base] of freshDefaultPrices) {
+    await _db.run('INSERT OR IGNORE INTO market_prices (id, current_price, base_price) VALUES (?, ?, ?)', [id, current, base]);
+  }
+
+  // Events table
+  await _db.exec(`
     CREATE TABLE IF NOT EXISTS events (
-      id               INTEGER PRIMARY KEY AUTOINCREMENT,
-      key              TEXT    NOT NULL UNIQUE,
-      name             TEXT    NOT NULL,
-      description      TEXT    NOT NULL,
-      season           TEXT    NOT NULL DEFAULT 'all',
-      effect_type      TEXT    NOT NULL DEFAULT 'morale',
-      effect_value     REAL    NOT NULL DEFAULT 5,
-      effect_duration  INTEGER NOT NULL DEFAULT 1,
-      race_only        TEXT    DEFAULT NULL,
-      is_positive      INTEGER NOT NULL DEFAULT 1,
-      is_active        INTEGER NOT NULL DEFAULT 1,
-      created_at       INTEGER NOT NULL DEFAULT (unixepoch())
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      key         TEXT    NOT NULL UNIQUE,
+      name        TEXT    NOT NULL,
+      description TEXT    NOT NULL,
+      season      TEXT    NOT NULL DEFAULT 'all',
+      effect_type TEXT    NOT NULL DEFAULT 'morale',
+      effect_value REAL   NOT NULL DEFAULT 5,
+      effect_duration INTEGER NOT NULL DEFAULT 1,
+      race_only   TEXT    DEFAULT NULL,
+      is_positive INTEGER NOT NULL DEFAULT 1,
+      is_active   INTEGER NOT NULL DEFAULT 1,
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch())
     );
   `);
 
+  // Event log table
   await _db.exec(`
     CREATE TABLE IF NOT EXISTS event_log (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      kingdom_id   INTEGER NOT NULL REFERENCES kingdoms(id),
-      kingdom_name TEXT    NOT NULL,
-      event_key    TEXT    NOT NULL,
-      event_name   TEXT    NOT NULL,
-      season       TEXT    NOT NULL,
-      fired_at     INTEGER NOT NULL DEFAULT (unixepoch())
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      kingdom_id  INTEGER NOT NULL REFERENCES kingdoms(id),
+      kingdom_name TEXT   NOT NULL,
+      event_key   TEXT    NOT NULL,
+      event_name  TEXT    NOT NULL,
+      season      TEXT    NOT NULL,
+      fired_at    INTEGER NOT NULL DEFAULT (unixepoch())
     );
-    CREATE INDEX IF NOT EXISTS idx_event_log_fired   ON event_log(fired_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_event_log_fired ON event_log(fired_at DESC);
     CREATE INDEX IF NOT EXISTS idx_event_log_kingdom ON event_log(kingdom_id);
   `);
 
-  // ── Seed data ────────────────────────────────────────────────────────────────
+  // Seed season state
   await _db.run(`INSERT OR IGNORE INTO server_state (key, value) VALUES ('current_season', 'spring')`);
   await _db.run(`INSERT OR IGNORE INTO server_state (key, value) VALUES ('season_started_at', CAST(unixepoch() AS TEXT))`);
-  await _db.run(`INSERT OR IGNORE INTO server_state (key, value) VALUES ('last_regen_at', CAST(unixepoch() AS TEXT))`);
 
-  for (const [key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive] of [
-    ['spring_bloom',     'Spring Bloom',        'Warm rains encourage growth.',                 'spring', 'farm_yield',  0.10, 5, null, 1],
-    ['spring_floods',    'Spring Floods',        'Rising rivers damage farmland.',               'spring', 'morale',     -5,   3, null, 0],
-    ['pollination_boom', 'Pollination Boom',     'A great flowering swells the population.',     'spring', 'population', 500,  1, null, 1],
-    ['warm_winds',       'Warm Winds',           'A pleasant breeze lifts spirits.',             'spring', 'morale',      5,   1, null, 1],
-    ['abundant_harvest', 'Abundant Harvest',     'Exceptional sun yields record crops.',         'summer', 'food',       0.15, 1, null, 1],
-    ['heat_wave',        'Heat Wave',            'Scorching heat wilts crops and morale.',       'summer', 'farm_yield', -0.10,3, null, 0],
-    ['travelling_merch', 'Travelling Merchants', 'Exotic goods boost market income.',            'summer', 'gold',       0.02, 3, null, 1],
-    ['border_skirmish',  'Border Skirmish',      'Bandits raid your outlying farms.',            'summer', 'food',      -0.05, 1, null, 0],
-    ['harvest_festival', 'Harvest Festival',     'The kingdom celebrates a bountiful autumn.',   'fall',   'morale',     10,  1, null, 1],
-    ['early_frost',      'Early Frost',          'An unexpected frost kills late crops.',        'fall',   'farm_yield', -0.15,2, null, 0],
-    ['trade_boom',       'Trade Boom',           'Merchants flock to your markets.',             'fall',   'gold',       0.05, 3, null, 1],
-    ['rat_infestation',  'Rat Infestation',      'Vermin consume stored food.',                  'fall',   'food',      -0.10, 1, null, 0],
-    ['blizzard',         'Blizzard',             'A fierce storm cripples farms and morale.',    'winter', 'farm_yield', -0.20,2, null, 0],
-    ['refugees',         'Refugees Arrive',      'Displaced families seek shelter.',             'winter', 'population', 1000, 1, null, 1],
-    ['winter_plague',    'Winter Plague',        'Disease spreads through the cold months.',     'winter', 'population', -0.02,1, null, 0],
-    ['wolf_raids',       'Wolf Raids',           'Dire wolves raid border farms.',               'winter', 'food',      -0.08, 1, null, 0],
-    ['ice_trade',        'Ice Trade',            'Dwarven merchants profit from winter routes.', 'winter', 'gold',       0.05, 2, 'dwarf',     1],
-    ['dire_wolf_hunt',   'Great Hunt',           'Dire Wolf hunters return laden with prey.',    'fall',   'food',       0.20, 1, 'dire_wolf', 1],
-    ['elven_bloom',      'Elven Bloom',          'High Elf mages channel spring energy.',        'spring', 'mana',       0.15, 3, 'high_elf',  1],
-    ['dark_elf_shadow',  'Shadow Markets',       'Dark Elf smugglers exploit the long nights.',  'winter', 'gold',       0.08, 2, 'dark_elf',  1],
-    ['orc_rampage',      'Orc Rampage',          'Summer heat fuels Orcish aggression.',         'summer', 'military',   0.10, 2, 'orc',       1],
-  ]) {
-    await _db.run(
-      `INSERT OR IGNORE INTO events (key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive) VALUES (?,?,?,?,?,?,?,?,?)`,
-      [key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive]
-    );
-  }
-
-  // ── Column migrations ─────────────────────────────────────────────────────────
-  const KINGDOM_COLS = [
-    ['turns_stored',            'INTEGER NOT NULL DEFAULT 400'],
-    ['research_allocation',     "TEXT NOT NULL DEFAULT '{}'"],
-    ['build_queue',             "TEXT NOT NULL DEFAULT '{}'"],
-    ['build_progress',          "TEXT NOT NULL DEFAULT '{}'"],
-    ['research_progress',       "TEXT NOT NULL DEFAULT '{}'"],
-    ['build_allocation',        "TEXT NOT NULL DEFAULT '{}'"],
-    ['prestige_level',          'INTEGER NOT NULL DEFAULT 0'],
-    ['trade_routes',            'INTEGER NOT NULL DEFAULT 0'],
-    ['tools_hammers',           'INTEGER NOT NULL DEFAULT 0'],
-    ['tools_scaffolding',       'INTEGER NOT NULL DEFAULT 0'],
-    ['tools_blueprints',        'INTEGER NOT NULL DEFAULT 0'],
-    ['scaffolding_stored',      'INTEGER NOT NULL DEFAULT 0'],
-    ['hammers_stored',          'INTEGER NOT NULL DEFAULT 0'],
-    ['xp',                      'INTEGER NOT NULL DEFAULT 0'],
-    ['level',                   'INTEGER NOT NULL DEFAULT 1'],
-    ['troop_levels',            "TEXT NOT NULL DEFAULT '{}'"],
-    ['training_allocation',     "TEXT NOT NULL DEFAULT '{}'"],
-    ['weapons_stockpile',       'INTEGER NOT NULL DEFAULT 0'],
-    ['armor_stockpile',         'INTEGER NOT NULL DEFAULT 0'],
-    ['description',             'TEXT'],
-    ['smithy_allocation',       "TEXT NOT NULL DEFAULT '{}'"],
-    ['hammer_turns_used',       'INTEGER NOT NULL DEFAULT 0'],
-    ['racial_bonuses_unlocked', "TEXT NOT NULL DEFAULT '{}'"],
-    ['bld_housing',             'INTEGER NOT NULL DEFAULT 100'],
-    ['mage_tower_allocation',   "TEXT NOT NULL DEFAULT '{}'"],
-    ['shrine_allocation',       "TEXT NOT NULL DEFAULT '{}'"],
-    ['scribes',                 'INTEGER NOT NULL DEFAULT 0'],
-    ['bld_libraries',           'INTEGER NOT NULL DEFAULT 0'],
-    ['bld_taverns',             'INTEGER NOT NULL DEFAULT 0'],
-    ['bld_mage_towers',         'INTEGER NOT NULL DEFAULT 0'],
-    ['world_fragments',         "TEXT NOT NULL DEFAULT '[]'"],
-    ['hybrid_blueprints',       "TEXT NOT NULL DEFAULT '{}'"],
-    ['library_allocation',      "TEXT NOT NULL DEFAULT '{}'"],
-    ['library_progress',        "TEXT NOT NULL DEFAULT '{}'"],
-    ['tower_progress',          "TEXT NOT NULL DEFAULT '{}'"],
-    ['scrolls',                 "TEXT NOT NULL DEFAULT '{}'"],
-    ['maps',                    'INTEGER NOT NULL DEFAULT 0'],
-    ['blueprints_stored',       'INTEGER NOT NULL DEFAULT 1'],
-    ['active_effects',          "TEXT NOT NULL DEFAULT '{}'"],
-    ['bld_walls',               'INTEGER NOT NULL DEFAULT 0'],
-    ['wall_upgrades',           "TEXT NOT NULL DEFAULT '{}'"],
-    ['tower_def_upgrades',      "TEXT NOT NULL DEFAULT '{}'"],
-    ['outpost_upgrades',        "TEXT NOT NULL DEFAULT '{}'"],
-    ['defense_upgrades',        "TEXT NOT NULL DEFAULT '{}'"],
-    ['tower_upgrades',          "TEXT NOT NULL DEFAULT '{}'"],
-    ['school_upgrades',         "TEXT NOT NULL DEFAULT '{}'"],
-    ['shrine_upgrades',         "TEXT NOT NULL DEFAULT '{}'"],
-    ['library_upgrades',        "TEXT NOT NULL DEFAULT '{}'"],
-    ['research_focus',          "TEXT NOT NULL DEFAULT '[]'"],
-    ['divine_sanctuary_used',   'INTEGER NOT NULL DEFAULT 0'],
-    ['farm_upgrades',           "TEXT NOT NULL DEFAULT '{}'"],
-    ['market_upgrades',         "TEXT NOT NULL DEFAULT '{}'"],
-    ['tavern_upgrades',         "TEXT NOT NULL DEFAULT '{}'"],
-    ['food_shortage_turns',     'INTEGER NOT NULL DEFAULT 0'],
-    ['food_surplus_turns',      'INTEGER NOT NULL DEFAULT 0'],
-    ['mercenaries',             "TEXT NOT NULL DEFAULT '[]'"],
-    ['last_event_at',           'INTEGER NOT NULL DEFAULT 0'],
-    ['active_event',            "TEXT NOT NULL DEFAULT '{}'"],
-    ['discovered_kingdoms',     "TEXT NOT NULL DEFAULT '{}'"],
-    ['location_maps_wip',       "TEXT NOT NULL DEFAULT '[]'"],
+  // Seed default events
+  const defaultEvents = [
+    // Spring
+    ['spring_bloom',      'Spring Bloom',         'Warm rains encourage growth.',                  'spring', 'farm_yield', 0.10, 5, null, 1],
+    ['spring_floods',     'Spring Floods',         'Rising rivers damage farmland.',                'spring', 'morale',   -5,   3, null, 0],
+    ['pollination_boom',  'Pollination Boom',      'A great flowering swells the population.',      'spring', 'population', 500, 1, null, 1],
+    ['warm_winds',        'Warm Winds',            'A pleasant breeze lifts spirits.',              'spring', 'morale',    5,   1, null, 1],
+    // Summer
+    ['abundant_harvest',  'Abundant Harvest',      'Exceptional sun yields record crops.',          'summer', 'food',      0.15, 1, null, 1],
+    ['heat_wave',         'Heat Wave',             'Scorching heat wilts crops and morale.',        'summer', 'farm_yield',-0.10,3, null, 0],
+    ['travelling_merch',  'Travelling Merchants',  'Exotic goods boost market income.',             'summer', 'gold',      0.02, 3, null, 1],
+    ['border_skirmish',   'Border Skirmish',       'Bandits raid your outlying farms.',             'summer', 'food',     -0.05,1, null, 0],
+    // Fall
+    ['harvest_festival',  'Harvest Festival',      'The kingdom celebrates a bountiful autumn.',    'fall',   'morale',    10,  1, null, 1],
+    ['early_frost',       'Early Frost',           'An unexpected frost kills late crops.',         'fall',   'farm_yield',-0.15,2, null, 0],
+    ['trade_boom',        'Trade Boom',            'Merchants flock to your markets.',              'fall',   'gold',      0.05, 3, null, 1],
+    ['rat_infestation',   'Rat Infestation',       'Vermin consume stored food.',                   'fall',   'food',     -0.10,1, null, 0],
+    // Winter
+    ['blizzard',          'Blizzard',              'A fierce storm cripples farms and morale.',     'winter', 'farm_yield',-0.20,2, null, 0],
+    ['refugees',          'Refugees Arrive',       'Displaced families seek shelter.',              'winter', 'population', 1000,1, null, 1],
+    ['winter_plague',     'Winter Plague',         'Disease spreads through the cold months.',      'winter', 'population',-0.02,1, null, 0],
+    ['wolf_raids',        'Wolf Raids',            'Dire wolves raid border farms.',                'winter', 'food',     -0.08,1, null, 0],
+    // Race-specific
+    ['ice_trade',         'Ice Trade',             'Dwarven merchants profit from winter routes.',  'winter', 'gold',      0.05, 2, 'dwarf',    1],
+    ['dire_wolf_hunt',    'Great Hunt',            'Dire Wolf hunters return laden with prey.',     'fall',   'food',      0.20, 1, 'dire_wolf', 1],
+    ['elven_bloom',       'Elven Bloom',           'High Elf mages channel spring energy.',        'spring', 'mana',      0.15, 3, 'high_elf', 1],
+    ['dark_elf_shadow',   'Shadow Markets',        'Dark Elf smugglers exploit the long nights.',  'winter', 'gold',      0.08, 2, 'dark_elf', 1],
+    ['orc_rampage',       'Orc Rampage',           'Summer heat fuels Orcish aggression.',         'summer', 'military',  0.10, 2, 'orc',      1],
   ];
-  const cols = (await _db.all('PRAGMA table_info(kingdoms)')).map(c => c.name);
-  for (const [col, def] of KINGDOM_COLS) {
-    if (!cols.includes(col)) await addColumn('kingdoms', col, def);
+  for (const [key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive] of defaultEvents) {
+    await _db.run(`INSERT OR IGNORE INTO events (key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive) VALUES (?,?,?,?,?,?,?,?,?)`,
+      [key,name,description,season,effect_type,effect_value,effect_duration,race_only,is_positive]);
   }
 
-  // Special: region column requires backfill on existing kingdoms
-  if (!cols.includes('region')) {
-    await addColumn('kingdoms', 'region', "TEXT NOT NULL DEFAULT ''");
-    const RACE_REGIONS = {
-      dwarf: 'The Iron Holds', high_elf: 'The Silverwood', orc: 'The Bloodplains',
-      dark_elf: 'The Underspire', human: 'The Heartlands', dire_wolf: 'The Ashfang Wilds',
-    };
-    for (const k of await _db.all('SELECT id, race FROM kingdoms')) {
-      await _db.run('UPDATE kingdoms SET region = ? WHERE id = ?', [RACE_REGIONS[k.race] || 'The Unknown Lands', k.id]);
-    }
-  }
-
-  // Legacy: copy defence_upgrades -> defense_upgrades for renamed column
-  if (cols.includes('defence_upgrades') && cols.includes('defense_upgrades')) {
-    await _db.run(`UPDATE kingdoms SET defense_upgrades = defence_upgrades WHERE defense_upgrades = '{}' AND defence_upgrades != '{}'`);
-  }
-
-  // Fix softlock: kingdoms with no libraries must have at least 1 blueprint
-  await _db.run("UPDATE kingdoms SET blueprints_stored = 1 WHERE bld_libraries = 0 AND blueprints_stored < 1");
-
-  // Data migration: tools_* -> *_stored (legacy column rename)
-  if (cols.includes('tools_scaffolding') && cols.includes('scaffolding_stored')) {
-    await _db.run("UPDATE kingdoms SET scaffolding_stored = tools_scaffolding WHERE scaffolding_stored = 0 AND tools_scaffolding > 0");
-  }
-  if (cols.includes('tools_hammers') && cols.includes('hammers_stored')) {
-    await _db.run("UPDATE kingdoms SET hammers_stored = tools_hammers WHERE hammers_stored = 0 AND tools_hammers > 0");
-  }
-
-  const PLAYER_COLS = [
-    ['is_admin',        'INTEGER NOT NULL DEFAULT 0'],
-    ['is_banned',       'INTEGER NOT NULL DEFAULT 0'],
-    ['ban_reason',      'TEXT'],
-    ['is_ai',           'INTEGER NOT NULL DEFAULT 0'],
-    ['is_chat_mod',     'INTEGER NOT NULL DEFAULT 0'],
-    ['chat_banned',     'INTEGER NOT NULL DEFAULT 0'],
-    ['chat_ban_reason', 'TEXT'],
-    ['chat_color',      'TEXT DEFAULT NULL'],
-    ['chat_name',       'TEXT DEFAULT NULL'],
-  ];
-  const pCols = (await _db.all('PRAGMA table_info(players)')).map(c => c.name);
-  for (const [col, def] of PLAYER_COLS) {
-    if (!pCols.includes(col)) await addColumn('players', col, def);
-  }
-
-  const nCols = (await _db.all('PRAGMA table_info(news)')).map(c => c.name);
-  if (!nCols.includes('turn_num')) await addColumn('news', 'turn_num', 'INTEGER NOT NULL DEFAULT 0');
-
-  const CHAT_COLS = [
-    ['username',  "TEXT NOT NULL DEFAULT ''"],
-    ['player_id', 'INTEGER NOT NULL DEFAULT 0'],
-    ['deleted',   'INTEGER NOT NULL DEFAULT 0'],
-  ];
-  const cmCols = (await _db.all('PRAGMA table_info(chat_messages)')).map(c => c.name);
-  for (const [col, def] of CHAT_COLS) {
-    if (!cmCols.includes(col)) await addColumn('chat_messages', col, def);
-  }
-
-  // Expeditions: seen flag lets completed rows persist until the frontend acknowledges them
-  const expCols = (await _db.all('PRAGMA table_info(expeditions)')).map(c => c.name);
-  if (!expCols.includes('seen')) {
-    await addColumn('expeditions', 'seen', 'INTEGER NOT NULL DEFAULT 0');
-    // Clean up stuck completed rows that predate the seen column
-    await _db.run('DELETE FROM expeditions WHERE turns_left = 0');
-  }
+  // Seed default server_state row for regen tracking
+  await _db.run(`
+    INSERT OR IGNORE INTO server_state (key, value)
+    VALUES ('last_regen_at', CAST(unixepoch() AS TEXT))
+  `);
 
   return _db;
 }

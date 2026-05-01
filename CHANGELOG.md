@@ -3,16 +3,6 @@
 
 ---
 
-### Security & Hygiene (May 2026)
-- **Admin route protection** — `POST /api/admin/seed-ai` and `POST /api/admin/reset-ai` now require a valid admin JWT (were publicly accessible).
-- **Hardened JWT secret** — server exits at startup if `JWT_SECRET` env var is missing; hardcoded fallback string removed from all files.
-- **Token no longer in response body** — login and register now return only the httpOnly cookie; raw token removed from JSON response.
-- **Rate limiter trust proxy** — `app.set('trust proxy', 1)` added so IP-based rate limiting works correctly behind Render's load balancer.
-- **Payload size limits** — 50 kb global JSON body cap; direct messages capped at 2,000 characters.
-- **Orphan file cleanup** — removed `update_inputs.js`, `public/fix.js`, `public/client.js`, and unused `app/` directory.
-
----
-
 ### Latest Updates (April 2026)
 - **WISH-LIST DELIVERIES** — We've checked off several major requests:
   - **Seasons & Daily Events** — Dynamic world weather and events integrated.
@@ -217,17 +207,6 @@ Training fields award passive XP with equipment bonuses.
 
 ---
 
-### Recently Completed (from Wishlist)
-- ✅ **Seasons** — Spring/Summer/Fall/Winter real-time cycle with daily random events, season farm-yield multipliers, and race-specific events (e.g. Elven Bloom, Orc Rampage, Dwarven Ice Trade).
-- ✅ **Siege mechanics** — Full Defence panel with castle walls, guard towers, outposts, citadel unlock. Walls degrade on attack; castles reduce land capture; war machines mount on walls for +25% defence.
-- ✅ **Mercenary hiring** — Four tiers of contract troops (Rabble → Elite) available in the Economy panel. Fixed level, auto-expire, upkeep collected per turn.
-- ✅ **Trade system** — Player-to-player trade offers with accept/decline, Trading Post requirement, 1-hour expiry. Full economy panel with markets and commodity pricing.
-- ✅ **World map** — Dark fantasy SVG map with 6 racial regions, kingdom dots, click-to-inspect, compass rose, region legend.
-- ✅ **Bounty board** — Place gold bounties on rival kingdoms; auto-claimed on a successful attack.
-- ✅ **Direct messaging** — 1-on-1 private kingdom conversations accessible from rankings or profiles.
-
----
-
 ### Wishlist — Future Additions
 
 **Gameplay**
@@ -238,13 +217,11 @@ Training fields award passive XP with equipment bonuses.
 
 **Combat**
 - Alliance war — alliances can declare war on each other
+- Siege mechanics — castle walls reduce land capture percentage
 - Battle replay — animated step-by-step battle report
 
-**Economy**
-- Variable commodity prices — server-wide supply and demand shifts prices ±30% hourly
-- Trade route raiding — Orc kingdoms raid other kingdoms' trade routes for gold
-
 **World**
+- World map — visual representation of kingdom territories
 - More races — Gnome (inventor), Vampire (undead mage), Troll (regenerating fighter)
 
 **Polish**
