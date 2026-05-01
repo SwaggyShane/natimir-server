@@ -158,18 +158,14 @@ module.exports = function(db) {
     updates.turns_stored = (k.turns_stored || 0) - 1;
 
     // Apply kingdom updates in a transaction
-    // Dedup racial bonus news — only insert if we haven't already sent this message
-    const racialMsgSnippets = ['reached mastery','Dwarven war machines','High Elf scrolls','Orcish war culture','Dark Elf assassinations','Dire Wolf expeditions','Human healing aura'];
+    // Dedup news — only insert if we haven't already sent this EXACT message recently
     const filteredEvents = [];
     for (const ev of events) {
-      const isRacialMsg = racialMsgSnippets.some(s => ev.message && ev.message.includes(s));
-      if (isRacialMsg) {
-        const existing = await db.get(
-          'SELECT id FROM news WHERE kingdom_id = ? AND message = ? LIMIT 1',
-          [k.id, ev.message]
-        );
-        if (existing) continue; // already sent — skip
-      }
+      const existing = await db.get(
+        'SELECT id FROM news WHERE kingdom_id = ? AND message = ? AND created_at > (unixepoch() - 60) LIMIT 1',
+        [k.id, ev.message]
+      );
+      if (existing) continue; // already sent — skip
       filteredEvents.push(ev);
     }
 
@@ -1561,6 +1557,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'bld_guard_towers','bld_outposts','bld_schools','bld_libraries',
     'bld_mage_towers','bld_shrines','bld_housing','bld_taverns',
     'tools_hammers','tools_scaffolding','tools_blueprints','blueprints_stored',
+    'hammers_stored','scaffolding_stored','maps',
     'hammer_turns_used','smithy_allocation','racial_bonuses_unlocked',
     'last_event_at','active_event','discovered_kingdoms','location_maps_wip',
     'bld_walls','wall_upgrades','tower_def_upgrades','outpost_upgrades','defense_upgrades',

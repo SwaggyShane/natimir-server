@@ -2756,6 +2756,8 @@ function processLibrary(k, events) {
       const effective = Math.min(scribesPerTask, req.scribes);
       const workDone = (effective >= req.scribes ? 1 : effective / req.scribes) * scribeLvlMult * scribeSpeedMult;
       const newProg = (progress[progressKey] || 0) + workDone;
+      
+      const currentAlloc = parseInt(alloc[task] || 0);
 
       if (newProg >= req.turns) {
         progress[progressKey] = 0;
@@ -2788,7 +2790,7 @@ function processLibrary(k, events) {
           events.push({ type: 'system', message: `⚙️ Your scribes completed a blueprint in the Library — construction speed bonus applied.` });
         }
         
-        alloc[task] -= 1;
+        alloc[task] = Math.max(0, currentAlloc - 1);
         if (alloc[task] <= 0) delete alloc[task];
         completedAny = true;
 

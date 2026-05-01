@@ -1238,6 +1238,16 @@
                 </div>
               </div>
             </div>
+
+            <!-- Map Visualization -->
+            <div class="card" style="margin:0">
+              <div class="card-title">World Survey</div>
+              <div id="survey-map-container" style="background:#0a0d10;border-radius:6px;border:1px solid var(--border);height:200px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                <canvas id="survey-map-canvas" width="400" height="200" style="width:100%;height:100%"></canvas>
+                <div id="survey-empty" style="position:absolute;color:var(--text3);font-size:12px;pointer-events:none">No locations mapped yet.</div>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">Mapped kingdoms are shown relative to your capital.</div>
+            </div>
           </div>
 
           <div style="display:flex;flex-direction:column;gap:12px">
@@ -3459,7 +3469,14 @@ async function loadActiveExpeditions() {
 
   // ── Ensure active expeditions have a live log entry ───────────────────────
   active.forEach(function(exp) {
-    if (!document.getElementById('exp-log-live-' + exp.type) && log) {
+    var liveId = 'exp-log-live-' + exp.id;
+    var liveSpan = document.getElementById(liveId);
+    if (liveSpan) {
+      liveSpan.textContent = exp.turns_left + ' turn' + (exp.turns_left===1?'':'s') + ' remaining';
+      return;
+    }
+
+    if (log) {
       var entry = document.createElement('div');
       entry.className = 'exp-log-entry';
       entry.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px';
@@ -3468,7 +3485,7 @@ async function loadActiveExpeditions() {
         + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'
         + exp.rangers.toLocaleString() + ' rangers'
         + (exp.fighters > 0 ? ', ' + exp.fighters.toLocaleString() + ' fighters' : '')
-        + ' · <span id="exp-log-live-' + exp.type + '">' + exp.turns_left + ' turn' + (exp.turns_left===1?'':'s') + ' remaining</span>'
+        + ' · <span id="' + liveId + '">' + exp.turns_left + ' turn' + (exp.turns_left===1?'':'s') + ' remaining</span>'
         + '</div></div>';
       var empty = log.querySelector('[data-empty]');
       if (empty) empty.remove();
@@ -7186,6 +7203,12 @@ async function loadStudies() {
   if (el('st-libraries'))   el('st-libraries').textContent = fmt(libs);
   if (el('st-lib-cap'))     el('st-lib-cap').textContent = fmt(libCap);
   if (el('st-scribes-lib')) el('st-scribes-lib').textContent = fmt(libScribes);
+  
+  // Update Map & Blueprint counts (FIXED)
+  if (el('st-lib-maps'))       el('st-lib-maps').textContent = fmt(state.maps || 0);
+  if (el('st-lib-blueprints')) el('st-lib-blueprints').textContent = fmt(state.blueprints_stored || 0);
+  if (el('tools-blueprints'))  el('tools-blueprints').textContent = fmt(state.blueprints_stored || 0);
+  
   renderLibraryPanel();
 
   // Upgrade lists
@@ -8237,6 +8260,59 @@ async function clearTowerItem(id) {
 }
 
 function renderLibraryPanel() {
+  if (!studiesData) return;
+  var el = function(id){ return document.getElementById(id); };
+
+  // Render Map Visualization
+  var canvas = el('survey-map-canvas');
+  if (canvas) {
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    var disc = state.discovered_kingdoms || {};
+    if (typeof disc === 'string') { try { disc = JSON.parse(disc); } catch(e){ disc={}; } }
+    
+    var mapped = Object.keys(disc).filter(id => disc[id].mapped);
+    
+    if (mapped.length > 0) {
+      if (el('survey-empty')) el('survey-empty').style.display = 'none';
+      
+      // Draw capital (center)
+      ctx.fillStyle = '#7c6af5'; // purple
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#7c6af5';
+      ctx.beginPath(); ctx.arc(200, 100, 6, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      ctx.fillStyle = 'white'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('Your Capital', 200, 118);
+      
+      // Draw mapped kingdoms
+      mapped.forEach(function(id, i) {
+        var k = disc[id];
+        // Deterministic position based on ID
+        var seed = parseInt(id) || i;
+        var angle = (seed * 137.5) * (Math.PI/180);
+        var dist = 40 + (seed % 60);
+        var x = 200 + Math.cos(angle) * dist * 1.6;
+        var y = 100 + Math.sin(angle) * dist;
+        
+        // Connection line
+        ctx.strokeStyle = 'rgba(124,106,245,0.15)';
+        ctx.setLineDash([2, 4]);
+        ctx.beginPath(); ctx.moveTo(200,100); ctx.lineTo(x,y); ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillStyle = 'var(--gold)';
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'var(--text2)'; ctx.font = '9px sans-serif';
+        ctx.fillText(k.name || 'Unknown', x, y + 14);
+      });
+    } else {
+      if (el('survey-empty')) el('survey-empty').style.display = 'block';
+    }
+  }
+
   var alloc = state.library_allocation || {};
   if (typeof alloc === 'string') { try { alloc = JSON.parse(alloc); } catch(e){ alloc={}; } }
 
