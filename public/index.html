@@ -1701,15 +1701,6 @@
           </div>
         </div>
         <div class="trow">
-          <span class="bld-icon" style="background:#6a3a5a">🏟️</span>
-          <span class="name">Colosseum</span><span class="desc">Boosts morale recovery each turn · 2 land</span>
-          <span class="count" id="bld-colosseums">0</span>
-          <div style="display:flex;align-items:center;gap:4px">
-            <input type="number"   id="ba-colosseum" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
-            <button class="btn" onclick="setMaxValue('ba-colosseum','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
-          </div>
-        </div>
-        <div class="trow">
           <span class="bld-icon" style="background:#3a6a4a">⛩️</span>
           <span class="name">Shrines</span><span class="desc">Houses clerics to boost morale and heal troops · 2 land</span>
           <span class="count" id="bld-shrines">0</span>
@@ -6381,7 +6372,6 @@ var BUILD_FIELDS = [
   { id:'b-market',    key:'markets',      pieces:30,  alloc:'ba-market'    },
   { id:'b-mage_tower', key:'mage_towers',   pieces:25,  alloc:'ba-mage_tower' },
   { id:'b-training',  key:'training',    pieces:50,  alloc:'ba-training'  },
-  { id:'b-colosseum', key:'colosseums',   pieces:25,  alloc:'ba-colosseum' },
   { id:'b-shrine',    key:'shrines',      pieces:50,  alloc:'ba-shrine'    },
   { id:'b-castle',    key:'castles',      pieces:500, alloc:'ba-castle'    },
   { id:'b-library',   key:'libraries',     pieces:100, alloc:'ba-library'   },
@@ -6410,7 +6400,7 @@ function updateBuildDisplay() {
   }
 
   // Blueprint/scaffolding requirement notices beside buildings
-  var BLUEPRINT_REQUIRED  = new Set(['vaults','smithies','markets','mage_towers','training','colosseums','castles','libraries']);
+  var BLUEPRINT_REQUIRED  = new Set(['vaults','smithies','markets','mage_towers','training','castles','libraries']);
   var SCAFFOLDING_REQUIRED = new Set(['mage_towers','training','castles']);
   var bp = state.blueprints_stored || 0;
   var sc = state.tools_scaffolding || 0;
@@ -6494,7 +6484,7 @@ async function releaseAllResearchers() {
 
 async function releaseAllEngineers() {
   var BA_FIELDS = ['ba-farm','ba-barracks','ba-walls','ba-outpost','ba-tower','ba-school','ba-armory','ba-vault',
-    'ba-smithy','ba-market','ba-mage_tower','ba-training','ba-colosseum','ba-shrine','ba-castle','ba-library','ba-tavern','ba-housing','ba-wm','ba-weapons','ba-armor'];
+    'ba-smithy','ba-market','ba-mage_tower','ba-training','ba-shrine','ba-castle','ba-library','ba-tavern','ba-housing','ba-wm','ba-weapons','ba-armor'];
   BA_FIELDS.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = 0; });
   updateBuildDisplay();
   var result = await apiCall('POST', '/api/kingdom/build-allocation', { allocation: {} });
@@ -6537,7 +6527,7 @@ function renderBuildQueue() {
   var BUILDING_COST_JS = {
     farms:2500, barracks:5000, outposts:7500, guard_towers:2500,
     schools:7500, armories:2500, vaults:10000, smithies:10000,
-    markets:10000, mage_towers:15000, training:20000, colosseums:5000, shrines:5000, housing:5000,
+    markets:10000, mage_towers:15000, training:20000, shrines:5000, housing:5000,
     castles:100000, war_machines:1000, weapons:10, armor:10
   };
   var labels = {
