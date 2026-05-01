@@ -84,8 +84,8 @@ function manaPerTurn(k) {
   const raceManaBase = {
     high_elf: 8, dark_elf: 6, human: 3, dwarf: 2, orc: 2, dire_wolf: 1,
   }[k.race] || 3;
-  const towerMana   = (k.bld_cathedrals || 0) * 5;
-  const capacity      = (k.bld_cathedrals || 0) * 20;
+  const towerMana   = (k.bld_mage_towers || 0) * 5;
+  const capacity      = (k.bld_mage_towers || 0) * 20;
   const effectiveMages = Math.min(k.mages || 0, capacity);
   const mageMana       = Math.floor(effectiveMages / 5);
 
@@ -339,7 +339,7 @@ function applyWarmachineDamage(attacker, defender, win) {
     updates.bld_walls = Math.max(0, walls - wallLost);
   } else {
     // No walls — random buildings take damage
-    const DAMAGEABLE = ['bld_farms','bld_markets','bld_barracks','bld_schools','bld_cathedrals','bld_shrines'];
+    const DAMAGEABLE = ['bld_farms','bld_markets','bld_barracks','bld_schools','bld_mage_towers','bld_shrines'];
     const target = DAMAGEABLE[Math.floor(Math.random() * DAMAGEABLE.length)];
     const current = defender[target] || 0;
     if (current > 0) {
@@ -588,7 +588,7 @@ function purchaseUpgrade(k, category, upgradeKey) {
   if (def.requires && !upgrades[def.requires])     return { error:`Requires ${def.requires.replace(/_/g,' ')} first` };
   if (def.raceOnly && k.race !== def.raceOnly)     return { error:`Only available to ${def.raceOnly.replace(/_/g,' ')}` };
   if ((k.gold||0) < def.cost)                     return { error:`Need ${def.cost.toLocaleString()} gold` };
-  const bldCheck = { farm:'bld_farms', market:'bld_markets', tavern:'bld_taverns', tower:'bld_cathedrals', school:'bld_schools', shrine:'bld_shrines', library:'bld_libraries', wall:'bld_walls', tower_def:'bld_guard_towers', outpost:'bld_outposts' };
+  const bldCheck = { farm:'bld_farms', market:'bld_markets', tavern:'bld_taverns', tower:'bld_mage_towers', school:'bld_schools', shrine:'bld_shrines', library:'bld_libraries', wall:'bld_walls', tower_def:'bld_guard_towers', outpost:'bld_outposts' };
   if (bldCheck[category] && !((k[bldCheck[category]]||0) > 0)) return { error:`Need at least 1 ${category}` };
   upgrades[upgradeKey] = true;
   return { updates:{ gold:(k.gold||0)-def.cost, [colName]:JSON.stringify(upgrades) } };
@@ -2383,7 +2383,7 @@ async function resolveExpeditions(db, k, engine) {
         'war_machines','weapons_stockpile','armor_stockpile',
         'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
         'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
-        'bld_farms','bld_barracks','bld_markets','bld_cathedrals','blueprints_stored','maps',
+        'bld_farms','bld_barracks','bld_markets','bld_mage_towers','blueprints_stored','maps',
         'troop_levels','xp','level','discovered_kingdoms','world_fragments',
       ]);
 
@@ -2446,7 +2446,7 @@ async function resolveExpeditions(db, k, engine) {
 // ── Mage Tower — scroll crafting and mana production ──────────────────────────
 function processMageTower(k, events) {
   const updates = {};
-  const towers = k.bld_cathedrals || 0;
+  const towers = k.bld_mage_towers || 0;
   if (towers === 0) return updates;
 
   let alloc = {};
@@ -2659,7 +2659,7 @@ function processLibrary(k, events) {
           const frag = frags.splice(fragIndex, 1)[0];
           updates.world_fragments = JSON.stringify(frags);
           
-          const buildings = ['farms','barracks','markets','schools','cathedrals','shrines','guard_towers','castles','smithies','libraries'];
+          const buildings = ['farms','barracks','markets','schools','mage_towers','shrines','guard_towers','castles','smithies','libraries'];
           const targetBld = buildings[Math.floor(Math.random() * buildings.length)];
           
           hbp[frag + '_' + Date.now()] = { fragment: frag, building: targetBld, assigned: false };

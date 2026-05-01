@@ -502,9 +502,9 @@ module.exports = function(db) {
   router.post('/tower-craft', requireAuth, async (req, res) => {
     const { item, qty } = req.body;
     if (!item || qty <= 0) return res.status(400).json({ error: 'Invalid input' });
-    const k = await db.get('SELECT id, bld_cathedrals, mage_tower_allocation FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    const k = await db.get('SELECT id, bld_mage_towers, mage_tower_allocation FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-    if ((k.bld_cathedrals || 0) === 0) return res.status(400).json({ error: 'You need at least 1 Mage Tower first' });
+    if ((k.bld_mage_towers || 0) === 0) return res.status(400).json({ error: 'You need at least 1 Mage Tower first' });
 
     let alloc = {};
     try { alloc = JSON.parse(k.mage_tower_allocation || '{}'); } catch {}
@@ -820,7 +820,7 @@ module.exports = function(db) {
       'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
       'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
       'bld_farms','bld_barracks','bld_schools','bld_armories','bld_vaults','bld_smithies',
-      'bld_markets','bld_cathedrals','bld_colosseums','bld_castles','bld_libraries','bld_shrines',
+      'bld_markets','bld_mage_towers','bld_colosseums','bld_castles','bld_libraries','bld_shrines',
     ]);
 
     async function applyCovert(kingdom, updates) {
@@ -890,7 +890,7 @@ module.exports = function(db) {
     } else if (op === 'sabotage') {
       const ninjasSent = Math.max(1, parseInt(units) || 0);
       if (ninjasSent > k.ninjas) return res.status(400).json({ error: 'Not enough ninjas' });
-      const BLD_MAP = { farms:'bld_farms', smithies:'bld_smithies', cathedrals:'bld_cathedrals', barracks:'bld_barracks', libraries:'bld_libraries' };
+      const BLD_MAP = { farms:'bld_farms', smithies:'bld_smithies', mage_towers:'bld_mage_towers', barracks:'bld_barracks', libraries:'bld_libraries' };
       const col = BLD_MAP[bldType];
       if (!col) return res.status(400).json({ error: 'Invalid building type' });
       const stealthMulti = (engine.RACE_BONUSES[k.race]?.stealth || 1.0);
@@ -1238,7 +1238,7 @@ module.exports = function(db) {
       researchers:      k.researchers || 0,
       bld_libraries:    k.bld_libraries || 0,
       bld_shrines:      k.bld_shrines || 0,
-      bld_cathedrals:   k.bld_cathedrals || 0,
+      bld_mage_towers:   k.bld_mage_towers || 0,
       bld_schools:      k.bld_schools || 0,
       bld_taverns:      k.bld_taverns  || 0,
     });
@@ -1473,7 +1473,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'res_economy','res_weapons','res_armor','res_military','res_spellbook',
     'res_attack_magic','res_defense_magic','res_entertainment',
     'res_construction','res_war_machines',
-    'bld_farms','bld_barracks','bld_markets','bld_cathedrals','bld_training',
+    'bld_farms','bld_barracks','bld_markets','bld_mage_towers','bld_training',
     'bld_colosseums','bld_castles','bld_vaults','bld_smithies','bld_armories',
     'bld_guard_towers','bld_outposts','bld_schools','bld_libraries',
     'bld_mage_towers','bld_shrines','bld_housing','bld_taverns',

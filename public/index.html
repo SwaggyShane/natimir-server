@@ -908,7 +908,7 @@
           <div class="trow"><span class="name">Barracks</span><span class="count" id="kb-barracks">0</span></div>
           <div class="trow"><span class="name">Schools</span><span class="count" id="kb-schools">0</span></div>
           <div class="trow"><span class="name">Library</span><span class="count" id="kb-libraries">0</span></div>
-          <div class="trow"><span class="name">Mage Towers</span><span class="count" id="kb-cathedrals">0</span></div>
+          <div class="trow"><span class="name">Mage Towers</span><span class="count" id="kb-mage_towers">0</span></div>
           <div class="trow"><span class="name">Smithies</span><span class="count" id="kb-smithies">0</span></div>
           <div class="trow"><span class="name">Market</span><span class="count" id="kb-markets">0</span></div>
           <div class="trow"><span class="name">Guard towers</span><span class="count" id="kb-guard_towers">0</span></div>
@@ -1616,10 +1616,10 @@
         <div class="trow">
           <span class="bld-icon" style="background:#4a2a7a">⛪</span>
           <span class="name">Mage Towers</span><span class="desc">Houses mages for mana production · 5 land</span>
-          <span class="count" id="bld-cathedrals">0</span>
+          <span class="count" id="bld-mage_towers">0</span>
           <div style="display:flex;align-items:center;gap:4px">
-            <input type="number"   id="ba-cathedral" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
-            <button class="btn" onclick="setMaxValue('ba-cathedral','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
+            <input type="number"   id="ba-mage_tower" min="0" value="0" oninput="updateBuildDisplay()" style="text-align:right;width:60px"   placeholder="Qty">
+            <button class="btn" onclick="setMaxValue('ba-mage_tower','avail_units')" style="padding:4px 8px;font-size:10px">Max</button>
           </div>
         </div>
         <div class="trow">
@@ -2521,7 +2521,7 @@
             <select id="sab-target-type" style="width:100%;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px 8px;font-size:12px">
               <option value="farms">Farms</option>
               <option value="smithies">Smithies</option>
-              <option value="cathedrals">Mage Towers</option>
+              <option value="mage_towers">Mage Towers</option>
               <option value="barracks">Barracks</option>
             </select>
           </div>
@@ -4516,7 +4516,7 @@ function syncUI() {
     bld_farms:1, bld_barracks:1, bld_outposts:1, bld_guard_towers:1, bld_armories:1, bld_vaults:1,
     bld_schools:2, bld_smithies:2, bld_markets:2, bld_colosseums:2, bld_shrines:2, bld_libraries:2,
     bld_housing:1,
-    bld_cathedrals:5, bld_training:5,
+    bld_mage_towers:5, bld_training:5,
     bld_castles:10,
   };
   var usedLand = Object.keys(LAND_COST).reduce(function(sum, k) {
@@ -4692,7 +4692,7 @@ function syncUI() {
   // Key buildings in status panel — expanded set
   var kbMap = {
     farms:'bld_farms', barracks:'bld_barracks', schools:'bld_schools',
-    libraries:'bld_libraries', cathedrals:'bld_cathedrals', smithies:'bld_smithies',
+    libraries:'bld_libraries', mage_towers:'bld_mage_towers', smithies:'bld_smithies',
     markets:'bld_markets', guard_towers:'bld_guard_towers', training:'bld_training',
     castles:'bld_castles'
   };
@@ -4709,7 +4709,7 @@ function syncUI() {
     farms:'bld_farms', barracks:'bld_barracks', outposts:'bld_outposts',
     guard_towers:'bld_guard_towers', schools:'bld_schools', armories:'bld_armories',
     vaults:'bld_vaults', smithies:'bld_smithies', markets:'bld_markets',
-    cathedrals:'bld_cathedrals', training:'bld_training', colosseums:'bld_colosseums',
+    mage_towers:'bld_mage_towers', training:'bld_training', colosseums:'bld_colosseums',
     castles:'bld_castles', libraries:'bld_libraries', shrines:'bld_shrines', housing:'bld_housing',
     walls:'bld_walls', taverns:'bld_taverns',
     weapons_stockpile:'weapons_stockpile', armor_stockpile:'armor_stockpile',
@@ -5244,7 +5244,7 @@ async function loadKingdom() {
     bld_outposts: kingdom.bld_outposts, bld_guard_towers: kingdom.bld_guard_towers,
     bld_schools: kingdom.bld_schools, bld_armories: kingdom.bld_armories,
     bld_vaults: kingdom.bld_vaults, bld_smithies: kingdom.bld_smithies,
-    bld_markets: kingdom.bld_markets, bld_cathedrals: kingdom.bld_cathedrals,
+    bld_markets: kingdom.bld_markets, bld_mage_towers: kingdom.bld_mage_towers,
     bld_training: kingdom.bld_training, bld_colosseums: kingdom.bld_colosseums,
     bld_libraries: kingdom.bld_libraries || 0,
     bld_taverns: kingdom.bld_taverns || 0,
@@ -6102,7 +6102,7 @@ function applyServerUpdates(u) {
    'res_attack_magic','res_defense_magic','res_entertainment','res_construction','res_war_machines'
   ].forEach(function(k) { if (u[k] !== undefined) state[k] = u[k]; });
   ['bld_farms','bld_barracks','bld_outposts','bld_guard_towers','bld_schools','bld_armories',
-   'bld_vaults','bld_smithies','bld_markets','bld_cathedrals','bld_training','bld_colosseums','bld_castles'
+   'bld_vaults','bld_smithies','bld_markets','bld_mage_towers','bld_training','bld_colosseums','bld_castles'
   ].forEach(function(k) { if (u[k] !== undefined) state[k] = u[k]; });
   if (u.description   !== undefined) state.description   = u.description;
   if (u.xp    !== undefined) state.xp    = u.xp;
@@ -6130,7 +6130,7 @@ var BUILD_FIELDS = [
   { id:'b-vault',     key:'vaults',       pieces:5,   alloc:'ba-vault'     },
   { id:'b-smithy',    key:'smithies',      pieces:15,  alloc:'ba-smithy'    },
   { id:'b-market',    key:'markets',      pieces:30,  alloc:'ba-market'    },
-  { id:'b-cathedral', key:'cathedrals',   pieces:25,  alloc:'ba-cathedral' },
+  { id:'b-mage_tower', key:'mage_towers',   pieces:25,  alloc:'ba-mage_tower' },
   { id:'b-training',  key:'training',    pieces:50,  alloc:'ba-training'  },
   { id:'b-colosseum', key:'colosseums',   pieces:25,  alloc:'ba-colosseum' },
   { id:'b-shrine',    key:'shrines',      pieces:50,  alloc:'ba-shrine'    },
@@ -6161,8 +6161,8 @@ function updateBuildDisplay() {
   }
 
   // Blueprint/scaffolding requirement notices beside buildings
-  var BLUEPRINT_REQUIRED  = new Set(['vaults','smithies','markets','cathedrals','training','colosseums','castles','libraries']);
-  var SCAFFOLDING_REQUIRED = new Set(['cathedrals','training','castles']);
+  var BLUEPRINT_REQUIRED  = new Set(['vaults','smithies','markets','mage_towers','training','colosseums','castles','libraries']);
+  var SCAFFOLDING_REQUIRED = new Set(['mage_towers','training','castles']);
   var bp = state.blueprints_stored || 0;
   var sc = state.tools_scaffolding || 0;
 
@@ -6222,7 +6222,7 @@ function loadBuildAllocation() {
   var buildingKeyMap = {
     farm:'farms', barracks:'barracks', outpost:'outposts', tower:'guard_towers',
     school:'schools', armory:'armories', vault:'vaults', smithy:'smithies',
-    market:'markets', cathedral:'cathedrals', training:'training',
+    market:'markets', mage_tower:'mage_towers', training:'training',
     colosseum:'colosseums', shrine:'shrines', castle:'castles', library:'libraries', housing:'housing', war_machine:'war_machines',
     weapons:'weapons', armor:'armor'
   };
@@ -6245,7 +6245,7 @@ async function releaseAllResearchers() {
 
 async function releaseAllEngineers() {
   var BA_FIELDS = ['ba-farm','ba-barracks','ba-walls','ba-outpost','ba-tower','ba-school','ba-armory','ba-vault',
-    'ba-smithy','ba-market','ba-cathedral','ba-training','ba-colosseum','ba-shrine','ba-castle','ba-library','ba-tavern','ba-housing','ba-wm','ba-weapons','ba-armor'];
+    'ba-smithy','ba-market','ba-mage_tower','ba-training','ba-colosseum','ba-shrine','ba-castle','ba-library','ba-tavern','ba-housing','ba-wm','ba-weapons','ba-armor'];
   BA_FIELDS.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = 0; });
   updateBuildDisplay();
   var result = await apiCall('POST', '/api/kingdom/build-allocation', { allocation: {} });
@@ -6259,7 +6259,7 @@ async function saveBuildAllocation() {
   var buildingKeyMap = {
     farm:'farms', barracks:'barracks', outpost:'outposts', tower:'guard_towers',
     school:'schools', armory:'armories', vault:'vaults', smithy:'smithies',
-    market:'markets', cathedral:'cathedrals', training:'training',
+    market:'markets', mage_tower:'mage_towers', training:'training',
     colosseum:'colosseums', shrine:'shrines', castle:'castles', library:'libraries', housing:'housing', war_machine:'war_machines',
     weapons:'weapons', armor:'armor'
   };
@@ -6288,20 +6288,20 @@ function renderBuildQueue() {
   var BUILDING_COST_JS = {
     farms:2500, barracks:5000, outposts:7500, guard_towers:2500,
     schools:7500, armories:2500, vaults:10000, smithies:10000,
-    markets:10000, cathedrals:15000, training:20000, colosseums:5000, shrines:5000, housing:5000,
+    markets:10000, mage_towers:15000, training:20000, colosseums:5000, shrines:5000, housing:5000,
     castles:100000, war_machines:1000, weapons:10, armor:10
   };
   var labels = {
     farms:'Farms', barracks:'Barracks', outposts:'Outposts', guard_towers:'Guard Towers',
     schools:'Schools', armories:'Armories', vaults:'Vaults', smithies:'Smithies',
-    markets:'Market Places', cathedrals:'Mage Towers', training:'Training Fields',
+    markets:'Market Places', mage_towers:'Mage Towers', training:'Training Fields',
     colosseums:'Taverns', shrines:'Shrines', housing:'Housing', castles:'Castles', war_machines:'War Machines',
     weapons:'Weapons', armor:'Armor'
   };
   var icons = {
     farms:'🌾', barracks:'🏠', outposts:'🏴', guard_towers:'🗼',
     schools:'📚', armories:'🛡️', vaults:'💰', smithies:'⚒️',
-    markets:'🏪', cathedrals:'🗼', training:'⚔️', colosseums:'🍺', shrines:'⛩️', housing:'🏘️',
+    markets:'🏪', mage_towers:'🗼', training:'⚔️', colosseums:'🍺', shrines:'⛩️', housing:'🏘️',
     castles:'🏰', war_machines:'🪖', weapons:'🗡️', armor:'🔰'
   };
 
@@ -6309,7 +6309,7 @@ function renderBuildQueue() {
   var keyMap = {
     farm:'farms', barracks:'barracks', outpost:'outposts', tower:'guard_towers',
     school:'schools', armory:'armories', vault:'vaults', smithy:'smithies',
-    market:'markets', cathedral:'cathedrals', training:'training',
+    market:'markets', mage_tower:'mage_towers', training:'training',
     colosseum:'colosseums', shrine:'shrines', castle:'castles', library:'libraries', housing:'housing', war_machine:'war_machines',
     weapons:'weapons', armor:'armor'
   };
@@ -6933,8 +6933,8 @@ async function loadStudies() {
   var el = function(id){ return document.getElementById(id); };
 
   // Tower
-  var towers = data.bld_cathedrals || 0;
-  state.bld_cathedrals = towers; // Sync
+  var towers = data.bld_mage_towers || 0;
+  state.bld_mage_towers = towers; // Sync
   var towerCap = towers * 20;
   var towerMages = Math.min(state.mages || 0, towerCap);
   if (el('st-towers'))     el('st-towers').textContent     = fmt(towers);
@@ -8021,7 +8021,7 @@ var SCROLL_DEFS = [
 ];
 
 async function craftTowerItem(id) {
-  var towers = state.bld_cathedrals || 0;
+  var towers = state.bld_mage_towers || 0;
   if (towers === 0) return toast('Build a Mage Tower first', 'error');
   var qty = parseInt(document.getElementById('tower-input-' + id)?.value) || 0;
   if (qty <= 0) return toast('Enter a quantity to craft', 'error');

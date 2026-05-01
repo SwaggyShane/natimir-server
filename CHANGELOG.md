@@ -4,6 +4,12 @@
 ---
 
 ### Latest Updates (April 2026)
+- **WISH-LIST DELIVERIES** — We've checked off several major requests:
+  - **Seasons & Daily Events** — Dynamic world weather and events integrated.
+  - **Trade System** — Player-to-player commodity exchange active.
+  - **Bounty Board** — Place hits on rivals.
+  - **Direct Messaging** — Private 1-on-1 kingdom chat.
+  - **Mercenary Camp** — Hire temporary soldiers for gold.
 - **INTERFACE PATCH (1.0.6)** — Major UI cleanup:
   - **Library Residents** — Libraries now correctly house scribes only.
   - **Badges** — Added "Siege" (Status), "Racial Gift" (Training), and "Citadel" (Defense) badges.
@@ -205,8 +211,7 @@ Training fields award passive XP with equipment bonuses.
 
 **Gameplay**
 - Spell casting target history — remember last target per spell
-- Diplomacy — non-aggression pacts, trade agreements between kingdoms
-- Seasons — periodic world events affecting all kingdoms (drought, plague, magic surge)
+- Diplomacy — formal non-aggression pacts and tribute
 - Prestige / reset system — kingdoms that reach max level can prestige for a permanent bonus
 - Named hero units — single high-level units with unique abilities
 
@@ -214,11 +219,6 @@ Training fields award passive XP with equipment bonuses.
 - Alliance war — alliances can declare war on each other
 - Siege mechanics — castle walls reduce land capture percentage
 - Battle replay — animated step-by-step battle report
-- Mercenary hiring — temporary troops available for gold at market
-
-**Social**
-- Trade system — send gold or resources between kingdoms
-- Named hero units — single high-level units with unique abilities
 
 **World**
 - World map — visual representation of kingdom territories
@@ -231,3 +231,4 @@ Training fields award passive XP with equipment bonuses.
 - Email notifications — optional alerts for attacks and expedition return
 - Tutorial / new player guide
 - Achievements system
+

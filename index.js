@@ -112,7 +112,7 @@ async function runAiKingdom(db, engine, playerId) {
     'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
     'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
     'bld_farms','bld_barracks','bld_schools','bld_armories','bld_vaults','bld_smithies',
-    'bld_markets','bld_cathedrals','bld_training','bld_colosseums','bld_castles',
+    'bld_markets','bld_mage_towers','bld_training','bld_colosseums','bld_castles',
     'bld_shrines','bld_libraries',
     'build_allocation','build_progress','research_allocation','research_progress','mage_tower_allocation',
     'build_queue','xp','level','troop_levels','maps','scrolls','active_effects',
@@ -180,7 +180,7 @@ async function runAiKingdom(db, engine, playerId) {
         farms:      Math.floor(eng * farmPct),
         barracks:   Math.floor(eng * barPct),
         schools:    Math.floor(eng * schoolPct),
-        cathedrals: (ai.race === 'high_elf' || ai.race === 'dark_elf') ? Math.floor(eng * restPct) : 0,
+        mage_towers: (ai.race === 'high_elf' || ai.race === 'dark_elf') ? Math.floor(eng * restPct) : 0,
         markets:    (ai.race === 'dwarf'    || ai.race === 'human')     ? Math.floor(eng * restPct) : 0,
         training:   (ai.race === 'dire_wolf'|| ai.race === 'orc')       ? Math.floor(eng * restPct) : 0,
       });
@@ -205,7 +205,7 @@ async function runAiKingdom(db, engine, playerId) {
     }
 
     // ── Mage tower allocation ──
-    const towers = ai.bld_cathedrals || 0;
+    const towers = ai.bld_mage_towers || 0;
     const mages  = ai.mages || 0;
     if (towers > 0 && mages > 0) {
       updates.mage_tower_allocation = JSON.stringify({ mages: Math.min(mages, towers * 20) });
@@ -745,7 +745,7 @@ async function start() {
           war_machines=0, weapons_stockpile=0, armor_stockpile=0,
           bld_farms=200, bld_barracks=1, bld_schools=1, bld_armories=1,
           bld_housing=100, bld_outposts=0, bld_guard_towers=0, bld_vaults=0,
-          bld_smithies=0, bld_markets=0, bld_cathedrals=0, bld_training=0,
+          bld_smithies=0, bld_markets=0, bld_mage_towers=0, bld_training=0,
           bld_colosseums=0, bld_castles=0, bld_shrines=0, bld_libraries=0,
           res_economy=100, res_weapons=100, res_armor=100, res_military=100,
           res_attack_magic=100, res_defense_magic=100, res_entertainment=100,

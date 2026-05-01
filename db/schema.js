@@ -63,7 +63,7 @@ async function initDb() {
       bld_vaults        INTEGER NOT NULL DEFAULT 0,
       bld_smithies      INTEGER NOT NULL DEFAULT 0,
       bld_markets       INTEGER NOT NULL DEFAULT 0,
-      bld_cathedrals    INTEGER NOT NULL DEFAULT 0,
+      bld_mage_towers    INTEGER NOT NULL DEFAULT 0,
       bld_shrines       INTEGER NOT NULL DEFAULT 0,
       mage_tower_allocation TEXT NOT NULL DEFAULT '{}',
       shrine_allocation TEXT NOT NULL DEFAULT '{}',
