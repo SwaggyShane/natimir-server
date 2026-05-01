@@ -3,11 +3,13 @@ const express      = require('express');
 const http         = require('http');
 const { Server }   = require('socket.io');
 const cookieParser = require('cookie-parser');
+const helmet       = require('helmet');
 const path         = require('path');
 
-const { initDb }      = require('./db/schema');
-const setupSockets    = require('./game/sockets');
-const { requireAuth } = require('./routes/middleware');
+const { initDb }          = require('./db/schema');
+const setupSockets        = require('./game/sockets');
+const { requireAuth }     = require('./routes/middleware');
+const { seedAiKingdoms }  = require('./game/ai');
 
 const app    = express();
 const server = http.createServer(app);
@@ -41,6 +43,7 @@ const turnLimiter   = makeRateLimiter(300, 60 * 1000);     // 300 turn/action re
 const generalLimiter= makeRateLimiter(500, 60 * 1000);     // 500 general requests/min
 
 app.set('trust proxy', 1); // trust first proxy so req.ip reflects the real client IP
+app.use(helmet({ contentSecurityPolicy: false })); // CSP disabled — inline scripts in single-file HTML
 app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
 app.use(generalLimiter);
@@ -51,42 +54,6 @@ const REGEN_AMOUNT = 7;   // +7 turns every 25 minutes = ~400/day
 const REGEN_MAX    = 400;
 const REGEN_MS     = 25 * 60 * 1000;
 
-const AI_KINGDOMS = [
-  { username: 'ai_ironforge',   kingdomName: 'Ironforge Hold',     race: 'dwarf'     },
-  { username: 'ai_shadowveil',  kingdomName: 'Shadowveil Enclave', race: 'dark_elf'  },
-  { username: 'ai_stormfang',   kingdomName: 'Stormfang Warpack',  race: 'dire_wolf' },
-  { username: 'ai_silverwind',  kingdomName: 'Silverwind Spire',   race: 'high_elf'  },
-  { username: 'ai_grimtusk',    kingdomName: 'Grimtusk Horde',     race: 'orc'       },
-  { username: 'ai_ashenvale',   kingdomName: 'Ashenvale Republic', race: 'human'     },
-  { username: 'ai_deepdelve',   kingdomName: 'Deepdelve Citadel',  race: 'dwarf'     },
-  { username: 'ai_nightshade',  kingdomName: 'Nightshade Court',   race: 'dark_elf'  },
-  { username: 'ai_bloodmoon',   kingdomName: 'Bloodmoon Clan',     race: 'orc'       },
-  { username: 'ai_crystalpeak', kingdomName: 'Crystalpeak Tower',  race: 'high_elf'  },
-];
-
-async function seedAiKingdoms(db) {
-  let seeded = 0;
-  for (const ai of AI_KINGDOMS) {
-    const existing = await db.get('SELECT id FROM players WHERE username = ?', [ai.username]);
-    if (existing) continue;
-    const bcrypt = require('bcryptjs');
-    const hash = bcrypt.hashSync(Math.random().toString(36), 8);
-    const player = await db.run(
-      'INSERT INTO players (username, password, is_ai) VALUES (?, ?, 1)',
-      [ai.username, hash]
-    );
-    await db.run(
-      `INSERT INTO kingdoms (player_id, name, race, gold, land, population,
-        researchers, engineers, rangers, turns_stored, res_spellbook, blueprints_stored,
-        bld_farms, bld_schools, bld_barracks, bld_armories, bld_housing, world_fragments)
-       VALUES (?, ?, ?, 10000, 504, 50000, 100, 100, 50, 400, 0, 1, 200, 1, 1, 1, 100, '["Volcanic Rock", "Ancient Elven Wood", "Dragon Scale", "Abyssal Crystal", "Celestial Feather", "Dwarven Star-Metal", "Cursed Bloodstone", "Tears of the World Tree", "Void Essence", "Titan Bone"]')`,
-      [player.lastID, ai.kingdomName, ai.race]
-    );
-    seeded++;
-    console.log(`[ai] Seeded: ${ai.kingdomName} (${ai.race})`);
-  }
-  return seeded;
-}
 
 async function processAiTurns(db) {
   const engine = require('./game/engine');
@@ -445,7 +412,7 @@ async function runRegen(db) {
   }
 
   // Fire daily events for all kingdoms
-  const kingdoms = await db.all('SELECT * FROM kingdoms WHERE turn > 0');
+  const kingdoms = await db.all('SELECT id, name, race, gold, food, morale, population, turn, last_event_at, active_event FROM kingdoms WHERE turn > 0');
   for (const k of kingdoms) {
     const result = await fireDailyEvent(db, k, season);
     if (result) {
@@ -535,252 +502,14 @@ async function start() {
   updateMarketPrices(db);
 
   // ── Routes ────────────────────────────────────────────────────────────────────
-  app.use('/api/auth',    authLimiter,  require('./routes/auth')(db));
-  app.use('/api/kingdom', turnLimiter,  require('./routes/kingdom')(db));
-  app.use('/api/hero',    turnLimiter,  require('./routes/hero')(db));
-  app.use('/api/admin',                 require('./routes/admin')(db, io));
-
-  app.get('/api/alliance/list', requireAuth, async (req, res) => {
-    const rows = await db.all(`
-      SELECT a.id, a.name, k.name AS leader_name, COUNT(am.kingdom_id) as member_count
-      FROM alliances a
-      JOIN kingdoms k ON a.leader_id = k.id
-      JOIN alliance_members am ON am.alliance_id = a.id
-      GROUP BY a.id ORDER BY member_count DESC, a.name ASC
-    `);
-    res.json(rows);
-  });
-
-  app.get('/api/alliance/my', requireAuth, async (req, res) => {
-    const kingdom = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-    if (!kingdom) return res.status(404).json({ error: 'Kingdom not found' });
-    const membership = await db.get('SELECT * FROM alliance_members WHERE kingdom_id = ?', [kingdom.id]);
-    if (!membership) return res.json({ alliance: null });
-    const alliance = await db.get('SELECT * FROM alliances WHERE id = ?', [membership.alliance_id]);
-    const members = await db.all(`
-      SELECT k.id, k.name, k.race, k.land, k.fighters, k.level, am.pledge
-      FROM kingdoms k JOIN alliance_members am ON k.id = am.kingdom_id
-      WHERE am.alliance_id = ? ORDER BY k.land DESC`, [membership.alliance_id]);
-    res.json({ alliance, members, myPledge: membership.pledge, isLeader: alliance.leader_id === kingdom.id });
-  });
-
-  app.post('/api/alliance/pledge', requireAuth, async (req, res) => {
-    const kingdom = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-    const { pledge } = req.body;
-    const p = Math.max(0, Math.min(10, Number(pledge) || 3));
-    await db.run('UPDATE alliance_members SET pledge = ? WHERE kingdom_id = ?', [p, kingdom.id]);
-    res.json({ ok: true, pledge: p });
-  });
-
-  app.post('/api/alliance/dismiss', requireAuth, async (req, res) => {
-    const kingdom = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-    const alliance = await db.get('SELECT * FROM alliances WHERE leader_id = ?', [kingdom.id]);
-    if (!alliance) return res.status(403).json({ error: 'Only leader can dismiss members' });
-    const { targetKingdomId } = req.body;
-    if (targetKingdomId === kingdom.id) return res.status(400).json({ error: 'Cannot dismiss yourself' });
-    await db.run('DELETE FROM alliance_members WHERE kingdom_id = ? AND alliance_id = ?', [targetKingdomId, alliance.id]);
-    res.json({ ok: true });
-  });
-
-  app.post('/api/alliance/create', requireAuth, async (req, res) => {
-    const { name } = req.body;
-    if (!name?.trim()) return res.status(400).json({ error: 'Alliance name required' });
-    const kingdom = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-    if (!kingdom) return res.status(404).json({ error: 'Kingdom not found' });
-    await db.run('DELETE FROM alliance_members WHERE kingdom_id = ?', [kingdom.id]);
-    try {
-      const result = await db.run('INSERT INTO alliances (name, leader_id) VALUES (?, ?)', [name.trim(), kingdom.id]);
-      await db.run('INSERT INTO alliance_members (alliance_id, kingdom_id, pledge) VALUES (?, ?, 3)', [result.lastID, kingdom.id]);
-      res.json({ ok: true, allianceId: result.lastID });
-    } catch (err) {
-      if (err.message.includes('UNIQUE')) return res.status(409).json({ error: 'Alliance name taken' });
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
-
-  app.post('/api/alliance/invite', requireAuth, async (req, res) => {
-    const kingdom = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-    const membership = await db.get('SELECT * FROM alliance_members WHERE kingdom_id = ?', [kingdom.id]);
-    if (!membership) return res.status(400).json({ error: 'You are not in an alliance' });
-    const alliance = await db.get('SELECT * FROM alliances WHERE id = ?', [membership.alliance_id]);
-    if (alliance.leader_id !== kingdom.id) return res.status(403).json({ error: 'Only the leader can invite' });
-    try {
-      await db.run('INSERT INTO alliance_members (alliance_id, kingdom_id) VALUES (?, ?)', [membership.alliance_id, req.body.targetKingdomId]);
-      res.json({ ok: true });
-    } catch {
-      res.status(409).json({ error: 'Already a member' });
-    }
-  });
-
-  app.post('/api/alliance/leave', requireAuth, async (req, res) => {
-    const kingdom = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-    await db.run('DELETE FROM alliance_members WHERE kingdom_id = ?', [kingdom.id]);
-    res.json({ ok: true });
-  });
-
-  app.get('/api/regions', requireAuth, async (req, res) => {
-    try {
-      const rows = await db.all(`
-        SELECT r.*, a.name as owner_name, ca.name as challenger_name
-        FROM regions r
-        LEFT JOIN alliances a ON r.owner_alliance_id = a.id
-        LEFT JOIN alliances ca ON r.contest_alliance_id = ca.id
-      `);
-      res.json(rows);
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.get('/api/world/bounties', requireAuth, async (req, res) => {
-    try {
-      const rows = await db.all(`
-        SELECT b.*, k.name as target_name, p.username as placer_name
-        FROM bounties b
-        JOIN kingdoms k ON b.target_id = k.id
-        JOIN players p ON b.placer_id = p.id
-        WHERE b.status = 'active'
-        ORDER BY b.amount DESC
-      `);
-      res.json(rows);
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/world/bounties', requireAuth, async (req, res) => {
-    try {
-      const { target_id, amount } = req.body;
-      if (!target_id || !amount || amount <= 0) return res.status(400).json({ error: 'Invalid target or amount' });
-
-      // Check if player has enough gold
-      const k = await db.get('SELECT id, gold FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-      if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-      if (k.gold < amount) return res.status(400).json({ error: 'Not enough gold' });
-      if (k.id === target_id) return res.status(400).json({ error: 'Cannot place bounty on yourself' });
-
-      await db.run('UPDATE kingdoms SET gold = gold - ? WHERE id = ?', [amount, k.id]);
-      await db.run(
-        'INSERT INTO bounties (placer_id, target_id, amount) VALUES (?, ?, ?)',
-        [req.player.playerId, target_id, amount]
-      );
-
-      res.json({ ok: true, message: 'Bounty placed!' });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.get('/api/messages', requireAuth, async (req, res) => {
-    try {
-      // Get unique conversations
-      const rows = await db.all(`
-        SELECT 
-          m.*, 
-          p1.username as sender_name, 
-          p2.username as recipient_name,
-          CASE WHEN m.sender_id = ? THEN m.recipient_id ELSE m.sender_id END as other_id,
-          CASE WHEN m.sender_id = ? THEN p2.username ELSE p1.username END as other_name
-        FROM messages m
-        JOIN players p1 ON m.sender_id = p1.id
-        JOIN players p2 ON m.recipient_id = p2.id
-        WHERE m.sender_id = ? OR m.recipient_id = ?
-        ORDER BY m.created_at DESC
-      `, [req.player.playerId, req.player.playerId, req.player.playerId, req.player.playerId]);
-      
-      res.json(rows);
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/messages', requireAuth, async (req, res) => {
-    try {
-      const { recipient_id, content } = req.body;
-      if (!recipient_id || !content) return res.status(400).json({ error: 'Missing recipient or content' });
-      if (typeof content !== 'string' || content.length > 2000) return res.status(400).json({ error: 'Message too long (max 2000 chars)' });
-      const myId = req.player.playerId;
-      if (myId === recipient_id) return res.status(400).json({ error: 'Cannot message yourself' });
-
-      const result = await db.run(
-        'INSERT INTO messages (sender_id, recipient_id, content) VALUES (?, ?, ?)',
-        [myId, recipient_id, content]
-      );
-
-      // Emit real-time notification
-      const senderInfo = await db.get('SELECT username FROM players WHERE id = ?', [myId]);
-      io.to(`player:${recipient_id}`).emit('message:received', {
-        id: result.lastID,
-        sender_id: myId,
-        sender_name: senderInfo?.username || 'System',
-        content,
-        created_at: Math.floor(Date.now()/1000)
-      });
-
-      res.json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.get('/api/alliance/:id', requireAuth, async (req, res) => {
-    const alliance = await db.get('SELECT * FROM alliances WHERE id = ?', [req.params.id]);
-    if (!alliance) return res.status(404).json({ error: 'Not found' });
-    const members = await db.all(`
-      SELECT k.id, k.name, k.race, k.land, am.pledge
-      FROM kingdoms k JOIN alliance_members am ON k.id = am.kingdom_id
-      WHERE am.alliance_id = ?`, [req.params.id]);
-    res.json({ ...alliance, members });
-  });
-
-  app.get('/api/chat/:room', requireAuth, async (req, res) => {
-    const msgs = await db.all(`
-      SELECT cm.id, cm.message, cm.created_at, cm.username,
-             p.is_chat_mod, p.is_admin, p.chat_color, p.chat_name, k.race
-      FROM chat_messages cm
-      JOIN players p ON cm.player_id = p.id
-      JOIN kingdoms k ON cm.kingdom_id = k.id
-      WHERE cm.room = ? AND cm.deleted = 0
-      ORDER BY cm.created_at DESC LIMIT 80`, [req.params.room]);
-    res.json(msgs.reverse());
-  });
+  app.use('/api/auth',     authLimiter,  require('./routes/auth')(db));
+  app.use('/api/kingdom',  turnLimiter,  require('./routes/kingdom')(db));
+  app.use('/api/hero',     turnLimiter,  require('./routes/hero')(db));
+  app.use('/api/admin',                  require('./routes/admin')(db, io));
+  app.use('/api/alliance',               require('./routes/alliance')(db));
+  app.use('/api',                        require('./routes/world')(db, io));
 
   app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: Math.floor(process.uptime()) }));
-
-  // Admin: seed or reset AI kingdoms
-  app.post('/api/admin/seed-ai', requireAuth, async (req, res) => {
-    if (!req.player.isAdmin) return res.status(403).json({ error: 'Admin access required' });
-    try {
-      const seeded = await seedAiKingdoms(db);
-      res.json({ ok: true, seeded, message: seeded > 0 ? `Seeded ${seeded} AI kingdoms` : 'All AI kingdoms already exist' });
-    } catch(e) { res.status(500).json({ error: e.message }); }
-  });
-
-  app.post('/api/admin/reset-ai', requireAuth, async (req, res) => {
-    if (!req.player.isAdmin) return res.status(403).json({ error: 'Admin access required' });
-    try {
-      const aiPlayers = await db.all('SELECT id FROM players WHERE is_ai = 1');
-      for (const p of aiPlayers) {
-        const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [p.id]);
-        if (k) await db.run(`UPDATE kingdoms SET
-          gold=10000, mana=0, land=504, population=50000, food=0, morale=100,
-          turn=0, turns_stored=400, fighters=0, rangers=50, clerics=0, mages=0,
-          thieves=0, ninjas=0, researchers=100, engineers=100, scribes=0,
-          war_machines=0, weapons_stockpile=0, armor_stockpile=0,
-          bld_farms=200, bld_barracks=1, bld_schools=1, bld_armories=1,
-          bld_housing=100, bld_outposts=0, bld_guard_towers=0, bld_vaults=0,
-          bld_smithies=0, bld_markets=0, bld_mage_towers=0, bld_training=0,
-          bld_colosseums=0, bld_castles=0, bld_shrines=0, bld_libraries=0,
-          res_economy=100, res_weapons=100, res_armor=100, res_military=100,
-          res_attack_magic=100, res_defense_magic=100, res_entertainment=100,
-          res_construction=100, res_war_machines=100, res_spellbook=0,
-          xp=0, level=1, research_allocation='{}', build_allocation='{}',
-          build_queue='{}', scrolls='{}', maps=0, blueprints_stored=0, active_effects='{}'
-          WHERE id = ?`, [k.id]);
-      }
-      res.json({ ok: true, reset: aiPlayers.length });
-    } catch(e) { res.status(500).json({ error: e.message }); }
-  });
 
   // ── One-time admin promotion ───────────────────────────────────────────────
   // POST /api/setup-admin  body: { secret, username }
@@ -802,24 +531,6 @@ async function start() {
   // Admin panel HTML served at /admin
   app.get('/admin', (_req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-  });
-
-  app.post('/api/suggestions', requireAuth, async (req, res) => {
-    try {
-      const { message } = req.body;
-      if (!message || message.length < 5) return res.status(400).json({ error: 'Suggestion too short' });
-      if (message.length > 1000) return res.status(400).json({ error: 'Suggestion too long (max 1000 chars)' });
-
-      const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-      await db.run(
-        'INSERT INTO suggestions (player_id, kingdom_id, message) VALUES (?, ?, ?)',
-        [req.player.playerId, k ? k.id : null, message]
-      );
-
-      res.json({ ok: true, message: 'Thank you! Your suggestion has been recorded.' });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
   });
 
   app.get('*', (_req, res) => {
