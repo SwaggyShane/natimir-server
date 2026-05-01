@@ -684,16 +684,11 @@ function processTurn(k) {
           updates.collected_lore = JSON.stringify(loreCollected);
           
           if (loreCollected.length >= raceLore.length) {
-            const ach = safeJsonParse(updates.achievements || k.achievements, [], 'lore');
-            if (!ach.includes('historian')) {
-              ach.push('historian');
-              updates.achievements = JSON.stringify(ach);
-              events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Historian (Found all library lore)' });
-            }
+            updates._historian_unlocked = true;
           }
         }
         updates.last_lore_id = ev.id;
-        events.push({ type: 'lore', message: `📜 HISTORY: ${ev.msg || ev.content || ev}` });
+        events.push({ type: 'system', message: `📜 HISTORY: ${ev.msg || ev.content || ev}` });
       }
     }
   }
@@ -1049,7 +1044,73 @@ function processTurn(k) {
   }
 
   updates.last_turn_at = Math.floor(Date.now() / 1000);
+  checkAchievements(k, updates, events);
   return { updates, events };
+}
+
+function checkAchievements(k, updates, events) {
+  const ach = safeJsonParse(updates.achievements || k.achievements, [], 'checkAchievements');
+  let achUpdated = false;
+
+  const currentTowers = updates.bld_mage_towers !== undefined ? updates.bld_mage_towers : k.bld_mage_towers || 0;
+  const currentCastles = updates.bld_castles !== undefined ? updates.bld_castles : k.bld_castles || 0;
+  if (!ach.includes('ach_grandmaster') && currentTowers >= 100 && currentCastles >= 100) {
+    ach.push('ach_grandmaster');
+    updates.land = (updates.land !== undefined ? updates.land : k.land || 0) + 1000;
+    updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) + 1000;
+    events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Grandmaster! Rewarded +1000 Land and +1000 Maps.' });
+    achUpdated = true;
+  }
+
+  const currentPop = updates.population !== undefined ? updates.population : k.population || 0;
+  if (!ach.includes('ach_warlord') && currentPop >= 10000) {
+    ach.push('ach_warlord');
+    updates.land = (updates.land !== undefined ? updates.land : k.land || 0) + 5000;
+    events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Warlord! Rewarded +5000 Land.' });
+    achUpdated = true;
+  }
+
+  const currentGold = updates.gold !== undefined ? updates.gold : k.gold || 0;
+  if (!ach.includes('ach_wealthy') && currentGold >= 10000000) {
+    ach.push('ach_wealthy');
+    updates.scaffolding_stored = (updates.scaffolding_stored !== undefined ? updates.scaffolding_stored : k.scaffolding_stored || 0) + 5000;
+    events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Merchant King! Rewarded +5000 Scaffolding.' });
+    achUpdated = true;
+  }
+
+  const currentMana = updates.mana !== undefined ? updates.mana : k.mana || 0;
+  if (!ach.includes('ach_arcane') && currentMana >= 1000000) {
+    ach.push('ach_arcane');
+    updates.scrolls = (updates.scrolls !== undefined ? updates.scrolls : k.scrolls || 0) + 10000;
+    events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Arcane Overlord! Rewarded +10,000 Scrolls.' });
+    achUpdated = true;
+  }
+
+  const collectorAchieved = updates._collector_unlocked;
+  if (collectorAchieved) {
+    if (!ach.includes('collector')) {
+      ach.push('collector');
+      achUpdated = true;
+      updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) + 5000;
+      events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Field Collector (Found all expedition events). Rewarded +5000 Maps.' });
+    }
+    delete updates._collector_unlocked;
+  }
+
+  const historianAchieved = updates._historian_unlocked;
+  if (historianAchieved) {
+    if (!ach.includes('historian')) {
+      ach.push('historian');
+      achUpdated = true;
+      updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) + 5000;
+      events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Historian (Found all library lore). Rewarded +5000 Maps.' });
+    }
+    delete updates._historian_unlocked;
+  }
+
+  if (achUpdated) {
+    updates.achievements = JSON.stringify(ach);
+  }
 }
 
 // ── Level-based caps ──────────────────────────────────────────────────────────
@@ -2237,12 +2298,7 @@ function junkPrize(k, updates) {
       updates.collected_events = JSON.stringify(eventsCollected);
 
       if (eventsCollected.length >= 25) {
-        const ach = safeJsonParse(updates.achievements || k.achievements, [], 'junk');
-        if (!ach.includes('collector')) {
-          ach.push('collector');
-          updates.achievements = JSON.stringify(ach);
-          updates._achievement_unlocked = 'Collector (Found all random events)';
-        }
+        updates._collector_unlocked = true;
       }
     }
     updates.last_event_id = ev.id;
@@ -2452,6 +2508,12 @@ function expeditionRewards(type, rangers, fighters, k) {
   const throneChance = (type === 'deep' || type === 'dungeon') ? 0.001 : 0;
   if (throneChance > 0 && roll(throneChance)) {
     updates._check_throne = true; // resolveExpeditions will check server_state and apply if unclaimed
+  }
+
+  const preAchLength = events.length;
+  checkAchievements(k, updates, events);
+  for (let i = preAchLength; i < events.length; i++) {
+      rewards.push({ text: events[i].message });
   }
 
   return { rewards, updates, events };

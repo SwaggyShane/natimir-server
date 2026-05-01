@@ -1304,10 +1304,15 @@
               <div id="library-upgrade-list"></div>
             </div>
 
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
             <div class="card" style="margin:0">
-              <div class="card-title">Lore & Achievements</div>
-              <div id="library-achievements" style="margin-bottom:12px;font-size:12px;color:var(--gold);font-weight:bold;"></div>
+              <div class="card-title">Lore</div>
               <div id="library-lore-list" style="font-size:13px;color:var(--text2);display:flex;flex-direction:column;gap:8px">Loading lore...</div>
+            </div>
+            <div class="card" style="margin:0">
+              <div class="card-title">Achievements</div>
+              <div id="library-achievements" style="margin-bottom:12px;font-size:12px;color:var(--gold);font-weight:bold;"></div>
             </div>
           </div>
         </div>
@@ -1904,7 +1909,6 @@
           <button class="btn news-filter" data-filter="spell" onclick="setNewsFilter('spell',this)" style="font-size:12px;padding:4px 10px">✨ Spells</button>
           <button class="btn news-filter" data-filter="covert" onclick="setNewsFilter('covert',this)" style="font-size:12px;padding:4px 10px">🕵️ Covert</button>
           <button class="btn news-filter" data-filter="system" onclick="setNewsFilter('system',this)" style="font-size:12px;padding:4px 10px">📋 System</button>
-          <button class="btn news-filter" data-filter="lore" onclick="setNewsFilter('lore',this)" style="font-size:12px;padding:4px 10px">📜 Lore</button>
         </div>
         <div id="news-list">
           <div style="color:var(--text3);font-size:13px;padding:8px 0">Loading news...</div>
@@ -5687,7 +5691,6 @@ var NEWS_META = {
   system:  { icon:'📋', color:'var(--text2)',  label:'System'     },
   alliance:{ icon:'🤝', color:'var(--blue)',   label:'Alliance'   },
   expedition:{ icon:'🧭', color:'var(--gold)', label:'Expedition' },
-  lore:      { icon:'📜', color:'var(--gold)', label:'Lore'       },
 };
 
 async function loadNews() {
@@ -7166,6 +7169,7 @@ function showStudiesTab(id, btn) {
   document.querySelectorAll('#studies .admin-tab').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('stab-'+id).style.display='block';
   if (btn) btn.classList.add('active');
+  if (id === 'slibrary') renderLibraryPanel();
 }
 
 async function loadExploration() {
@@ -8296,18 +8300,24 @@ async function clearTowerItem(id) {
   toast('Removed from Mage Tower queue', 'success');
 }
 
+var _lastLoreFetch = 0;
 function renderLibraryPanel() {
   if (!studiesData) return;
   var el = function(id){ return document.getElementById(id); };
 
-  // Fetch lore asynchronously
-  if (el('stab-slibrary').style.display !== 'none') {
+  // Fetch lore asynchronously (at most once every 30 seconds to prevent spam)
+  if (el('stab-slibrary').style.display !== 'none' && Date.now() - _lastLoreFetch > 30000) {
+    _lastLoreFetch = Date.now();
     apiCall('GET', '/api/kingdom/lore-and-achievements').then(res => {
       if (res && res.lore) {
         var aList = res.achievements || [];
         var achStr = [];
-        if (aList.includes('historian')) achStr.push('🏆 Historian (All Lore)');
-        if (aList.includes('collector')) achStr.push('🏆 Field Collector (All Events)');
+        if (aList.includes('ach_grandmaster')) achStr.push('🏆 Grandmaster (100+ Mage Towers & Castles) [+1000 Land, +1000 Maps]');
+        if (aList.includes('ach_warlord')) achStr.push('🏆 Warlord (10,000+ Population) [+5000 Land]');
+        if (aList.includes('ach_wealthy')) achStr.push('🏆 Merchant King (10,000,000+ Gold) [+5000 Scaffolding]');
+        if (aList.includes('ach_arcane')) achStr.push('🏆 Arcane Overlord (1,000,000+ Mana) [+10,000 Scrolls]');
+        if (aList.includes('historian')) achStr.push('🏆 Historian (Found all library lore) [+5000 Maps]');
+        if (aList.includes('collector')) achStr.push('🏆 Field Collector (Found all expedition random events) [+5000 Maps]');
         var achEl = el('library-achievements');
         if (achEl) achEl.innerHTML = achStr.length > 0 ? achStr.join('<br>') : '';
 
