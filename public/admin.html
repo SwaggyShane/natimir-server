@@ -1462,7 +1462,7 @@ async function uploadSound(key, input) {
   try {
     const resp = await fetch('/api/admin/sounds/upload', {
       method: 'POST',
-      headers: { 'x-auth-token': localStorage.getItem('narmir_token') || '' },
+      credentials: 'include',
       body: formData,
     });
     const result = await resp.json();
