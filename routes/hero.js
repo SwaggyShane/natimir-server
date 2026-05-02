@@ -23,6 +23,7 @@ module.exports = function(db) {
   router.post('/recruit', requireAuth, async (req, res) => {
     const { name, heroClass } = req.body;
     if (!name || !heroClass) return res.status(400).json({ error: 'Name and class required' });
+    if (!engine.HERO_CLASSES[heroClass]) return res.status(400).json({ error: 'Invalid hero class' });
 
     const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
@@ -64,6 +65,7 @@ module.exports = function(db) {
   // Dismiss a hero
   router.post('/dismiss', requireAuth, async (req, res) => {
     const { heroId } = req.body;
+    if (!heroId) return res.status(400).json({ error: 'heroId required' });
     const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
 
