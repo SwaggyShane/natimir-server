@@ -196,6 +196,18 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_expeditions_kingdom ON expeditions(kingdom_id, turns_left);
     CREATE INDEX IF NOT EXISTS idx_war_log_defender ON war_log(defender_id);
     CREATE INDEX IF NOT EXISTS idx_news_turn        ON news(kingdom_id, turn_num DESC);
+    CREATE TABLE IF NOT EXISTS spy_reports (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      kingdom_id          INTEGER NOT NULL REFERENCES kingdoms(id),
+      target_id           INTEGER NOT NULL REFERENCES kingdoms(id),
+      target_name         TEXT    NOT NULL,
+      outcome             TEXT    NOT NULL,
+      report              TEXT,
+      shared_to_alliance  INTEGER NOT NULL DEFAULT 0,
+      created_at          INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_spy_reports_kingdom ON spy_reports(kingdom_id);
+    CREATE INDEX IF NOT EXISTS idx_spy_reports_target  ON spy_reports(target_id);
   `);
 
   // ── Migrations — safe, idempotent, never crash on duplicate ─────────────────

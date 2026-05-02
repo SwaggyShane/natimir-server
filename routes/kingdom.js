@@ -830,20 +830,24 @@ module.exports = function(db) {
 
     if (op === 'spy') {
       const unitsSent = Math.max(1, parseInt(units) || 0);
-      if (unitsSent > (k.thieves + k.ninjas)) return res.status(400).json({ error: 'Not enough thieves/ninjas' });
+      if (unitsSent > k.thieves) return res.status(400).json({ error: 'Not enough thieves' });
       result = engine.covertSpy(k, target, unitsSent);
+      if (result.error) return res.status(400).json({ error: result.error });
       await applyCovert(k, result.spyUpdates || {});
       await db.run('UPDATE kingdoms SET turns_stored = turns_stored - 1 WHERE id = ?', [k.id]);
       if (result.spyEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [k.id, 'covert', result.spyEvent, k.turn]);
-      if (!result.success && result.targetEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [target.id, 'covert', result.targetEvent, target.turn]);
-      // War log: reveal attacker only on failure
+      if (result.targetEvent) await db.run('INSERT INTO news (kingdom_id, type, message, turn_num) VALUES (?,?,?,?)', [target.id, 'covert', result.targetEvent, target.turn]);
+      // Store spy report
+      const reportRow = await db.run(
+        `INSERT INTO spy_reports (kingdom_id, target_id, target_name, outcome, report) VALUES (?,?,?,?,?)`,
+        [k.id, target.id, target.name, result.outcome, result.report ? JSON.stringify(result.report) : null]
+      );
+      // War log: obscure attacker on success so target doesn't know who spied
       await db.run(`INSERT INTO war_log (action_type, attacker_id, attacker_name, defender_id, defender_name, outcome, detail, obscured) VALUES (?,?,?,?,?,?,?,?)`, [
         'spy', k.id, k.name, target.id, target.name,
-        result.success ? 'success' : 'caught',
-        'Intelligence gathering',
-        result.success ? 1 : 0,
+        result.outcome, 'Intelligence gathering', result.success ? 1 : 0,
       ]);
-      return res.json({ ok: true, success: result.success, report: result.report || null, event: result.spyEvent });
+      return res.json({ ok: true, outcome: result.outcome, success: result.success, report: result.report || null, reportId: reportRow.lastID, event: result.spyEvent });
 
     } else if (op === 'loot') {
       const thievesSent = Math.max(1, parseInt(units) || 0);
@@ -1580,8 +1584,54 @@ module.exports = function(db) {
       });
     } catch (err) {
       console.error('Error in /lore-and-achievements:', err);
-      res.status(500).json({ error: 'Internal server error: ' + err.message });
+      console.error('[lore] GET lore-and-achievements:', err.message);
+      res.status(500).json({ error: 'Failed to load lore' });
     }
+  });
+
+  // ── Spy reports ───────────────────────────────────────────────────────────────
+  router.get('/spy-reports', requireAuth, async (req, res) => {
+    try {
+      const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+      if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+      const rows = await db.all(
+        `SELECT id, target_id, target_name, outcome, report, shared_to_alliance, created_at
+         FROM spy_reports WHERE kingdom_id = ? ORDER BY created_at DESC LIMIT 100`,
+        [k.id]
+      );
+      res.json(rows.map(r => ({ ...r, report: r.report ? JSON.parse(r.report) : null })));
+    } catch (e) { console.error('[spy] GET spy-reports:', e.message); res.status(500).json({ error: 'Failed to load spy reports' }); }
+  });
+
+  router.post('/spy-reports/:id/share', requireAuth, async (req, res) => {
+    try {
+      const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+      if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+      const report = await db.get('SELECT id, shared_to_alliance FROM spy_reports WHERE id = ? AND kingdom_id = ?', [req.params.id, k.id]);
+      if (!report) return res.status(404).json({ error: 'Report not found' });
+      const newVal = report.shared_to_alliance ? 0 : 1;
+      await db.run('UPDATE spy_reports SET shared_to_alliance = ? WHERE id = ?', [newVal, report.id]);
+      res.json({ ok: true, shared: newVal === 1 });
+    } catch (e) { console.error('[spy] POST spy-reports/share:', e.message); res.status(500).json({ error: 'Failed to update report' }); }
+  });
+
+  router.get('/spy-reports/alliance', requireAuth, async (req, res) => {
+    try {
+      const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+      if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+      const membership = await db.get('SELECT alliance_id FROM alliance_members WHERE kingdom_id = ?', [k.id]);
+      if (!membership) return res.json([]);
+      const rows = await db.all(`
+        SELECT sr.id, sr.target_id, sr.target_name, sr.outcome, sr.report, sr.created_at,
+               k.name as shared_by_name
+        FROM spy_reports sr
+        JOIN kingdoms k ON sr.kingdom_id = k.id
+        JOIN alliance_members am ON am.kingdom_id = sr.kingdom_id
+        WHERE am.alliance_id = ? AND sr.shared_to_alliance = 1
+        ORDER BY sr.created_at DESC LIMIT 50
+      `, [membership.alliance_id]);
+      res.json(rows.map(r => ({ ...r, report: r.report ? JSON.parse(r.report) : null })));
+    } catch (e) { console.error('[spy] GET spy-reports/alliance:', e.message); res.status(500).json({ error: 'Failed to load alliance intel' }); }
   });
 
   return router;
