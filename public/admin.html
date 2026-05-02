@@ -365,19 +365,48 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <div class="card">
       <h2 style="margin-top:0;color:var(--green)">✅ Completed Features</h2>
 
-      <div class="cl-section" style="color:var(--gold); font-size: 13px">🔥 LATEST UPDATES (APRIL 2026)</div>
+      <div class="cl-section" style="color:var(--gold); font-size: 13px">🔥 v1.1.0 — MAY 2026 (CURRENT)</div>
+      <div class="cl-item">✅ <b>Certified Blueprints & Masonry Upgrades</b> — New certified blueprint tier for advanced construction. Masonry upgrade tree for walls and structures.</div>
+      <div class="cl-item">✅ <b>Full Spy System</b> — Tiered spy outcomes (surveillance → partial → full report). Alliance intel sharing with per-report share toggle. Spy report history panel.</div>
+      <div class="cl-item">✅ <b>Hero System</b> — Named hero units with unique abilities, XP from combat, passive bonuses applied each turn.</div>
+      <div class="cl-item">✅ <b>World Fragments & Hybrid Blueprints</b> — Rare drops from expeditions. Combine building types for unique bonuses. Assign for 500k gold + 100k mana.</div>
+      <div class="cl-item">✅ <b>Prestige / Rebirth</b> — Level 50 kingdoms can Rebirth for permanent prestige bonus with carry-over advantages.</div>
+      <div class="cl-item">✅ <b>Lore & Achievements</b> — 200 lore entries across 8 categories (6 races + Narmir world + general wisdom). Discovered through play, displayed in Library.</div>
+      <div class="cl-item">✅ <b>Racial Gift Fanfare</b> — First unit Level 5 unlock plays a 4-note fanfare, shows 6-second toast, pulses badge on Training panel.</div>
+      <div class="cl-item">✅ <b>Attack Insult MP3</b> — fart.mp3 plays on being attacked. Replaces text-to-speech. Test button in Admin → Manage.</div>
+      <div class="cl-item">✅ <b>Tax Rate Strip</b> — Tax %, Income, Upkeep, Net shown below resource metrics on status panel.</div>
+      <div class="cl-item">✅ <b>Colosseums removed</b> — bld_colosseums retired. Entertainment via Taverns.</div>
+      <div class="cl-item">✅ <b>state.loaded guard</b> — syncUI bails until loadKingdom fully populates state. Fixes kingdom name/level/turns not showing on login.</div>
+      <div class="cl-item">✅ <b>Kingdom header in syncUI</b> — Name, owner, turn written in syncUI so they stay current on all updates.</div>
+      <div class="cl-item">✅ <b>Racial badge fix</b> — syncUI now reads racial_bonuses_unlocked correctly (was reading non-existent racial_gift_active).</div>
+      <div class="cl-item">✅ <b>Spell label fix</b> — SCROLL_DEFS uses sp.label. Both spell panels now use label with safe fallbacks. Spellbook < 100 shows "Your mages need direction. STUDY!"</div>
+      <div class="cl-item">✅ <b>Tab wrap on mobile</b> — All panel tab strips use flex-wrap. Tabs wrap instead of overflowing. 15px mobile / 19px desktop font.</div>
+      <div class="cl-item">✅ <b>Admin events panel</b> — 📅 Events tab: log viewer with kingdom/season filter + full event editor (create/edit/delete/toggle). Effect type dropdown.</div>
+      <div class="cl-item">✅ <b>Admin flush locations</b> — 🗺️ Flush all locations button clears discovered_kingdoms and location_maps_wip for all players.</div>
+
+      <div class="cl-section">v1.0.6 — April 2026</div>
       <div class="cl-item">✅ <b>WISH-LIST DELIVERIES</b> — Seasons/Daily Events, Trade System, Bounty Board, Direct Messaging, Mercenary Camp</div>
       <div class="cl-item">✅ <b>INTERFACE PATCH (1.0.6)</b> — Library correctly houses scribes only, new badges (Siege, Racial Gift, Citadel), Rankings refresh (troop counts private), Market Clear Logs button, Hire page rework, Library sync fix</div>
-      <div class="cl-item">✅ <b>RACE LORE EXPANSION</b> — New in-game events referencing regional history</div>
-      <div class="cl-item">✅ <b>REGION CAPTURE & MASTERY</b> — Alliances can contest territories for +10% global faction bonus</div>
-      <div class="cl-item">✅ <b>ALLIANCE LEADERBOARDS</b> — New rankings tab for coalition total land and membership</div>
-      <div class="cl-item">✅ <b>KINGDOM LORE/BIOS</b> — Persisted custom descriptions shown on public profiles</div>
-      <div class="cl-item">✅ <b>NARMIR REBORN</b> — Aesthetic rebrand to "Pure. Damn. Evil."</div>
-      <div class="cl-item">✅ <b>Racial Unit Bonuses (Lv 5+)</b> — Dwarf Engines, HE Scrolls, Orc Free Training, DE Silent Kills, DW Fast Expeditions, Human Morale Aura</div>
-      <div class="cl-item">✅ <b>Persistent Personalization</b> — Saved chat nicknames and colors via `/nick` and `/color`</div>
-      <div class="cl-item">✅ <b>Extended Protection</b> — Newbie shield now lasts until Turn 400</div>
-      <div class="cl-item">✅ <b>Race Starting Buildings</b> — Custom starting kits for all 6 races</div>
-      <div class="cl-item">✅ <b>Tax System Fixes</b> — Persisted lock button and synced slider UI</div>
+      <div class="cl-item">✅ <b>Seasons & Daily Events</b> — 13-day real-time cycle. One event per kingdom per real day. 21 seeded seasonal events. Farm yield modified per season. Season badge on status panel.</div>
+      <div class="cl-item">✅ <b>Location System</b> — Discovery via expeditions (10–15% chance). 10 scribes × 5 turns to create a map. Auto-stored on attack/covert. Map theft covert action.</div>
+      <div class="cl-item">✅ <b>Smithy Overhaul</b> — Hammers 25 GC, Scaffolding 2,500 GC, bought directly for gold with Max button. No more allocation sliders.</div>
+      <div class="cl-item">✅ <b>Warfare Panel</b> — Single panel: war log + Attack/Spells/Covert tabs. Replaces separate nav items.</div>
+      <div class="cl-item">✅ <b>Hire Panel</b> — Grid with race-adjusted prices per unit. Hire/Fire buttons under input.</div>
+      <div class="cl-item">✅ <b>Tavern in Build Panel</b> — Added to BUILD_FIELDS, BA_FIELDS, and engine BUILDING_COST maps.</div>
+      <div class="cl-item">✅ <b>Turns 400/day</b> — +7 every 25 minutes, max 400.</div>
+      <div class="cl-item">✅ <b>Resource strip hidden</b> — kd-top hidden on 10 panels via CSS body class. No more inline style fighting.</div>
+
+      <div class="cl-section">v1.0.5 — April 2026</div>
+      <div class="cl-item">✅ <b>REGION CAPTURE & MASTERY</b> — Alliances contest territories for +10% faction bonus</div>
+      <div class="cl-item">✅ <b>ALLIANCE LEADERBOARDS</b> — Coalition total land / member rankings</div>
+      <div class="cl-item">✅ <b>BOUNTY BOARD</b> — Gold bounties on rival kingdoms</div>
+      <div class="cl-item">✅ <b>DIRECT MESSAGING</b> — Private 1-on-1 kingdom chat</div>
+      <div class="cl-item">✅ <b>KINGDOM LORE/BIOS</b> — Custom descriptions on public profiles</div>
+      <div class="cl-item">✅ <b>NARMIR REBORN</b> — Rebrand to "Pure. Damn. Evil."</div>
+      <div class="cl-item">✅ <b>Racial Unit Bonuses (Lv 5+)</b> — All 6 races: Dwarf (war machines), HE (scrolls), Orc (free fighters), DE (silent kills), DW (fast expeditions), Human (morale aura)</div>
+      <div class="cl-item">✅ <b>Persistent Personalization</b> — /nick and /color commands</div>
+      <div class="cl-item">✅ <b>Extended Protection</b> — Newbie shield until Turn 400</div>
+      <div class="cl-item">✅ <b>Race Starting Buildings</b> — Custom starting kits per race</div>
 
       <div class="cl-section">Core Systems</div>
       <div class="cl-item">✅ Registration, login, JWT auth with httpOnly cookie</div>
@@ -597,6 +626,10 @@ textarea{width:100%;resize:vertical;min-height:60px}
         <div class="cl-item">✅ Seasons — Spring/Summer/Fall/Winter cycle.</div>
         <div class="cl-item">✅ Mercenary hiring — Sellswords and elites for gold.</div>
         <div class="cl-item">✅ Trade system — Player-to-player trading.</div>
+        <div class="cl-item">✅ Named hero units — Heroes with XP and unique abilities.</div>
+        <div class="cl-item">✅ Prestige / reset — Rebirth at Level 50 for permanent bonus.</div>
+        <div class="cl-item">✅ Achievements system — Tracked and displayed in Library.</div>
+        <div class="cl-item">✅ Sound effects — Attack insult MP3, racial gift fanfare.</div>
       </div>
 
       <div class="card">
