@@ -109,7 +109,8 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <button class="admin-tab" onclick="showAdminTab('kingdoms',this)">🏰 Kingdoms</button>
     <button class="admin-tab" onclick="showAdminTab('events',this)">📅 Events</button>
     <button class="admin-tab" onclick="showAdminTab('config',this)">🛠️ Configs</button>
-    <button class="admin-tab" onclick="showAdminTab('lore',this)">📖 Lore & Trips</button>
+    <button class="admin-tab" onclick="showAdminTab('lore',this)">📖 Lore</button>
+    <button class="admin-tab" onclick="showAdminTab('sounds',this)">🔊 Sounds</button>
     <button class="admin-tab" onclick="showAdminTab('changelog',this)">📋 Changelog</button>
   </div>
 
@@ -335,24 +336,156 @@ textarea{width:100%;resize:vertical;min-height:60px}
 
 <!-- TAB: Lore & Trips -->
 <div id="atab-lore" class="atab" style="display:none">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
-    
-    <!-- Lore Entries -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h2 style="margin:0;color:var(--gold)">📜 Lore Entries</h2>
-        <button class="btn btn-gold" onclick="addLoreEntry()" style="padding:4px 8px;font-size:12px">+ Add Lore</button>
+
+  <!-- Sub-tab nav -->
+  <div style="display:flex;gap:4px;border-bottom:2px solid var(--border2);margin-bottom:18px;flex-wrap:wrap">
+    <button class="admin-tab active" id="lore-sub-tab-race"    onclick="showLoreTab('race',this)"   >🧬 Race</button>
+    <button class="admin-tab"        id="lore-sub-tab-narmir"  onclick="showLoreTab('narmir',this)" >🌍 Narmir</button>
+    <button class="admin-tab"        id="lore-sub-tab-general" onclick="showLoreTab('general',this)">📜 General</button>
+    <button class="admin-tab"        id="lore-sub-tab-junk"    onclick="showLoreTab('junk',this)"   >🎲 Junk</button>
+  </div>
+
+  <!-- RACE sub-tab -->
+  <div id="lore-tab-race">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-gold" style="font-size:11px;padding:4px 10px" onclick="filterRaceLore('all')">All</button>
+      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="filterRaceLore('dwarf')">⛏️ Dwarf</button>
+      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="filterRaceLore('high_elf')">🧝 High Elf</button>
+      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="filterRaceLore('orc')">💀 Orc</button>
+      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="filterRaceLore('dark_elf')">🗡️ Dark Elf</button>
+      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="filterRaceLore('human')">👑 Human</button>
+      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="filterRaceLore('dire_wolf')">🐺 Dire Wolf</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <button class="btn btn-green" style="font-size:12px" onclick="openAddLoreModal('race','dwarf')">+ Add Race Entry</button>
+    </div>
+    <div id="lore-race-list" style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto">
+      <div style="color:var(--text3);font-size:12px">Loading...</div>
+    </div>
+  </div>
+
+  <!-- NARMIR sub-tab -->
+  <div id="lore-tab-narmir" style="display:none">
+    <div style="margin-bottom:12px">
+      <button class="btn btn-green" style="font-size:12px" onclick="openAddLoreModal('narmir')">+ Add Narmir Entry</button>
+    </div>
+    <div id="lore-narmir-list" style="display:flex;flex-direction:column;gap:8px;max-height:640px;overflow-y:auto">
+      <div style="color:var(--text3);font-size:12px">Loading...</div>
+    </div>
+  </div>
+
+  <!-- GENERAL sub-tab -->
+  <div id="lore-tab-general" style="display:none">
+    <div style="margin-bottom:12px">
+      <button class="btn btn-green" style="font-size:12px" onclick="openAddLoreModal('general')">+ Add General Entry</button>
+    </div>
+    <div id="lore-general-list" style="display:flex;flex-direction:column;gap:8px;max-height:640px;overflow-y:auto">
+      <div style="color:var(--text3);font-size:12px">Loading...</div>
+    </div>
+  </div>
+
+  <!-- JUNK sub-tab -->
+  <div id="lore-tab-junk" style="display:none">
+    <p style="font-size:12px;color:var(--text3);margin-bottom:12px">These flavour blurbs appear when an expedition returns with nothing useful. Edit them here.</p>
+    <div style="margin-bottom:12px">
+      <button class="btn btn-green" style="font-size:12px" onclick="openAddJunkModal()">+ Add Junk Blurb</button>
+    </div>
+    <div id="lore-junk-list" style="display:flex;flex-direction:column;gap:8px;max-height:620px;overflow-y:auto">
+      <div style="color:var(--text3);font-size:12px">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Edit modal (shared by race/narmir/general) -->
+  <div id="lore-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:center;justify-content:center">
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:24px;width:min(560px,95vw);max-height:85vh;overflow-y:auto">
+      <h3 id="lore-modal-title" style="margin:0 0 16px;color:var(--gold)">Edit Lore Entry</h3>
+      <input type="hidden" id="lore-edit-id">
+      <input type="hidden" id="lore-edit-category">
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Race (for Race category)</label>
+        <select id="lore-edit-race" style="width:100%">
+          <option value="">— N/A (narmir / general) —</option>
+          <option value="dwarf">Dwarf</option>
+          <option value="high_elf">High Elf</option>
+          <option value="orc">Orc</option>
+          <option value="dark_elf">Dark Elf</option>
+          <option value="human">Human</option>
+          <option value="dire_wolf">Dire Wolf</option>
+        </select>
       </div>
-      <div id="lore-list" style="display:flex;flex-direction:column;gap:10px">Loading lore...</div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Title</label>
+        <input type="text" id="lore-edit-title" placeholder="Entry title..." style="width:100%">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Content</label>
+        <textarea id="lore-edit-content" style="width:100%;height:140px;resize:vertical;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:13px" placeholder="Lore text..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green" style="flex:1" onclick="saveLoreEdit()">💾 Save</button>
+        <button class="btn" onclick="closeLoreModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Junk edit modal -->
+  <div id="junk-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:24px;width:min(480px,95vw)">
+      <h3 id="junk-modal-title" style="margin:0 0 16px;color:var(--gold)">Edit Junk Blurb</h3>
+      <input type="hidden" id="junk-edit-index">
+      <div style="margin-bottom:16px">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Blurb text</label>
+        <textarea id="junk-edit-content" style="width:100%;height:80px;resize:vertical;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-size:13px" placeholder="a suspiciously damp sock..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green" style="flex:1" onclick="saveJunkEdit()">💾 Save</button>
+        <button class="btn" onclick="closeJunkModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── SOUNDS TAB ──────────────────────────────────────────────────────────────── -->
+<div id="atab-sounds" class="atab" style="display:none">
+  <p style="font-size:13px;color:var(--text3);margin-bottom:20px">Upload MP3 files for each game action. Files are served from <code>/sounds/</code> and referenced by filename. Click a row to test the current sound.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+    <!-- Combat sounds -->
+    <div class="card">
+      <h3 style="margin:0 0 14px;color:var(--gold);font-size:14px">⚔️ Combat</h3>
+      <div id="sound-rows-combat"></div>
     </div>
 
-    <!-- Random Expedition Events -->
+    <!-- Covert sounds -->
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h2 style="margin:0;color:var(--gold)">🏕️ Random Expedition Events</h2>
-        <button class="btn btn-gold" onclick="addRandomEvent()" style="padding:4px 8px;font-size:12px">+ Add Event</button>
-      </div>
-      <div id="random-events-list" style="display:flex;flex-direction:column;gap:10px">Loading events...</div>
+      <h3 style="margin:0 0 14px;color:var(--gold);font-size:14px">🕵️ Covert</h3>
+      <div id="sound-rows-covert"></div>
+    </div>
+
+    <!-- Exploration sounds -->
+    <div class="card">
+      <h3 style="margin:0 0 14px;color:var(--gold);font-size:14px">🧭 Exploration</h3>
+      <div id="sound-rows-exploration"></div>
+    </div>
+
+    <!-- Kingdom events -->
+    <div class="card">
+      <h3 style="margin:0 0 14px;color:var(--gold);font-size:14px">🏰 Kingdom Events</h3>
+      <div id="sound-rows-kingdom"></div>
+    </div>
+
+    <!-- Magic sounds -->
+    <div class="card">
+      <h3 style="margin:0 0 14px;color:var(--gold);font-size:14px">✨ Magic</h3>
+      <div id="sound-rows-magic"></div>
+    </div>
+
+    <!-- UI sounds -->
+    <div class="card">
+      <h3 style="margin:0 0 14px;color:var(--gold);font-size:14px">🖥️ Interface</h3>
+      <div id="sound-rows-ui"></div>
     </div>
 
   </div>
@@ -365,48 +498,19 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <div class="card">
       <h2 style="margin-top:0;color:var(--green)">✅ Completed Features</h2>
 
-      <div class="cl-section" style="color:var(--gold); font-size: 13px">🔥 v1.1.0 — MAY 2026 (CURRENT)</div>
-      <div class="cl-item">✅ <b>Certified Blueprints & Masonry Upgrades</b> — New certified blueprint tier for advanced construction. Masonry upgrade tree for walls and structures.</div>
-      <div class="cl-item">✅ <b>Full Spy System</b> — Tiered spy outcomes (surveillance → partial → full report). Alliance intel sharing with per-report share toggle. Spy report history panel.</div>
-      <div class="cl-item">✅ <b>Hero System</b> — Named hero units with unique abilities, XP from combat, passive bonuses applied each turn.</div>
-      <div class="cl-item">✅ <b>World Fragments & Hybrid Blueprints</b> — Rare drops from expeditions. Combine building types for unique bonuses. Assign for 500k gold + 100k mana.</div>
-      <div class="cl-item">✅ <b>Prestige / Rebirth</b> — Level 50 kingdoms can Rebirth for permanent prestige bonus with carry-over advantages.</div>
-      <div class="cl-item">✅ <b>Lore & Achievements</b> — 200 lore entries across 8 categories (6 races + Narmir world + general wisdom). Discovered through play, displayed in Library.</div>
-      <div class="cl-item">✅ <b>Racial Gift Fanfare</b> — First unit Level 5 unlock plays a 4-note fanfare, shows 6-second toast, pulses badge on Training panel.</div>
-      <div class="cl-item">✅ <b>Attack Insult MP3</b> — fart.mp3 plays on being attacked. Replaces text-to-speech. Test button in Admin → Manage.</div>
-      <div class="cl-item">✅ <b>Tax Rate Strip</b> — Tax %, Income, Upkeep, Net shown below resource metrics on status panel.</div>
-      <div class="cl-item">✅ <b>Colosseums removed</b> — bld_colosseums retired. Entertainment via Taverns.</div>
-      <div class="cl-item">✅ <b>state.loaded guard</b> — syncUI bails until loadKingdom fully populates state. Fixes kingdom name/level/turns not showing on login.</div>
-      <div class="cl-item">✅ <b>Kingdom header in syncUI</b> — Name, owner, turn written in syncUI so they stay current on all updates.</div>
-      <div class="cl-item">✅ <b>Racial badge fix</b> — syncUI now reads racial_bonuses_unlocked correctly (was reading non-existent racial_gift_active).</div>
-      <div class="cl-item">✅ <b>Spell label fix</b> — SCROLL_DEFS uses sp.label. Both spell panels now use label with safe fallbacks. Spellbook < 100 shows "Your mages need direction. STUDY!"</div>
-      <div class="cl-item">✅ <b>Tab wrap on mobile</b> — All panel tab strips use flex-wrap. Tabs wrap instead of overflowing. 15px mobile / 19px desktop font.</div>
-      <div class="cl-item">✅ <b>Admin events panel</b> — 📅 Events tab: log viewer with kingdom/season filter + full event editor (create/edit/delete/toggle). Effect type dropdown.</div>
-      <div class="cl-item">✅ <b>Admin flush locations</b> — 🗺️ Flush all locations button clears discovered_kingdoms and location_maps_wip for all players.</div>
-
-      <div class="cl-section">v1.0.6 — April 2026</div>
+      <div class="cl-section" style="color:var(--gold); font-size: 13px">🔥 LATEST UPDATES (APRIL 2026)</div>
       <div class="cl-item">✅ <b>WISH-LIST DELIVERIES</b> — Seasons/Daily Events, Trade System, Bounty Board, Direct Messaging, Mercenary Camp</div>
       <div class="cl-item">✅ <b>INTERFACE PATCH (1.0.6)</b> — Library correctly houses scribes only, new badges (Siege, Racial Gift, Citadel), Rankings refresh (troop counts private), Market Clear Logs button, Hire page rework, Library sync fix</div>
-      <div class="cl-item">✅ <b>Seasons & Daily Events</b> — 13-day real-time cycle. One event per kingdom per real day. 21 seeded seasonal events. Farm yield modified per season. Season badge on status panel.</div>
-      <div class="cl-item">✅ <b>Location System</b> — Discovery via expeditions (10–15% chance). 10 scribes × 5 turns to create a map. Auto-stored on attack/covert. Map theft covert action.</div>
-      <div class="cl-item">✅ <b>Smithy Overhaul</b> — Hammers 25 GC, Scaffolding 2,500 GC, bought directly for gold with Max button. No more allocation sliders.</div>
-      <div class="cl-item">✅ <b>Warfare Panel</b> — Single panel: war log + Attack/Spells/Covert tabs. Replaces separate nav items.</div>
-      <div class="cl-item">✅ <b>Hire Panel</b> — Grid with race-adjusted prices per unit. Hire/Fire buttons under input.</div>
-      <div class="cl-item">✅ <b>Tavern in Build Panel</b> — Added to BUILD_FIELDS, BA_FIELDS, and engine BUILDING_COST maps.</div>
-      <div class="cl-item">✅ <b>Turns 400/day</b> — +7 every 25 minutes, max 400.</div>
-      <div class="cl-item">✅ <b>Resource strip hidden</b> — kd-top hidden on 10 panels via CSS body class. No more inline style fighting.</div>
-
-      <div class="cl-section">v1.0.5 — April 2026</div>
-      <div class="cl-item">✅ <b>REGION CAPTURE & MASTERY</b> — Alliances contest territories for +10% faction bonus</div>
-      <div class="cl-item">✅ <b>ALLIANCE LEADERBOARDS</b> — Coalition total land / member rankings</div>
-      <div class="cl-item">✅ <b>BOUNTY BOARD</b> — Gold bounties on rival kingdoms</div>
-      <div class="cl-item">✅ <b>DIRECT MESSAGING</b> — Private 1-on-1 kingdom chat</div>
-      <div class="cl-item">✅ <b>KINGDOM LORE/BIOS</b> — Custom descriptions on public profiles</div>
-      <div class="cl-item">✅ <b>NARMIR REBORN</b> — Rebrand to "Pure. Damn. Evil."</div>
-      <div class="cl-item">✅ <b>Racial Unit Bonuses (Lv 5+)</b> — All 6 races: Dwarf (war machines), HE (scrolls), Orc (free fighters), DE (silent kills), DW (fast expeditions), Human (morale aura)</div>
-      <div class="cl-item">✅ <b>Persistent Personalization</b> — /nick and /color commands</div>
-      <div class="cl-item">✅ <b>Extended Protection</b> — Newbie shield until Turn 400</div>
-      <div class="cl-item">✅ <b>Race Starting Buildings</b> — Custom starting kits per race</div>
+      <div class="cl-item">✅ <b>RACE LORE EXPANSION</b> — New in-game events referencing regional history</div>
+      <div class="cl-item">✅ <b>REGION CAPTURE & MASTERY</b> — Alliances can contest territories for +10% global faction bonus</div>
+      <div class="cl-item">✅ <b>ALLIANCE LEADERBOARDS</b> — New rankings tab for coalition total land and membership</div>
+      <div class="cl-item">✅ <b>KINGDOM LORE/BIOS</b> — Persisted custom descriptions shown on public profiles</div>
+      <div class="cl-item">✅ <b>NARMIR REBORN</b> — Aesthetic rebrand to "Pure. Damn. Evil."</div>
+      <div class="cl-item">✅ <b>Racial Unit Bonuses (Lv 5+)</b> — Dwarf Engines, HE Scrolls, Orc Free Training, DE Silent Kills, DW Fast Expeditions, Human Morale Aura</div>
+      <div class="cl-item">✅ <b>Persistent Personalization</b> — Saved chat nicknames and colors via `/nick` and `/color`</div>
+      <div class="cl-item">✅ <b>Extended Protection</b> — Newbie shield now lasts until Turn 400</div>
+      <div class="cl-item">✅ <b>Race Starting Buildings</b> — Custom starting kits for all 6 races</div>
+      <div class="cl-item">✅ <b>Tax System Fixes</b> — Persisted lock button and synced slider UI</div>
 
       <div class="cl-section">Core Systems</div>
       <div class="cl-item">✅ Registration, login, JWT auth with httpOnly cookie</div>
@@ -626,10 +730,6 @@ textarea{width:100%;resize:vertical;min-height:60px}
         <div class="cl-item">✅ Seasons — Spring/Summer/Fall/Winter cycle.</div>
         <div class="cl-item">✅ Mercenary hiring — Sellswords and elites for gold.</div>
         <div class="cl-item">✅ Trade system — Player-to-player trading.</div>
-        <div class="cl-item">✅ Named hero units — Heroes with XP and unique abilities.</div>
-        <div class="cl-item">✅ Prestige / reset — Rebirth at Level 50 for permanent bonus.</div>
-        <div class="cl-item">✅ Achievements system — Tracked and displayed in Library.</div>
-        <div class="cl-item">✅ Sound effects — Attack insult MP3, racial gift fanfare.</div>
       </div>
 
       <div class="card">
@@ -1027,63 +1127,362 @@ function showAdminTab(id, btn) {
   document.querySelectorAll('.admin-tab').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('atab-'+id).style.display='block';
   if (btn) btn.classList.add('active');
-  if (id === 'events') { loadEventLog(); loadEventList(); }
-  if (id === 'changelog') { loadSuggestions(); }
-  if (id === 'config') { loadGameConfigs(); }
-  if (id === 'lore') { loadLoreList(); loadRandomEventsList(); }
+  if (id === 'events')   { loadEventLog(); loadEventList(); }
+  if (id === 'changelog'){ loadSuggestions(); }
+  if (id === 'config')   { loadGameConfigs(); }
+  if (id === 'lore')     { loadAllLore(); }
+  if (id === 'sounds')   { loadSoundsTab(); }
 }
 
-async function loadLoreList() {
-  const result = await api('GET', '/api/admin/lore');
-  if (result.error) return;
-  const list = document.getElementById('lore-list');
-  list.innerHTML = result.list.map(l => `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:8px">
-      <div style="font-size:12px;color:var(--text);margin-bottom:6px">${l.content}</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-red" onclick="deleteLore(${l.id})" style="padding:2px 6px;font-size:11px">Delete</button>
+// ── Lore tab ──────────────────────────────────────────────────────────────────
+
+const LORE_RACES = ['dwarf','high_elf','orc','dark_elf','human','dire_wolf'];
+const RACE_LABELS = { dwarf:'Dwarf', high_elf:'High Elf', orc:'Orc', dark_elf:'Dark Elf', human:'Human', dire_wolf:'Dire Wolf' };
+const RACE_ICONS  = { dwarf:'⛏️', high_elf:'🧝', orc:'💀', dark_elf:'🗡️', human:'👑', dire_wolf:'🐺' };
+
+var _loreData      = { race:{}, narmir:[], general:[] };
+var _junkData      = [];
+var _loreSubTab    = 'race';
+var _raceFilter    = 'all';
+
+function showLoreTab(id, btn) {
+  ['race','narmir','general','junk'].forEach(function(t){
+    var el = document.getElementById('lore-tab-'+t);
+    if (el) el.style.display = t===id ? 'block' : 'none';
+  });
+  document.querySelectorAll('#atab-lore .admin-tab').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  _loreSubTab = id;
+  if (id === 'junk' && !_junkData.length) loadJunkList();
+  if ((id === 'narmir' || id === 'general') && !_loreData[id].length) loadStaticLore(id);
+  if (id === 'race') renderRaceLore();
+}
+
+async function loadAllLore() {
+  // Load from game/lore.js via admin endpoint
+  const result = await api('GET', '/api/admin/lore-static');
+  if (result && result.lore) {
+    _loreData = result.lore; // { race:{dwarf:[...], ...}, narmir:[...], general:[...] }
+  }
+  renderRaceLore();
+}
+
+async function loadStaticLore(cat) {
+  const result = await api('GET', '/api/admin/lore-static');
+  if (result && result.lore) {
+    _loreData = result.lore;
+    if (cat === 'narmir')  renderStaticLore('narmir',  _loreData.narmir  || []);
+    if (cat === 'general') renderStaticLore('general', _loreData.general || []);
+  }
+}
+
+function renderRaceLore() {
+  const list = document.getElementById('lore-race-list');
+  if (!list) return;
+  const races = _raceFilter === 'all' ? LORE_RACES : [_raceFilter];
+  let html = '';
+  races.forEach(function(race) {
+    const entries = (_loreData.race && _loreData.race[race]) || [];
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--gold);padding:6px 0;border-bottom:1px solid var(--border2);margin-bottom:8px">${RACE_ICONS[race]||''} ${RACE_LABELS[race]||race} <span style="color:var(--text3);font-weight:400;font-size:11px">(${entries.length} entries)</span></div>`;
+    entries.forEach(function(e, i) {
+      html += renderLoreEntry(e, 'race', race, i);
+    });
+    html += `</div>`;
+  });
+  if (!html) html = '<div style="color:var(--text3);font-size:12px">No lore entries found. Make sure lore.js is loaded.</div>';
+  list.innerHTML = html;
+}
+
+function renderStaticLore(cat, entries) {
+  const list = document.getElementById('lore-'+cat+'-list');
+  if (!list) return;
+  if (!entries.length) { list.innerHTML = '<div style="color:var(--text3);font-size:12px">No entries.</div>'; return; }
+  list.innerHTML = entries.map(function(e, i) { return renderLoreEntry(e, cat, null, i); }).join('');
+}
+
+function renderLoreEntry(e, cat, race, idx) {
+  const id   = e.id || (cat+'_'+idx);
+  const title = escHtml(e.title || '(no title)');
+  const msg   = escHtml(e.msg || '');
+  return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px">
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px">${title}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5">${msg}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+        <button class="btn" style="font-size:10px;padding:3px 8px" onclick="openEditLoreEntry('${id}','${cat}','${race||''}',${idx})">✏️ Edit</button>
+        <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="deleteLoreEntry('${id}','${cat}','${race||''}',${idx})">🗑️</button>
       </div>
     </div>
-  `).join('');
-  if (!result.list.length) list.innerHTML = '<div style="color:var(--text3);font-size:12px">No lore found.</div>';
+  </div>`;
 }
 
-async function loadRandomEventsList() {
-  const result = await api('GET', '/api/admin/random_events');
-  if (result.error) return;
-  const list = document.getElementById('random-events-list');
-  list.innerHTML = result.list.map(l => `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:8px">
-      <div style="font-size:12px;color:var(--text);margin-bottom:6px">${l.content}</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-red" onclick="deleteRandomEvent(${l.id})" style="padding:2px 6px;font-size:11px">Delete</button>
-      </div>
-    </div>
-  `).join('');
-  if (!result.list.length) list.innerHTML = '<div style="color:var(--text3);font-size:12px">No random events found.</div>';
+function filterRaceLore(race) {
+  _raceFilter = race;
+  // Update button styles
+  document.querySelectorAll('#lore-tab-race .btn').forEach(function(b) {
+    b.classList.toggle('btn-gold', b.textContent.toLowerCase().includes(race) || (race==='all' && b.textContent==='All'));
+    if (race === 'all' && b.textContent === 'All') b.classList.add('btn-gold');
+  });
+  renderRaceLore();
 }
 
-async function addLoreEntry() {
-  const c = prompt('Enter new lore content:');
-  if (!c) return;
-  await api('POST', '/api/admin/lore', { content: c });
-  loadLoreList();
+function openAddLoreModal(cat, race) {
+  document.getElementById('lore-edit-id').value = '';
+  document.getElementById('lore-edit-category').value = cat;
+  document.getElementById('lore-edit-race').value = race || '';
+  document.getElementById('lore-edit-title').value = '';
+  document.getElementById('lore-edit-content').value = '';
+  document.getElementById('lore-modal-title').textContent = 'Add Lore Entry';
+  document.getElementById('lore-edit-modal').style.display = 'flex';
 }
-async function deleteLore(id) {
+
+function openEditLoreEntry(id, cat, race, idx) {
+  // Get current entry data
+  let entry;
+  if (cat === 'race' && race) {
+    entry = (_loreData.race[race] || [])[idx];
+  } else {
+    entry = (_loreData[cat] || [])[idx];
+  }
+  if (!entry) return toast('Entry not found', 'error');
+  document.getElementById('lore-edit-id').value = id;
+  document.getElementById('lore-edit-category').value = cat;
+  document.getElementById('lore-edit-race').value = race || '';
+  document.getElementById('lore-edit-title').value = entry.title || '';
+  document.getElementById('lore-edit-content').value = entry.msg || '';
+  document.getElementById('lore-modal-title').textContent = 'Edit: ' + (entry.title || id);
+  document.getElementById('lore-edit-modal').style.display = 'flex';
+}
+
+function closeLoreModal() {
+  document.getElementById('lore-edit-modal').style.display = 'none';
+}
+
+async function saveLoreEdit() {
+  const id       = document.getElementById('lore-edit-id').value;
+  const cat      = document.getElementById('lore-edit-category').value;
+  const race     = document.getElementById('lore-edit-race').value;
+  const title    = document.getElementById('lore-edit-title').value.trim();
+  const content  = document.getElementById('lore-edit-content').value.trim();
+  if (!title || !content) return toast('Title and content required', 'error');
+
+  const r = await api('POST', '/api/admin/lore-static/save', { id, cat, race, title, content });
+  if (r.error) return toast(r.error, 'error');
+  toast(id ? 'Entry updated' : 'Entry added', 'success');
+  closeLoreModal();
+  // Reload lore data
+  const result = await api('GET', '/api/admin/lore-static');
+  if (result && result.lore) {
+    _loreData = result.lore;
+    if (cat === 'race') renderRaceLore();
+    else renderStaticLore(cat, _loreData[cat] || []);
+  }
+}
+
+async function deleteLoreEntry(id, cat, race, idx) {
   if (!confirm('Delete this lore entry?')) return;
-  await api('DELETE', '/api/admin/lore/'+id);
-  loadLoreList();
+  const r = await api('POST', '/api/admin/lore-static/delete', { id, cat, race, idx });
+  if (r.error) return toast(r.error, 'error');
+  toast('Entry deleted', 'success');
+  const result = await api('GET', '/api/admin/lore-static');
+  if (result && result.lore) {
+    _loreData = result.lore;
+    if (cat === 'race') renderRaceLore();
+    else renderStaticLore(cat, _loreData[cat] || []);
+  }
 }
-async function addRandomEvent() {
-  const c = prompt('Enter new random expedition event text:');
-  if (!c) return;
-  await api('POST', '/api/admin/random_events', { content: c });
-  loadRandomEventsList();
+
+// ── Junk blurbs ───────────────────────────────────────────────────────────────
+
+async function loadJunkList() {
+  const result = await api('GET', '/api/admin/junk-prizes');
+  if (result && Array.isArray(result.list)) {
+    _junkData = result.list;
+    renderJunkList();
+  }
 }
-async function deleteRandomEvent(id) {
-  if (!confirm('Delete this event?')) return;
-  await api('DELETE', '/api/admin/random_events/'+id);
-  loadRandomEventsList();
+
+function renderJunkList() {
+  const list = document.getElementById('lore-junk-list');
+  if (!list) return;
+  if (!_junkData.length) { list.innerHTML = '<div style="color:var(--text3);font-size:12px">No blurbs.</div>'; return; }
+  list.innerHTML = _junkData.map(function(text, i) {
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+      <div style="flex:1;font-size:12px;color:var(--text2);line-height:1.5">${escHtml(text)}</div>
+      <button class="btn" style="font-size:10px;padding:3px 8px;flex-shrink:0" onclick="openEditJunk(${i})">✏️ Edit</button>
+      <button class="btn btn-red" style="font-size:10px;padding:3px 8px;flex-shrink:0" onclick="deleteJunk(${i})">🗑️</button>
+    </div>`;
+  }).join('');
+}
+
+function openAddJunkModal() {
+  document.getElementById('junk-edit-index').value = '-1';
+  document.getElementById('junk-edit-content').value = '';
+  document.getElementById('junk-modal-title').textContent = 'Add Junk Blurb';
+  document.getElementById('junk-edit-modal').style.display = 'flex';
+}
+
+function openEditJunk(idx) {
+  document.getElementById('junk-edit-index').value = idx;
+  document.getElementById('junk-edit-content').value = _junkData[idx] || '';
+  document.getElementById('junk-modal-title').textContent = 'Edit Blurb';
+  document.getElementById('junk-edit-modal').style.display = 'flex';
+}
+
+function closeJunkModal() {
+  document.getElementById('junk-edit-modal').style.display = 'none';
+}
+
+async function saveJunkEdit() {
+  const idx     = parseInt(document.getElementById('junk-edit-index').value);
+  const content = document.getElementById('junk-edit-content').value.trim();
+  if (!content) return toast('Content required', 'error');
+  if (idx >= 0) {
+    _junkData[idx] = content;
+  } else {
+    _junkData.push(content);
+  }
+  const r = await api('POST', '/api/admin/junk-prizes/save', { list: _junkData });
+  if (r.error) return toast(r.error, 'error');
+  toast('Saved', 'success');
+  closeJunkModal();
+  renderJunkList();
+}
+
+async function deleteJunk(idx) {
+  if (!confirm('Delete this blurb?')) return;
+  _junkData.splice(idx, 1);
+  const r = await api('POST', '/api/admin/junk-prizes/save', { list: _junkData });
+  if (r.error) return toast(r.error, 'error');
+  toast('Deleted', 'success');
+  renderJunkList();
+}
+
+// ── Sounds tab ────────────────────────────────────────────────────────────────
+
+const SOUND_DEFS = {
+  combat: [
+    { key: 'attack_win',       label: 'Attack — Victory' },
+    { key: 'attack_lose',      label: 'Attack — Repelled' },
+    { key: 'attacked',         label: 'Being Attacked (fart)' },
+    { key: 'war_machine_fire', label: 'War Machine Fire' },
+    { key: 'ninja_strike',     label: 'Ninja Pre-Strike' },
+  ],
+  covert: [
+    { key: 'spy_success',      label: 'Spy — Success' },
+    { key: 'spy_caught',       label: 'Spy — Caught' },
+    { key: 'loot_success',     label: 'Loot — Success' },
+    { key: 'loot_caught',      label: 'Loot — Caught' },
+    { key: 'assassinate_success', label: 'Assassinate — Success' },
+    { key: 'sabotage_success', label: 'Sabotage — Success' },
+    { key: 'map_stolen',       label: 'Location Map Stolen' },
+  ],
+  exploration: [
+    { key: 'expedition_return',  label: 'Expedition Returns' },
+    { key: 'expedition_start',   label: 'Expedition Departs' },
+    { key: 'discovery',          label: 'Kingdom Discovered' },
+    { key: 'ultra_rare_prize',   label: 'Ultra-Rare Prize' },
+    { key: 'throne_found',       label: '👑 Throne of Nazdreg' },
+  ],
+  kingdom: [
+    { key: 'level_up',           label: 'Kingdom Level Up' },
+    { key: 'racial_gift',        label: 'Racial Gift Unlocked' },
+    { key: 'citadel_achieved',   label: 'Citadel Achieved' },
+    { key: 'seasonal_event',     label: 'Seasonal Event Fires' },
+    { key: 'rebirth',            label: 'Prestige / Rebirth' },
+    { key: 'food_shortage',      label: 'Food Shortage Warning' },
+  ],
+  magic: [
+    { key: 'spell_cast',         label: 'Spell Cast' },
+    { key: 'spell_received',     label: 'Spell Received' },
+    { key: 'scroll_crafted',     label: 'Scroll Crafted' },
+    { key: 'mana_low',           label: 'Mana Low Warning' },
+  ],
+  ui: [
+    { key: 'take_turn',          label: 'Take Turn' },
+    { key: 'hire_unit',          label: 'Hire Units' },
+    { key: 'building_complete',  label: 'Building Complete' },
+    { key: 'upgrade_purchased',  label: 'Upgrade Purchased' },
+    { key: 'notification',       label: 'Generic Notification' },
+    { key: 'error',              label: 'Error / Warning' },
+  ],
+};
+
+var _soundConfig = {};
+
+async function loadSoundsTab() {
+  // Load current sound assignments from server
+  const result = await api('GET', '/api/admin/sounds');
+  if (result && result.sounds) _soundConfig = result.sounds;
+  renderAllSoundRows();
+}
+
+function renderAllSoundRows() {
+  Object.keys(SOUND_DEFS).forEach(function(cat) {
+    const container = document.getElementById('sound-rows-' + cat);
+    if (!container) return;
+    container.innerHTML = SOUND_DEFS[cat].map(function(def) {
+      const current = _soundConfig[def.key] || '';
+      const hasSound = !!current;
+      return `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:12px;color:var(--text)">${def.label}</div>
+          <div style="font-size:10px;color:${hasSound ? 'var(--green)' : 'var(--text3)'}">${hasSound ? '🔊 ' + current : '— no sound assigned'}</div>
+        </div>
+        <button class="btn" style="font-size:10px;padding:3px 8px" onclick="testSound('${def.key}')" ${hasSound ? '' : 'disabled'} title="Test">▶</button>
+        <label class="btn btn-gold" style="font-size:10px;padding:3px 8px;cursor:pointer;margin:0" title="Upload MP3">
+          📁 Upload
+          <input type="file" accept=".mp3,.wav,.ogg" style="display:none" onchange="uploadSound('${def.key}', this)">
+        </label>
+        <button class="btn btn-red" style="font-size:10px;padding:3px 6px" onclick="removeSound('${def.key}')" ${hasSound ? '' : 'disabled'} title="Remove">✕</button>
+      </div>`;
+    }).join('');
+  });
+}
+
+function testSound(key) {
+  const file = _soundConfig[key];
+  if (!file) return toast('No sound assigned', 'error');
+  try {
+    var audio = new Audio('/sounds/' + file);
+    audio.volume = 1.0;
+    audio.play();
+  } catch(e) { toast('Playback failed: ' + e.message, 'error'); }
+}
+
+async function uploadSound(key, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('sound', file);
+  formData.append('key', key);
+  try {
+    const resp = await fetch('/api/admin/sounds/upload', {
+      method: 'POST',
+      headers: { 'x-auth-token': localStorage.getItem('narmir_token') || '' },
+      body: formData,
+    });
+    const result = await resp.json();
+    if (result.error) return toast(result.error, 'error');
+    _soundConfig[key] = result.filename;
+    toast('Sound uploaded: ' + result.filename, 'success');
+    renderAllSoundRows();
+  } catch(e) {
+    toast('Upload failed: ' + e.message, 'error');
+  }
+  input.value = '';
+}
+
+async function removeSound(key) {
+  if (!confirm('Remove sound for "' + key + '"?')) return;
+  const r = await api('POST', '/api/admin/sounds/remove', { key });
+  if (r.error) return toast(r.error, 'error');
+  delete _soundConfig[key];
+  toast('Sound removed', 'success');
+  renderAllSoundRows();
 }
 
 async function loadSuggestions() {
