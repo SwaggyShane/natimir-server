@@ -14,18 +14,16 @@ async function refreshLore() {
   try {
     const db = getDb();
     const loreRows = await db.all("SELECT id, content FROM lore_entries");
+    // Ensure all race keys exist natively, or just store all lore entries in a flat array for now?
+    // Wait, let's just make it a single array for all lore since the admin panel isn't specifying race
     const defaultRaces = ['high_elf', 'dwarf', 'dire_wolf', 'human', 'dark_elf', 'orc'];
-    const allLore = loreRows.map(r => ({ id: r.id, msg: r.content }));
-    defaultRaces.forEach(r => { config.LORE_EVENTS[r] = allLore; });
+    const allLore = loreRows.map(r => ({id: r.id, msg: r.content}));
+    defaultRaces.forEach(r => config.LORE_EVENTS[r] = allLore);
 
     const junkRows = await db.all("SELECT id, content FROM random_events");
-    if (junkRows.length > 0) {
-      config.JUNK_PRIZES.length = 0;
-      junkRows.forEach(r => config.JUNK_PRIZES.push(r));
-    }
-  } catch (e) {
-    console.error('[lore] refreshLore failed:', e.message);
-  }
+    config.JUNK_PRIZES.length = 0;
+    junkRows.forEach(r => config.JUNK_PRIZES.push(r));
+  } catch {}
 }
 
 const app    = express();

@@ -634,18 +634,52 @@ async function initDb() {
   const hasLore = await _db.get("SELECT 1 FROM lore_entries LIMIT 1");
   if (!hasLore) {
     const defaultLore = [
-      "A rare lunar eclipse has bathed the Silverwood in violet light. Your mages report that the Ley Lines are thrumming with ancient resonance.",
-      "The High Council of Elders has shared a vision of the First Age. Immersion in history has bolstered your kingdom's prestige.",
-      "A diplomatic envoy from the Hidden Glade has arrived, bringing scrolls of forgotten poetry and architectural secrets.",
-      "Deep-scouts have uncovered a vein of 'Living Granite' in the lower depths of the Iron Holds. Ancient runic carvings confirm it was intended for a Great Gate.",
-      "The Brewmaster's Guild has declared a week of Remembrance. Hammers fall silent as the songs of the ancestors fill the great caverns.",
-      "A massive steam-burst in the Geyser-Works revealed a cached archive of steam-engine blueprints from the Era of Industry.",
-      "A great pack-gathering occurred under the Ashfang moon. The elders spoke of the 'First Hunt' and the blood-ties that bind the wilds.",
-      "A blizzard has unearthed an ancient monolith of bone. Your trackers sense a lingering aura of the Great Pack-Mother.",
-      "The winds from the northern peaks carry the scent of old magic. Your rangers find signs of the spirit-kin returning to the Ash-Tainted groves."
+      // Narmir Lore
+      { title: "The First Age", content: "Before the kingdoms rose, Narmir was a vast wilderness of raw magic — mountains that breathed, rivers that sang, and forests whose roots reached the core of the world." },
+      { title: "The Sundering", content: "The world was once whole. Then the Arch-Mages attempted to bind all magic into a single point. The resulting explosion shattered the Weave, splitting the continent." },
+      { title: "The Weave", content: "Magic in Narmir comes from the Weave, an invisible lattice of energy that runs through all living things. Mages do not create magic; they coax it into submission." },
+      { title: "The Age of Crowns", content: "Following the Sundering came three hundred years of endless war as every warlord claimed dominion. Historians call this the Age of Crowns." },
+      { title: "The Dead Roads", content: "Beneath every major city lie the Dead Roads — ancient trade tunnels carved by civilisations lost to time. All six races claim to have built them." },
+      
+      // General Lore
+      { title: "A Wanderer's Note", content: "A mysterious traveller left this note: 'Don't trust the roads west of the Hollow Mountains after dark. The shadows move independently of the light.'" },
+      { title: "On the Nature of Gold", content: "Gold does not rust, rot, or lie. A gold coin from a destroyed kingdom is still worth a gold coin. The kingdom is gone; the gold remains." },
+      { title: "The Soldier's Calculation", content: "Before any battle, ask: Can we win? Can we survive losing? Can we afford either? Two 'yes' answers means you fight." },
+      { title: "The Scribe's Burden", content: "Everything that ever mattered was written down by someone who was tired, underpaid, and working by bad light. History is a function of eyestrain." },
+      { title: "On Spies", content: "A good spy does not look like a spy. They look like a merchant, a beggar, a cook. True invisibility is being completely ordinary." },
+
+      // Dwarf Lore
+      { title: "The Deep Origins", content: "Dwarves did not descend into the mountains; they emerged from them. They remember a time before the surface existed, and they found the sky unsettling." },
+      { title: "The Stonememory", content: "Every dwarf carries an instinctive understanding of stone composition and load-bearing angles. A mason identifies the age of a wall by touch." },
+      { title: "The Grudge Ledgers", content: "Every dwarf clan maintains a physical book bound in iron, listing every wrong done to them. Settled grudges are crossed out in ink that never dries." },
+
+      // High Elf Lore
+      { title: "The Memory Inheritance", content: "High Elves carry the emotional residue of their ancestors' experiences — instincts and preferences passed down through the millennia." },
+      { title: "The Silversong", content: "Elven children learn to sing before they speak. The Silversong is believed to be the original language of the Weave itself." },
+      { title: "The Long Patience", content: "A High Elf strategy spanning centuries is still considered 'in progress'. Waiting three generations for an opening is just basic planning." },
+
+      // Orc Lore
+      { title: "The War Cry", content: "An orcish war cry is a rhythmic magical signature that coordinates thousands of warriors across miles without a single word." },
+      { title: "Blood Forged", content: "Orcish weapons are tempered in a mixture of iron-rich mud and ceremonial intent, designed to break shields as much as to cut flesh." },
+      { title: "Hierarchy of Scars", content: "In orcish culture, a scar is a record. A veteran warrior is a living map of their own history. Every conflict is marked on the skin." },
+
+      // Dark Elf Lore
+      { title: "The Shadow Weave", content: "Dark Elves use the residual energy left behind when magic interacts with the physical world. This 'Shadow Weave' is difficult to perceive but perfect for stealth." },
+      { title: "The Silent Markets", content: "Dark Elf markets are silent. Transactions are conducted through sign language and magical cues, dealing in information and refined poisons." },
+      { title: "The Web of Secrets", content: "Dark Elf society is a meritocracy of intelligence. Those who know the most secrets hold the most power. Information is the primary currency." },
+
+      // Human Lore
+      { title: "The Adaptation Gene", content: "The greatest human strength is flexibility. A kingdom can be a trade hub today, a military fortress tomorrow, and a center of learning the day after." },
+      { title: "The Trade Hubs", content: "Human cities are the crossroads of Narmir. If you want a dwarf hammer, elven scroll, and orcish axe, you go to a human market." },
+      { title: "The Human Spirit", content: "Humans have so little time, they fill it with as much life as possible. They build, love, fight, and fail — then do it all over again." },
+
+      // Dire Wolf Lore
+      { title: "The Pack Bond", content: "Dire Wolves share a communal consciousness. The Pack Bond is a mental link allowing a pack to move and think as a single unit." },
+      { title: "The Language of Howls", content: "A howl is a data transfer. Subtle variations in pitch convey complex information about terrain and threats over vast distances." },
+      { title: "The One Truth", content: "The pack survives; the individual remains part of the pack. This is the only law of the Dire Wolves. They do not fight for themselves; they fight for the bond." },
     ];
     for (const e of defaultLore) {
-      await _db.run("INSERT INTO lore_entries (content) VALUES (?)", [e]);
+      await _db.run("INSERT INTO lore_entries (title, content) VALUES (?, ?)", [e.title, e.content]);
     }
   }
 

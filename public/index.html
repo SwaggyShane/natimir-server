@@ -64,16 +64,16 @@
     max-width: 100%;
     margin: 0;
     padding: 0;
-    padding-top: 64px; /* Ensure space for fixed topbar */
+    padding-top: 56px; /* Match topbar height */
     overflow-x: hidden;
   }
   .topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 8px;
-    height: 64px;
-    background: rgba(10, 10, 11, 0.95);
+    padding: 0 12px;
+    height: 56px;
+    background: rgba(10, 10, 11, 0.98);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     gap: 4px;
@@ -109,28 +109,28 @@
   }
   #kd-top {
     position: sticky;
-    top: 64px;
+    top: 56px;
     z-index: 100;
     background: var(--bg);
-    padding-top: 12px;
-    padding-bottom: 12px;
-    margin-bottom: 12px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
     border-bottom: 1px solid var(--border);
     margin-left: -10px;
     margin-right: -10px;
     padding-left: 10px;
     padding-right: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
   }
   @media (min-width: 700px) {
     #kd-top {
-      top: 64px;
+      top: 56px;
       margin-left: -24px;
       margin-right: -24px;
       padding-left: 24px;
       padding-right: 24px;
-      padding-top: 12px;
-      padding-bottom: 12px;
+      padding-top: 10px;
+      padding-bottom: 10px;
     }
   }
   body.panel-news #kd-top,
@@ -282,7 +282,7 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     width: 100%;
   }
   .metric { 
@@ -352,11 +352,6 @@
 
   /* ── Badges ── */
   .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
-  @keyframes pulse {
-    0%   { transform:scale(1);    box-shadow:0 0 0 0 rgba(232,184,75,.7); }
-    50%  { transform:scale(1.15); box-shadow:0 0 0 8px rgba(232,184,75,0); }
-    100% { transform:scale(1);    box-shadow:0 0 0 0 rgba(232,184,75,0); }
-  }
   .badge-green { background: rgba(76,175,125,.15); color: var(--green); }
   .badge-gold { background: rgba(232,184,75,.15); color: var(--gold); }
   .badge-blue { background: rgba(91,156,245,.15); color: var(--blue); }
@@ -634,16 +629,16 @@
     </div>
     <div class="topbar-stats">
       <div class="tstat hide-sm"><div class="val" id="top-rank">—</div><div class="lbl">Rank</div></div>
-      <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px">
         <div style="text-align:right">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:13px;color:var(--text2)" class="hide-xs">Turns:</span>
-            <span id="turns-stored-disp" style="font-size:15px;font-weight:700;color:var(--gold)">400</span>
-            <span style="font-size:12px;color:var(--text3)" class="hide-xs">/400</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="font-size:12px;color:var(--text2)" class="hide-xs">Turns:</span>
+            <span id="turns-stored-disp" style="font-size:14px;font-weight:700;color:var(--gold)">400</span>
+            <span style="font-size:11px;color:var(--text3)" class="hide-xs">/400</span>
           </div>
           <div class="countdown">+7 in <span id="regen-countdown">25:00</span></div>
         </div>
-        <button class="turn-btn" onclick="takeTurn()">Take Turn</button>
+        <button class="turn-btn" style="padding:6px 14px; font-size:11px" onclick="takeTurn()">Take Turn</button>
       </div>
     </div>
   </header>
@@ -682,27 +677,27 @@
   <main class="main">
 
     <div id="kd-top">
-    <!-- Kingdom header -->
-    <div class="kingdom-header" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-      <div>
-        <h1 style="font-size:26px;font-weight:700;color:var(--text);line-height:1.2" id="kingdom-name">—</h1>
-        <div style="color:var(--text2);font-size:13px;margin-top:4px">
-          <span id="kingdom-owner-line">—</span> · Turn <span id="turn-num" style="color:var(--text);font-weight:600">0</span> ·
-          <span id="season-badge" style="font-size:12px;color:var(--text3)">🌸 Spring</span>
-          <span id="protection-badge" class="badge badge-green" style="display:none">🛡️ Protected</span>
-        </div>
-        <div style="margin-top:6px"><span class="race-tag" id="race-tag-display" onclick="openRaceLore()" style="cursor:pointer" title="Click for race lore">—</span></div>
-        <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font-size:13px;color:var(--text3);cursor:pointer" onclick="showXpModal()" title="Click for XP breakdown">Level <span id="kingdom-level" style="color:var(--gold);font-weight:700;font-size:16px;text-decoration:underline dotted;text-underline-offset:3px">1</span> <span style="font-size:10px;color:var(--text3)">ⓘ</span></span>
-          <div style="flex:1;min-width:120px;max-width:220px;cursor:pointer" onclick="showXpModal()" title="Click for XP breakdown">
-            <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
-              <div id="xp-bar" style="height:6px;width:0%;background:linear-gradient(90deg,var(--purple),var(--gold));border-radius:3px;transition:width .4s"></div>
-            </div>
+  <!-- Kingdom header -->
+  <div class="kingdom-header" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div>
+      <h1 style="font-size:20px;font-weight:700;color:var(--text);line-height:1.1" id="kingdom-name">—</h1>
+      <div style="color:var(--text2);font-size:12px;margin-top:2px">
+        <span id="kingdom-owner-line">—</span> · Turn <span id="turn-num" style="color:var(--text);font-weight:600">0</span> ·
+        <span id="season-badge" style="font-size:11px;color:var(--text3)">🌸 Spring</span>
+        <span id="protection-badge" class="badge badge-green" style="display:none;padding:2px 6px">🛡️ Protected</span>
+      </div>
+      <div style="margin-top:4px"><span class="race-tag" id="race-tag-display" onclick="openRaceLore()" style="cursor:pointer;padding:2px 8px;font-size:11px" title="Click for race lore">—</span></div>
+      <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text3);cursor:pointer" onclick="showXpModal()" title="Click for XP breakdown">Level <span id="kingdom-level" style="color:var(--gold);font-weight:700;font-size:14px;text-decoration:underline dotted;text-underline-offset:2px">1</span></span>
+        <div style="flex:1;min-width:100px;max-width:180px;cursor:pointer" onclick="showXpModal()" title="Click for XP breakdown">
+          <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+            <div id="xp-bar" style="height:4px;width:0%;background:linear-gradient(90deg,var(--purple),var(--gold));border-radius:2px;transition:width .4s"></div>
           </div>
-          <span id="xp-label" style="font-size:11px;color:var(--text3);cursor:pointer" onclick="showXpModal()">0 / 100 XP</span>
         </div>
+        <span id="xp-label" style="font-size:10px;color:var(--text3);cursor:pointer" onclick="showXpModal()">0/100 XP</span>
       </div>
     </div>
+  </div>
 
     <!-- Metrics strip -->
     <div class="metrics">
@@ -2165,6 +2160,31 @@
     <button class="admin-tab active" onclick="showWarfareTab('attack',this)">⚔️ Attack</button>
     <button class="admin-tab" onclick="showWarfareTab('wspells',this)">✨ Spells</button>
     <button class="admin-tab" onclick="showWarfareTab('wcovert',this)">🕵️ Covert</button>
+    <button class="admin-tab" onclick="showWarfareTab('wintel',this)">📊 Intel</button>
+  </div>
+
+  <!-- INTEL TAB -->
+  <div id="wtab-wintel" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>🕵️ Your Spy Reports</span>
+          <button class="btn" style="font-size:10px;padding:2px 6px" onclick="loadSpyReports()">↻</button>
+        </div>
+        <div id="spy-reports-list" style="max-height:500px;overflow-y:auto;font-size:13px;display:flex;flex-direction:column;gap:8px">
+          <div style="color:var(--text3);padding:20px;text-align:center">No reports yet. Send spies to gather intel.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>🤝 Alliance Intelligence</span>
+          <button class="btn" style="font-size:10px;padding:2px 6px" onclick="loadAllianceIntel()">↻</button>
+        </div>
+        <div id="alliance-intel-list" style="max-height:500px;overflow-y:auto;font-size:13px;display:flex;flex-direction:column;gap:8px">
+          <div style="color:var(--text3);padding:20px;text-align:center">No shared reports in your alliance.</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ATTACK TAB -->
@@ -2647,17 +2667,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Spy report history -->
-  <div style="margin-top:20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:15px;font-weight:600;color:var(--text)">🕵️ Intelligence Reports</div>
-      <button class="btn" style="font-size:11px;padding:3px 10px" onclick="loadSpyReports()">↻ Refresh</button>
-    </div>
-    <div id="spy-report-list" style="display:flex;flex-direction:column;gap:10px">
-      <div style="color:var(--text3);font-size:13px;text-align:center;padding:24px 0">No spy reports yet.</div>
-    </div>
-  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════ TRAINING PANEL ══ -->
@@ -2786,7 +2795,10 @@
 <!-- ═══════════════════════════════════════════ EXPLORATION PANEL ══ -->
 <div id="exploration" class="panel" style="display:none">
 
-
+  <!-- Active expeditions bar at the VERY TOP -->
+  <div class="card" id="exp-counter-card" style="margin-bottom:12px;display:none">
+    <div id="active-expeditions"></div>
+  </div>
 
     <!-- Left col: instant search + three expedition launchers -->
     <div style="display:flex;flex-direction:column;gap:12px">
@@ -2795,9 +2807,6 @@
       <div class="card">
         <div class="card-title">Instant search — <span style="color:var(--green);font-weight:400;font-size:12px">costs 1 turn</span></div>
         
-        <!-- Active expeditions bar -->
-        <div id="active-expeditions" style="display:none;margin-bottom:12px"></div>
-
         <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Quick operations that return results immediately.</div>
         <div class="trow" style="margin-bottom:12px">
           <span class="name">Rangers</span>
@@ -2980,16 +2989,6 @@
           <div style="display:flex;gap:8px">
             <input type="text" id="ally-msg" placeholder="Message your alliance..." style="flex:1;width:auto" maxlength="300" onkeydown="if(event.key==='Enter')sendAllyMsg()">
             <button class="btn btn-purple" onclick="sendAllyMsg()">Send</button>
-          </div>
-        </div>
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div class="card-title" style="margin:0">🔍 Alliance Intelligence</div>
-            <button class="btn" style="font-size:11px;padding:3px 10px" onclick="loadAllianceIntel()">↻ Refresh</button>
-          </div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Spy reports shared by alliance members.</div>
-          <div id="alliance-intel-list" style="display:flex;flex-direction:column;gap:8px">
-            <div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">No shared intel yet.</div>
           </div>
         </div>
       </div>
@@ -3229,6 +3228,18 @@ function populateInputs() {
   // Build quantity — default to 1
   var ba = document.getElementById('b-amount');
   if (ba && (!ba.value || ba.value === '0')) ba.value = 1;
+
+  // Training — persist allocation values from state
+  if (state.training_allocation) {
+    TROOP_TYPES.forEach(function(u) {
+      var el = document.getElementById('ta-' + u);
+      if (el && (!el.value || el.value === "0" || el.dataset.firstLoad === "true")) {
+         el.value = state.training_allocation[u] || 0;
+      }
+    });
+    updateTrainingDisplay();
+  }
+
   // Spell power slider — max mana
   var sp = document.getElementById('sl-power');
   if (sp) { sp.max = state.mana || 200000; sp.value = Math.min(state.mana || 0, 200000); updateSpellCalc(); }
@@ -3507,10 +3518,19 @@ var _prevActiveTypes = {};
 async function loadActiveExpeditions() {
   var result = await apiCall('GET', '/api/kingdom/expedition/list');
   var bar = document.getElementById('active-expeditions');
+  var card = document.getElementById('exp-counter-card');
   if (!bar) return;
 
   var active    = Array.isArray(result) ? result : (result.active    || []);
   var completed = Array.isArray(result) ? [] :     (result.completed || []);
+
+  if (active.length > 0) {
+    if (card) card.style.display = 'block';
+    bar.style.display = 'block';
+  } else {
+    if (card) card.style.display = 'none';
+    bar.style.display = 'none';
+  }
 
   var log    = document.getElementById('exploration-log');
   var icons  = { scout:'🔭', deep:'🌲', dungeon:'⚔️' };
@@ -3871,14 +3891,11 @@ async function covertOp(op) {
   if (result.error) return toast(result.error, 'error');
 
   if (op === 'spy') {
-    var outcomeColor = { full:'var(--green)', partial:'var(--gold)', partial_failure:'var(--red)', total_failure:'var(--red)', disinformation:'var(--green)' };
-    var outcomeLabel = { full:'Full Success', partial:'Partial Success', partial_failure:'Partial Failure', total_failure:'Mission Failed', disinformation:'Intel Received' };
-    if (result.report) {
-      showSpyReport(result.report, t.name, result.outcome, result.reportId);
+    if (result.success && result.report) {
+      showSpyReport(result.report, t.name);
     } else {
-      toast(result.event || 'Spy mission failed', result.success ? 'success' : 'error');
+      toast(result.event || 'Spy mission failed', 'error');
     }
-    loadSpyReports();
   } else if (op === 'loot') {
     if (result.success) {
       toast(result.event || 'Loot successful!', 'success');
@@ -3970,91 +3987,23 @@ function showBattleReport(data) {
   document.getElementById('battle-overlay').style.display = 'flex';
 }
 
-function showSpyReport(report, targetName, outcome, reportId) {
-  var name = targetName || 'Unknown';
-  var OUTCOME_META = {
-    full:           { label:'Full Report',    color:'var(--green)', note:'±5% accuracy — highly reliable' },
-    partial:        { label:'Partial Report', color:'var(--gold)',  note:'±20% accuracy — army composition only' },
-    disinformation: { label:'Intel Received', color:'var(--green)', note:'Accuracy unknown — verify with another spy' },
-  };
-  var meta = OUTCOME_META[outcome] || { label:'Spy Report', color:'var(--blue)', note:'Report retrieved' };
-  var html = '<div class="br-title" style="color:' + meta.color + '">🕵️ ' + meta.label + ' — ' + name + '</div>';
-
-  var fieldDefs = [
-    ['race',       'Race',       function(v){ return v; }],
-    ['land',       'Land',       function(v){ return fmt(v) + ' acres'; }],
-    ['population', 'Population', function(v){ return fmt(v); }],
-    ['gold',       'Gold',       function(v){ return fmt(v); }],
-    ['food',       'Food',       function(v){ return fmt(v); }],
-    ['morale',     'Morale',     function(v){ return v + '%'; }],
-    ['fighters',   'Fighters',   function(v){ return fmt(v); }],
-    ['rangers',    'Rangers',    function(v){ return fmt(v); }],
-    ['clerics',    'Clerics',    function(v){ return fmt(v); }],
-    ['mages',      'Mages',      function(v){ return fmt(v); }],
-    ['thieves',    'Thieves',    function(v){ return fmt(v); }],
-    ['ninjas',     'Ninjas',     function(v){ return fmt(v); }],
+function showSpyReport(report, targetName) {
+  var name = targetName || report.name || 'Unknown';
+  var html = '<div class="br-title" style="color:var(--blue)">🕵️ Spy report — ' + name + '</div>';
+  var rows = [
+    ['Race',        report.race || '?'],
+    ['Land',        fmt(report.land || 0) + ' acres (approx)'],
+    ['Fighters',    fmt(report.fighters || 0)],
+    ['Mages',       fmt(report.mages || 0)],
+    ['Gold',        fmt(report.gold || 0)],
+    ['Accuracy',    '±15% — not fully reliable'],
   ];
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px">';
-  fieldDefs.forEach(function(f) {
-    if (report[f[0]] === undefined) return;
-    html += '<div style="display:contents"><span style="color:var(--text3);font-size:12px">' + f[1] + '</span>'
-          + '<span style="color:var(--text);font-size:12px;font-weight:600">' + f[2](report[f[0]]) + '</span></div>';
-  });
-  html += '</div>';
-  html += '<div style="font-size:11px;color:var(--text3);margin-top:10px">' + meta.note + '</div>';
-  if (reportId) {
-    html += '<button class="btn" style="margin-top:10px;font-size:12px" onclick="shareSpyReport(' + reportId + ',this)">📡 Share to Alliance</button>';
-  }
+  html += rows.map(function(r){
+    return '<div class="spy-row"><span style="color:var(--text2)">' + r[0] + '</span><span style="color:var(--text)">' + r[1] + '</span></div>';
+  }).join('');
+  html += '<div style="font-size:12px;color:var(--text3);margin-top:10px">Spy again to confirm. Report degrades with distance.</div>';
   document.getElementById('battle-content').innerHTML = html;
   document.getElementById('battle-overlay').style.display = 'flex';
-}
-
-function viewSpyReport(reportId) {
-  var r = _spyReportStore[reportId];
-  if (!r) return;
-  showSpyReport(r.report, r.target_name, r.outcome, r.id);
-}
-
-async function shareSpyReport(reportId, btn) {
-  var result = await apiCall('POST', '/api/kingdom/spy-reports/' + reportId + '/share', {});
-  if (result.error) return toast(result.error, 'error');
-  btn.textContent = result.shared ? '✅ Shared with Alliance' : '📡 Share to Alliance';
-  toast(result.shared ? 'Report shared with your alliance' : 'Report unshared', 'success');
-  loadSpyReports();
-}
-
-var _spyReportStore = {};
-
-async function loadSpyReports() {
-  var list = document.getElementById('spy-report-list');
-  if (!list) return;
-  var rows = await apiCall('GET', '/api/kingdom/spy-reports');
-  if (!rows || rows.error || rows.length === 0) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">No spy reports yet.</div>';
-    return;
-  }
-  _spyReportStore = {};
-  rows.forEach(function(r) { _spyReportStore[r.id] = r; });
-  var OUTCOME_BADGE = {
-    full:           '<span style="background:#1a4a2a;color:#4caf80;font-size:10px;padding:2px 6px;border-radius:4px">FULL</span>',
-    partial:        '<span style="background:#3a3010;color:#c8a020;font-size:10px;padding:2px 6px;border-radius:4px">PARTIAL</span>',
-    disinformation: '<span style="background:#1a2a4a;color:#4a90d9;font-size:10px;padding:2px 6px;border-radius:4px">INTEL</span>',
-    partial_failure:'<span style="background:#3a1a1a;color:#c84040;font-size:10px;padding:2px 6px;border-radius:4px">FAILED</span>',
-    total_failure:  '<span style="background:#3a1a1a;color:#c84040;font-size:10px;padding:2px 6px;border-radius:4px">CAUGHT</span>',
-  };
-  list.innerHTML = rows.map(function(r) {
-    var badge = OUTCOME_BADGE[r.outcome] || '';
-    var ago = timeAgo(r.created_at);
-    var shareBtn = r.report ? '<button class="btn" style="font-size:10px;padding:2px 8px;margin-left:auto" onclick="shareSpyReport(' + r.id + ',this)">'
-                            + (r.shared_to_alliance ? '✅ Shared' : '📡 Share') + '</button>' : '';
-    var viewBtn = r.report ? '<button class="btn" style="font-size:10px;padding:2px 8px" onclick="viewSpyReport(' + r.id + ')">View</button>' : '';
-    return '<div style="border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px">'
-         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-         + badge + '<span style="font-size:13px;font-weight:600;color:var(--text)">' + r.target_name + '</span>'
-         + '<span style="font-size:11px;color:var(--text3);margin-left:auto">' + ago + '</span></div>'
-         + '<div style="display:flex;gap:6px">' + viewBtn + shareBtn + '</div>'
-         + '</div>';
-  }).join('');
 }
 
 function closeBattle() {
@@ -4367,41 +4316,6 @@ async function loadAlliancePanel() {
   renderAllyList(data.members);
   populateDismissList(data.members);
   loadAllianceChatHistory(data.alliance.id);
-  loadAllianceIntel();
-}
-
-async function loadAllianceIntel() {
-  var el = document.getElementById('alliance-intel-list');
-  if (!el) return;
-  var rows = await apiCall('GET', '/api/kingdom/spy-reports/alliance');
-  if (!rows || !rows.length) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">No shared intel yet.</div>';
-    return;
-  }
-  var outcomeColors = { full:'var(--green)', partial:'var(--gold)', partial_failure:'var(--amber)', total_failure:'var(--red)', disinformation:'var(--purple)' };
-  var outcomeLabels = { full:'Full Success', partial:'Partial Success', partial_failure:'Partial Failure', total_failure:'Failed', disinformation:'Disinformation' };
-  el.innerHTML = rows.map(function(r) {
-    var color = outcomeColors[r.outcome] || 'var(--text3)';
-    var label = outcomeLabels[r.outcome] || r.outcome;
-    var rpt = r.report;
-    var fields = '';
-    if (rpt) {
-      var order = ['fighters','rangers','clerics','mages','thieves','ninjas','engineers','war_machines','land'];
-      order.forEach(function(k) {
-        if (rpt[k] !== undefined) {
-          fields += '<span style="color:var(--text3)">' + k.replace(/_/g,' ') + ':</span> <strong>' + fmt(rpt[k]) + '</strong>  ';
-        }
-      });
-    }
-    return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-size:12px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-        + '<span style="font-weight:600;color:var(--text)">' + r.target_name + '</span>'
-        + '<span style="color:' + color + ';font-size:11px">' + label + '</span>'
-      + '</div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">Shared by <strong style="color:var(--text2)">' + r.shared_by_name + '</strong></div>'
-      + (fields ? '<div style="line-height:2;word-break:break-all">' + fields + '</div>' : '<div style="color:var(--text3);font-style:italic">No intel gathered.</div>')
-      + '</div>';
-  }).join('');
 }
 
 function renderAllyList(members) {
@@ -4561,7 +4475,7 @@ function showNewsBadge(count) {
   }
 }
 
-function toast(msg, type, duration) {
+function toast(msg, type) {
   // Attack insult logic
   if (msg && (msg.includes('attacked and') || msg.includes('raided your'))) {
     playInsult();
@@ -4572,15 +4486,19 @@ function toast(msg, type, duration) {
   el.className = type || '';
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, duration || 2400);
+  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
 }
 
 function playInsult() {
-  try {
-    var audio = new Audio('/fart.mp3');
-    audio.volume = 0.8;
-    audio.play();
-  } catch(e) { console.error('Audio fail:', e); }
+  if (typeof SpeechSynthesisUtterance !== 'undefined' && window.speechSynthesis) {
+    try {
+      var utterance = new SpeechSynthesisUtterance("I fart in your general direction!");
+      utterance.pitch = 1.2;
+      utterance.rate = 1.0;
+      utterance.volume = 0.8;
+      window.speechSynthesis.speak(utterance);
+    } catch(e) { console.error('Audio fail:', e); }
+  }
 }
 
 function openDirectMessage(otherId, otherName) {
@@ -4602,6 +4520,11 @@ function switchTab(id, btn) {
     p.style.display = 'none';
   });
   document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
+  
+  // Set body class for panel-specific CSS (like hiding kd-top)
+  document.body.className = document.body.className.replace(/\bpanel-\S+/g, '');
+  document.body.classList.add('panel-' + id);
+
   var panel = document.getElementById(id);
   panel.classList.add('active');
   panel.style.display = 'block';
@@ -4688,9 +4611,6 @@ function switchTab(id, btn) {
     var mapWarn = document.getElementById('atk-map-warn');
     if (mapWarn) mapWarn.style.display = (state.maps || 0) < 1 ? 'block' : 'none';
     updateAtkEstimate();
-  }
-  if (id === 'covert') {
-    loadSpyReports();
   }
   if (id === 'globalchat' || id === 'alliances') {
     var badge = document.getElementById('chat-badge');
@@ -4810,31 +4730,6 @@ async function setTax(v) {
 
 
 var takingTurn = false;
-// ── Racial gift unlock sound ──────────────────────────────────────────────────
-function playRacialGiftSound() {
-  try {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
-    // Triumphant 3-note fanfare: C5 → E5 → G5 → C6
-    var notes = [523.25, 659.25, 783.99, 1046.50];
-    var times  = [0, 0.18, 0.36, 0.54];
-    var gains  = [0.5, 0.45, 0.45, 0.6];
-    notes.forEach(function(freq, i) {
-      var osc  = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      var t = ctx.currentTime + times[i];
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(gains[i], t + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-      osc.start(t);
-      osc.stop(t + 0.6);
-    });
-  } catch(e) { /* Audio not available — silent fail */ }
-}
-
 async function takeTurn() {
   if (takingTurn) return;
   if ((state.turns_stored || 0) < 1) return toast('No turns available — refills in ' + document.getElementById('regen-countdown').textContent, 'warn');
@@ -4846,31 +4741,6 @@ async function takeTurn() {
   if (result.error) { if (btn) btn.style.opacity = '1'; return toast(result.error, 'error'); }
   applyServerUpdates(result.updates);
   if (result.turns_stored !== undefined) state.turns_stored = result.turns_stored;
-
-  // ── Racial gift first-unlock detection ───────────────────────────────────────
-  var rgKey = RACIAL_UNIT_MAP[state.race];
-  var newUnlocked = state.racial_bonuses_unlocked || {};
-  if (rgKey && newUnlocked[rgKey] && !window._racialGiftShown) {
-    window._racialGiftShown = true;
-    playRacialGiftSound();
-    // Big unlock toast
-    var giftText = RACIAL_BADGE_TEXT[state.race] || 'Racial gift unlocked!';
-    toast('🎉 RACIAL GIFT UNLOCKED! ' + giftText, 'success', 6000);
-    // Flash the training panel badge
-    var badge = document.getElementById('racial-gift-badge');
-    if (badge) {
-      badge.style.display = 'inline-block';
-      badge.style.animation = 'none';
-      setTimeout(function() { badge.style.animation = 'pulse 0.6s ease 3'; }, 50);
-    }
-    var banner = document.getElementById('racial-gift-banner');
-    if (banner) {
-      banner.style.display = 'block';
-      banner.style.boxShadow = '0 0 20px rgba(232,184,75,0.5)';
-      setTimeout(function() { banner.style.boxShadow = ''; }, 3000);
-    }
-  }
-
   syncUI();
   updateTurnsDisplay();
   document.getElementById('turn-num').textContent = state.turn;
@@ -5144,9 +5014,7 @@ function syncUI() {
   if (citBadgeMain) citBadgeMain.style.display = citadelEarned ? 'inline-block' : 'none';
 
   var rgBadge = document.getElementById('racial-gift-badge');
-  var rgUnlocked = state.racial_bonuses_unlocked || {};
-  var rgKeyUnit  = RACIAL_UNIT_MAP[state.race];
-  var rgActive   = !!(rgKeyUnit && rgUnlocked[rgKeyUnit]);
+  var rgActive = (state.racial_gift_active && state.racial_gift_active !== 'false');
   if (rgBadge) rgBadge.style.display = rgActive ? 'inline-block' : 'none';
 
   var th = document.getElementById('tools-hammers');
@@ -5682,11 +5550,6 @@ async function loadKingdom() {
     build_progress: (() => { try { return typeof kingdom.build_progress === 'string' ? JSON.parse(kingdom.build_progress||'{}') : (kingdom.build_progress||{}); } catch { return {}; } })(),
     build_allocation: (() => { try { return typeof kingdom.build_allocation === 'string' ? JSON.parse(kingdom.build_allocation||'{}') : (kingdom.build_allocation||{}); } catch { return {}; } })(),
   });
-
-  // Don't re-fire fanfare if gift was already unlocked before this session
-  var _rgKeyInit = RACIAL_UNIT_MAP[state.race];
-  window._racialGiftShown = !!(_rgKeyInit && (state.racial_bonuses_unlocked||{})[_rgKeyInit]);
-
   syncUI();
   updateTurnsDisplay();
   document.getElementById('turn-num').textContent = kingdom.turn;
@@ -6488,6 +6351,7 @@ function applyServerUpdates(u) {
   if (u.bld_shrines  !== undefined) state.bld_shrines   = u.bld_shrines;
   if (u.mage_tower_allocation !== undefined) { try { state.mage_tower_allocation = typeof u.mage_tower_allocation==='string' ? JSON.parse(u.mage_tower_allocation) : u.mage_tower_allocation; } catch(e){} }
   if (u.shrine_allocation     !== undefined) { try { state.shrine_allocation     = typeof u.shrine_allocation    ==='string' ? JSON.parse(u.shrine_allocation)     : u.shrine_allocation;     } catch(e){} }
+  if (u.training_allocation   !== undefined) { try { state.training_allocation   = typeof u.training_allocation  ==='string' ? JSON.parse(u.training_allocation)   : u.training_allocation;   } catch(e){} }
   if (u.scrolls      !== undefined) { try { state.scrolls = typeof u.scrolls==='string' ? JSON.parse(u.scrolls) : u.scrolls; } catch(e){} }
   if (u.maps         !== undefined) state.maps          = u.maps;
   if (u.blueprints_stored !== undefined) state.blueprints_stored = u.blueprints_stored;
@@ -6923,12 +6787,110 @@ async function forgeScaffolding() {
 // ── Warfare Panel ─────────────────────────────────────────────────────────────
 
 function showWarfareTab(id, btn) {
-  ['attack','wspells','wcovert'].forEach(function(t){ document.getElementById('wtab-'+t).style.display='none'; });
+  ['attack','wspells','wcovert','wintel'].forEach(function(t){ 
+    const el = document.getElementById('wtab-'+t);
+    if (el) el.style.display='none'; 
+  });
   document.querySelectorAll('#warfare .admin-tab').forEach(function(b){ b.classList.remove('active'); });
-  document.getElementById('wtab-'+id).style.display='block';
+  const target = document.getElementById('wtab-'+id);
+  if (target) target.style.display='block';
   if (btn) btn.classList.add('active');
   if (id === 'wspells') initWspells();
   if (id === 'wcovert') initWcovert();
+  if (id === 'wintel') { loadSpyReports(); loadAllianceIntel(); }
+}
+
+var _spyReportsCache = {};
+
+async function loadSpyReports() {
+  const el = document.getElementById('spy-reports-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px;text-align:center">Loading reports...</div>';
+  
+  const res = await apiCall('GET', '/api/kingdom/spy-reports');
+  if (res.error) {
+    el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">' + res.error + '</div>';
+    return;
+  }
+  
+  if (!res.reports || res.reports.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center">No reports yet. Send spies to gather intel.</div>';
+    return;
+  }
+  
+  el.innerHTML = res.reports.map(r => {
+    let detail;
+    try { detail = typeof r.report === 'string' ? JSON.parse(r.report) : r.report; } catch(e) { detail = {}; }
+    _spyReportsCache[r.id] = detail;
+    return `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;color:var(--text)">${r.target_name}</span>
+          <span style="font-size:11px;color:var(--text3)">${new Date(r.created_at).toLocaleDateString()}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2)">
+          ${detail.race ? `Race: ${detail.race} · ` : ''} 
+          ${detail.land ? `Land: ${fmt(detail.land)} · ` : ''}
+          ${detail.gold ? `Gold: ${fmt(detail.gold)}` : ''}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn" style="flex:1;font-size:11px;padding:4px" onclick="viewDetailedReport(${r.id}, '${r.target_name}')">View Detailed</button>
+          ${!r.shared_to_alliance ? `<button class="btn btn-purple" style="flex:1;font-size:11px;padding:4px" onclick="shareSpyReport(${r.id})">Share to Alliance</button>` : `<span style="font-size:10px;color:var(--green);flex:1;text-align:center;padding:4px">Shared ✓</span>`}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadAllianceIntel() {
+  const el = document.getElementById('alliance-intel-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px;text-align:center">Loading alliance intel...</div>';
+  
+  const res = await apiCall('GET', '/api/kingdom/spy-reports/alliance');
+  if (res.error) {
+    el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">' + res.error + '</div>';
+    return;
+  }
+  
+  if (!res.reports || res.reports.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center">No shared reports in your alliance.</div>';
+    return;
+  }
+  
+  el.innerHTML = res.reports.map(r => {
+    let detail;
+    try { detail = typeof r.report === 'string' ? JSON.parse(r.report) : r.report; } catch(e) { detail = {}; }
+    const cacheKey = 'ally_' + r.id;
+    _spyReportsCache[cacheKey] = detail;
+    return `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;color:var(--text)">${r.target_name}</span>
+          <span style="font-size:11px;color:var(--text3)">By ${r.shared_by_name || 'Anonymous'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2)">
+          ${detail.race ? `Race: ${detail.race} · ` : ''} 
+          ${detail.land ? `Land: ${fmt(detail.land)} · ` : ''}
+          ${detail.gold ? `Gold: ${fmt(detail.gold)}` : ''}
+        </div>
+        <button class="btn" style="width:100%;font-size:11px;padding:4px;margin-top:4px" onclick="viewDetailedReport('${cacheKey}', '${r.target_name}')">View Detailed</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function viewDetailedReport(id, targetName) {
+  const detail = _spyReportsCache[id];
+  if (detail) showSpyReport(detail, targetName);
+}
+
+async function shareSpyReport(reportId) {
+  const res = await apiCall('POST', `/api/kingdom/spy-reports/${reportId}/share`);
+  if (res.error) return toast(res.error, 'error');
+  toast('Report shared with alliance!', 'success');
+  loadSpyReports();
+  loadAllianceIntel();
 }
 
 async function loadWarfarePanel() {
@@ -8424,7 +8386,6 @@ function renderMageTowerPanel() {
 
 var RACIAL_UNIT_MAP = { dwarf:'engineers', high_elf:'mages', orc:'fighters', dark_elf:'ninjas', dire_wolf:'rangers', human:'clerics' };
 var RACIAL_BADGE_TEXT = {
-  dwarf:     '⚒️ Dwarven Mastery — War machines need only 1 engineer to crew',
   high_elf:  '🌿 Silverwood Mastery — Level 5+ mages produce 2 scrolls per craft',
   orc:       '⚔️ Orcish War Culture — Passively trains 1 fighter per 10 each turn',
   dark_elf:  '🕵️ Shadow Mastery — Assassinations leave no trace',

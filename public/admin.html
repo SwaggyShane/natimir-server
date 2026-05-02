@@ -162,12 +162,6 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <div id="promote-result" style="margin-top:8px;font-size:13px"></div>
   </div>
 
-  <div class="card">
-    <h2 style="margin-top:0">Audio test</h2>
-    <button class="btn" onclick="testInsult()">💨 Test attack insult</button>
-    <span style="font-size:12px;color:var(--text3);margin-left:10px">Plays when a kingdom is attacked</span>
-  </div>
-
   </div><!-- end atab-manage -->
 
   <!-- TAB: Kingdoms -->
@@ -935,16 +929,6 @@ async function loadAiSynopsis() {
 }
 
 function fmt(n) { if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e3) return (n/1e3).toFixed(1)+'k'; return String(n||0); }
-
-function testInsult() {
-  try {
-    var audio = new Audio('/fart.mp3');
-    audio.volume = 1.0;
-    audio.play();
-  } catch(e) {
-    alert('Audio playback failed: ' + e.message);
-  }
-}
 
 async function flushLocations() {
   if (!confirm('This will clear ALL location maps and discovered kingdoms for every player. Are you sure?')) return;
