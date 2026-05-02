@@ -4480,25 +4480,7 @@ renderTargets(targets, 'covert-target-list', 'selectCovertTarget');
 updateSpellCalc();
 
 var toastTimer;
-function showNewsBadge(count) {
-  if (!count || count <= 0) {
-    var nb = document.getElementById('news-badge');
-    var bnb = document.getElementById('bnav-news-badge');
-    if (nb) nb.style.display = 'none';
-    if (bnb) bnb.style.display = 'none';
-    return;
-  }
-  var sideB = document.getElementById('news-badge');
-  if (sideB) {
-    sideB.style.display = 'inline-block';
-    sideB.textContent = count;
-  }
-  var bnavB = document.getElementById('bnav-news-badge');
-  if (bnavB) {
-    bnavB.style.display = 'inline-block';
-    bnavB.textContent = count;
-  }
-}
+
 
 function toast(msg, type) {
   // Attack insult logic
@@ -4515,21 +4497,14 @@ function toast(msg, type) {
 }
 
 function playInsult() {
-  if (typeof SpeechSynthesisUtterance !== 'undefined' && window.speechSynthesis) {
-    try {
-      var utterance = new SpeechSynthesisUtterance("I fart in your general direction!");
-      utterance.pitch = 1.2;
-      utterance.rate = 1.0;
-      utterance.volume = 0.8;
-      window.speechSynthesis.speak(utterance);
-    } catch(e) { console.error('Audio fail:', e); }
-  }
+  try {
+    var audio = new Audio('/fart.mp3');
+    audio.volume = 0.8;
+    audio.play();
+  } catch(e) { console.error('Audio fail:', e); }
 }
 
-function openDirectMessage(otherId, otherName) {
-  switchTab('messages');
-  openConversation(otherId, otherName);
-}
+
 
 function openBountyAction(targetId, targetName) {
   switchTab('bounties');
@@ -4710,48 +4685,7 @@ async function fire(unit) {
 
 
 
-function updateTax(v) {
-  v = parseInt(v) || 0;
-  // Do not set state.tax here so we don't treat it as saved.
-  var t1 = document.getElementById('tax-slider'); if(t1 && document.activeElement !== t1) t1.value = v;
-  var t2 = document.getElementById('strip-tax-slider'); if(t2 && document.activeElement !== t2) t2.value = v;
-  var d1 = document.getElementById('tax-disp'); if(d1) d1.textContent = v + '%';
-  var m1 = document.getElementById('m-tax'); if(m1) m1.textContent = v + '%';
-  var s1 = document.getElementById('strip-tax'); if(s1) s1.textContent = v + '%';
-  
-  // Calculate projected net income
-  var pop = (state.population || state.pop || 0);
-  var economyRating = state.res_economy || 100;
-  var income = Math.floor(pop * (v / 100) * (economyRating / 100));
-  var upkeep = Math.floor((state.fighters||0) * 0.5 + (state.mages||0) * 2);
-  
-  var ei = document.getElementById('econ-income'); if(ei) ei.textContent = '+' + fmt(income);
-  var eu = document.getElementById('econ-upkeep'); if(eu) eu.textContent = '-' + fmt(upkeep);
-  var en = document.getElementById('econ-net'); if(en) {
-    en.textContent = fmt(income - upkeep);
-    en.style.color = (income - upkeep) >= 0 ? 'var(--green)' : 'var(--red)';
-  }
-}
 
-async function lockTax(inputId) {
-  var slider = document.getElementById(inputId || 'tax-slider');
-  var v = parseInt(slider ? slider.value : (state.tax || 42));
-  var result = await apiCall('POST', '/api/kingdom/options', { tax: v });
-  if (result.error) return toast(result.error, 'error');
-  state.tax = v;
-  updateTax(v);
-  toast('Tax rate locked at ' + v + '%', v > 50 ? 'warn' : 'success');
-}
-
-async function setTax(v) {
-  var slider = document.getElementById('tax-slider');
-  if (slider) slider.value = v;
-  updateTax(v);
-  var result = await apiCall('POST', '/api/kingdom/options', { tax: v });
-  if (result.error) return toast(result.error, 'error');
-  state.tax = v;
-  toast('Tax rate locked at ' + v + '%', v > 50 ? 'warn' : 'success');
-}
 
 
 var takingTurn = false;
@@ -5914,89 +5848,6 @@ var ACTION_LABELS = {
   sabotage:    'Sabotage',
   spell:       'Spell Cast',
 };
-
-async function loadWorldMap() {
-  const container = document.getElementById('world-map-container');
-  const legendList = document.getElementById('region-legend-list');
-  if (!container || !legendList) return;
-
-  container.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3)">Loading regions...</div>';
-
-  try {
-    const regions = await apiCall('GET', '/api/regions');
-    if (!Array.isArray(regions)) throw new Error('Invalid regions data');
-
-    legendList.innerHTML = '';
-    let mapHtml = `<svg viewBox="0 0 600 400" style="width:100%; height:auto; overflow:visible">
-      <defs>
-        <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
-          <feOffset dx="0" dy="1" result="offsetblur" />
-          <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
-          <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>`;
-
-    const colors = {
-      'The Iron Holds':    '#795548',
-      'The Silverwood':    '#2e7d32',
-      'The Bloodplains':   '#c62828',
-      'The Underspire':    '#4a148c',
-      'The Heartlands':    '#1565c0',
-      'The Ashfang Wilds': '#37474f'
-    };
-
-    regions.forEach((r, i) => {
-      const x = (i % 3) * 200 + 5;
-      const y = Math.floor(i / 3) * 200 + 5;
-      const w = 190;
-      const h = 190;
-      const color = colors[r.name] || '#444';
-      const isSelected = r.name === state.region;
-      const ownerName = r.owner_name || 'Neutral';
-      const progress = r.contest_progress || 0;
-      const isContested = r.contest_alliance_id !== null;
-
-      mapHtml += `
-        <g style="cursor:pointer" onclick="showRegionDetails('${r.name.replace(/'/g, "\\'")}')">
-          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" 
-            fill="${color}" fill-opacity="${isSelected ? 0.7 : 0.3}" 
-            stroke="${isSelected ? 'var(--gold)' : 'var(--border)'}" 
-            stroke-width="${isSelected ? 2 : 1}" 
-            filter="url(#shadow)" />
-          <text x="${x + 95}" y="${y + 40}" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">${r.name}</text>
-          <text x="${x + 95}" y="${y + 65}" text-anchor="middle" fill="#ddd" font-size="11">Owner: ${ownerName}</text>
-          
-          ${isContested ? `
-            <rect x="${x + 25}" y="${y + 85}" width="140" height="6" rx="3" fill="rgba(0,0,0,0.3)" />
-            <rect x="${x + 25}" y="${y + 85}" width="${140 * (progress / 100)}" height="6" rx="3" fill="var(--amber)" />
-            <text x="${x + 95}" y="${y + 110}" text-anchor="middle" fill="var(--amber)" font-size="10" font-weight="600">Capturing: ${progress}%</text>
-            <text x="${x + 95}" y="${y + 125}" text-anchor="middle" fill="var(--text3)" font-size="9">by ${r.challenger_name || 'Unknown'}</text>
-          ` : ''}
-
-          <text x="${x + 95}" y="${y + 160}" text-anchor="middle" fill="#999" font-size="10">Bonus: +10% ${r.bonus_type}</text>
-        </g>`;
-
-      const leg = document.createElement('div');
-      leg.className = 'trow';
-      leg.style.padding = '8px 0';
-      leg.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:12px;height:12px;border-radius:2px;background:${color};opacity:${isSelected ? 1 : 0.4}"></div>
-          <span style="${isSelected ? 'font-weight:700;color:var(--text)' : 'color:var(--text2)'}">${r.name}</span>
-        </div>
-        <span style="font-size:12px;color:var(--text3)">${ownerName}</span>
-      `;
-      legendList.appendChild(leg);
-    });
-
-    mapHtml += '</svg>';
-    container.innerHTML = mapHtml;
-  } catch (err) {
-    container.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px 0">Failed to load world map.</div>';
-    console.error(err);
-  }
-}
 
 function showRegionDetails(name) {
   // Placeholder for future expanded region info panel
@@ -7522,7 +7373,6 @@ async function setTax(v) {
 async function loadEconomy() {
   var data = await apiCall('GET', '/api/kingdom/economy/overview');
   if (data.error) return toast(data.error, 'error');
-  console.log('loadEconomy data:', data);
   econData = data;
 
   // Farms
