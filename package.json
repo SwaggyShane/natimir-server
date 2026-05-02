@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "node --watch index.js",
+    "dev": "tsx index.js",
     "start": "node index.js",
     "build": "echo 'No build step required — static files in public/'",
     "lint": "eslint . --ext js --report-unused-disable-directives"
@@ -13,7 +13,6 @@
     "cookie-parser": "^1.4.6",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
-    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "socket.io": "^4.7.4",
     "sqlite": "^5.1.1",
@@ -22,6 +21,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.0",
     "eslint": "^10.2.1",
-    "globals": "^15.0.0"
+    "globals": "^15.0.0",
+    "tsx": "^4.21.0"
   }
 }

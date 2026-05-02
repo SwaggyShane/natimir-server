@@ -17,7 +17,7 @@ const {
   SPELL_DEFS, SCROLL_REQUIREMENTS, SCRIBE_ITEMS, SUPPORT_CAP_RACE, WM_CREW_REQUIRED,
   RESEARCH_MAP, BUILDING_ALIASES, RACIAL_UNITS,
   WORLD_FRAGMENTS, JUNK_PRIZES, ULTRA_RARE_PRIZES, THRONE_OF_NAZDREG, EXPEDITION_TURNS,
-  LORE_EVENTS, CAPS, BUILDING_COL, TOOL_COL, TOOL_GOLD_COST, BLUEPRINT_REQUIRED: BP_REQ,
+  CAPS, BUILDING_COL, TOOL_COL, TOOL_GOLD_COST, BLUEPRINT_REQUIRED: BP_REQ,
   SCAFFOLDING_REQUIRED: SCAFF_REQ, SCAFFOLDING_BONUS_BUILDINGS: SCAFF_BONUS, HERO_CLASSES
 } = config;
 
@@ -669,11 +669,31 @@ function processTurn(k) {
   if (changed) updates.active_event = JSON.stringify(activeEv2);
 
   // ── 5. Lore Events ────────────────────────────────────────────────────────────
-  if (Math.random() < 0.10) {
-    const raceLore = LORE_EVENTS[k.race] || [];
+  // 0.1% chance ~ 24000 turns needed for 24 drops
+  if (Math.random() < 0.001) {
+    const LORE = require('./lore');
+    const cats = ['narmir', 'general', k.race];
+    const cat = cats[Math.floor(Math.random() * cats.length)];
+    const raceLore = LORE[cat] || [];
     if (raceLore.length > 0) {
-      const msg = raceLore[Math.floor(Math.random() * raceLore.length)];
-      events.push({ type: 'lore', message: `📜 HISTORY: ${msg}` });
+      const loreCollected = safeJsonParse(updates.collected_lore || k.collected_lore, [], 'processTurn:lore');
+      const lastId = updates.last_lore_id || k.last_lore_id;
+
+      let available = raceLore.filter(l => l.id !== lastId);
+      if (available.length === 0) available = raceLore;
+      const ev = available[Math.floor(Math.random() * available.length)];
+      if (ev) {
+        if (!loreCollected.includes(ev.id)) {
+          loreCollected.push(ev.id);
+          updates.collected_lore = JSON.stringify(loreCollected);
+          
+          if (loreCollected.length >= Object.values(LORE).flat().length) {
+            updates._historian_unlocked = true;
+          }
+        }
+        updates.last_lore_id = ev.id;
+        events.push({ type: 'system', message: `📜 HISTORY: ${ev.msg || ev.content || ev}` });
+      }
     }
   }
 
@@ -1028,7 +1048,73 @@ function processTurn(k) {
   }
 
   updates.last_turn_at = Math.floor(Date.now() / 1000);
+  checkAchievements(k, updates, events);
   return { updates, events };
+}
+
+function checkAchievements(k, updates, events) {
+  const ach = safeJsonParse(updates.achievements || k.achievements, [], 'checkAchievements');
+  let achUpdated = false;
+
+  const currentTowers = updates.bld_mage_towers !== undefined ? updates.bld_mage_towers : k.bld_mage_towers || 0;
+  const currentCastles = updates.bld_castles !== undefined ? updates.bld_castles : k.bld_castles || 0;
+  if (!ach.includes('ach_grandmaster') && currentTowers >= 100 && currentCastles >= 100) {
+    ach.push('ach_grandmaster');
+    updates.land = (updates.land !== undefined ? updates.land : k.land || 0) + 1000;
+    updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) + 1000;
+    events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Grandmaster! Rewarded +1000 Land and +1000 Maps.' });
+    achUpdated = true;
+  }
+
+  const currentPop = updates.population !== undefined ? updates.population : k.population || 0;
+  if (!ach.includes('ach_warlord') && currentPop >= 10000) {
+    ach.push('ach_warlord');
+    updates.land = (updates.land !== undefined ? updates.land : k.land || 0) + 5000;
+    events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Warlord! Rewarded +5000 Land.' });
+    achUpdated = true;
+  }
+
+  const currentGold = updates.gold !== undefined ? updates.gold : k.gold || 0;
+  if (!ach.includes('ach_wealthy') && currentGold >= 10000000) {
+    ach.push('ach_wealthy');
+    updates.scaffolding_stored = (updates.scaffolding_stored !== undefined ? updates.scaffolding_stored : k.scaffolding_stored || 0) + 5000;
+    events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Merchant King! Rewarded +5000 Scaffolding.' });
+    achUpdated = true;
+  }
+
+  const currentMana = updates.mana !== undefined ? updates.mana : k.mana || 0;
+  if (!ach.includes('ach_arcane') && currentMana >= 1000000) {
+    ach.push('ach_arcane');
+    updates.scrolls = (updates.scrolls !== undefined ? updates.scrolls : k.scrolls || 0) + 10000;
+    events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Arcane Overlord! Rewarded +10,000 Scrolls.' });
+    achUpdated = true;
+  }
+
+  const collectorAchieved = updates._collector_unlocked;
+  if (collectorAchieved) {
+    if (!ach.includes('collector')) {
+      ach.push('collector');
+      achUpdated = true;
+      updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) + 5000;
+      events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Field Collector (Found all expedition events). Rewarded +5000 Maps.' });
+    }
+    delete updates._collector_unlocked;
+  }
+
+  const historianAchieved = updates._historian_unlocked;
+  if (historianAchieved) {
+    if (!ach.includes('historian')) {
+      ach.push('historian');
+      achUpdated = true;
+      updates.maps = (updates.maps !== undefined ? updates.maps : k.maps || 0) + 5000;
+      events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: Historian (Found all library lore). Rewarded +5000 Maps.' });
+    }
+    delete updates._historian_unlocked;
+  }
+
+  if (achUpdated) {
+    updates.achievements = JSON.stringify(ach);
+  }
 }
 
 // ── Level-based caps ──────────────────────────────────────────────────────────
@@ -1418,14 +1504,8 @@ function processBuildQueue(k, events) {
   if (scaffoldingUsed > 0) updates[sl]  = Math.max(0, scaffoldingLeft);
 
   // News notices for missing tools
-  if (updates._blueprint_needed) {
-    events.push({ type: 'system', message: `⚙️ Blueprint required to build: ${updates._blueprint_needed.join(', ')}. Craft one in your Library using scribes.` });
-    delete updates._blueprint_needed;
-  }
-  if (updates._scaffolding_needed) {
-    events.push({ type: 'system', message: `🪜 Scaffolding required to build: ${updates._scaffolding_needed.join(', ')}. Produce it in your Smithy.` });
-    delete updates._scaffolding_needed;
-  }
+  if (updates._blueprint_needed) delete updates._blueprint_needed;
+  if (updates._scaffolding_needed) delete updates._scaffolding_needed;
   delete updates._low_gold;
 
   // Clean up zero progress entries for inactive buildings
@@ -2272,8 +2352,28 @@ function resolveAllianceDefense(attackResult, allies) {
 function roll(chance) { return Math.random() < chance; }
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-function junkPrize() {
-  return JUNK_PRIZES[Math.floor(Math.random() * JUNK_PRIZES.length)];
+function junkPrize(k, updates) {
+  if (!JUNK_PRIZES || JUNK_PRIZES.length === 0) return "a particularly shiny pebble";
+  const eventsCollected = safeJsonParse(updates.collected_events || k.collected_events, [], 'junkPrize');
+  const lastId = updates.last_event_id || k.last_event_id;
+
+  let available = JUNK_PRIZES.filter(p => p.id !== lastId);
+  if (available.length === 0) available = JUNK_PRIZES; // Fallback if 1 event in total
+  const ev = available[Math.floor(Math.random() * available.length)];
+  
+  if (ev) {
+    if (!eventsCollected.includes(ev.id)) {
+      eventsCollected.push(ev.id);
+      updates.collected_events = JSON.stringify(eventsCollected);
+
+      if (eventsCollected.length >= 25) {
+        updates._collector_unlocked = true;
+      }
+    }
+    updates.last_event_id = ev.id;
+    return ev.msg || ev.content || "a mysterious rock";
+  }
+  return "a strange pebble";
 }
 
 function expeditionRewards(type, rangers, fighters, k) {
@@ -2332,7 +2432,7 @@ function expeditionRewards(type, rangers, fighters, k) {
       rewards.push({ text: `An ancient map reveals ${bonus} additional acres — scouts claim them!` });
       updates.land = (updates.land || k.land || 0) + bonus;
     }
-    if (roll(0.45)) rewards.push({ text: `Your rangers also found ${junkPrize()}` });
+    if (roll(0.45)) rewards.push({ text: `Your rangers also found ${junkPrize(k, updates)}` });
 
     // Map drop — 5% chance on scout
     if (roll(0.05)) {
@@ -2389,7 +2489,7 @@ function expeditionRewards(type, rangers, fighters, k) {
     if (roll(calcDiscoveryChance(k))) {
       updates._find_kingdom = true;
     }
-    if (roll(0.60)) rewards.push({ text: `Hidden deep in the wilderness, your rangers also discovered ${junkPrize()}` });
+    if (roll(0.60)) rewards.push({ text: `Hidden deep in the wilderness, your rangers also discovered ${junkPrize(k, updates)}` });
 
     // Map drop — 15% chance on deep
     if (roll(0.15)) {
@@ -2441,7 +2541,7 @@ function expeditionRewards(type, rangers, fighters, k) {
         rewards.push({ text: `⚡ The dungeon's heart pulsed with ancient magic — spellbook permanently +${boost2}` });
         updates.res_spellbook = (updates.res_spellbook || k.res_spellbook || 0) + boost2;
       }
-      if (roll(0.5)) rewards.push({ text: `Amid the carnage, someone pocketed ${junkPrize()}` });
+      if (roll(0.5)) rewards.push({ text: `Amid the carnage, someone pocketed ${junkPrize(k, updates)}` });
 
       // Map drop — 25% chance on dungeon
       if (roll(0.25)) {
@@ -2477,6 +2577,12 @@ function expeditionRewards(type, rangers, fighters, k) {
   const throneChance = (type === 'deep' || type === 'dungeon') ? 0.001 : 0;
   if (throneChance > 0 && roll(throneChance)) {
     updates._check_throne = true; // resolveExpeditions will check server_state and apply if unclaimed
+  }
+
+  const preAchLength = events.length;
+  checkAchievements(k, updates, events);
+  for (let i = preAchLength; i < events.length; i++) {
+      rewards.push({ text: events[i].message });
   }
 
   return { rewards, updates, events };
@@ -2572,6 +2678,7 @@ async function resolveExpeditions(db, k, engine) {
         'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
         'bld_farms','bld_barracks','bld_markets','bld_mage_towers','blueprints_stored','maps',
         'troop_levels','xp','level','discovered_kingdoms','world_fragments',
+        'collected_events', 'last_event_id', 'achievements'
       ]);
 
       // Award XP
@@ -2581,6 +2688,12 @@ async function resolveExpeditions(db, k, engine) {
       if (exp.type === 'dungeon' && exp.fighters > 0) {
         const fXp = awardTroopXp({ ...freshK, troop_levels: updates.troop_levels }, 'fighters', 40 * exp.fighters);
         updates.troop_levels = fXp.troop_levels;
+      }
+
+      if (updates._achievement_unlocked) {
+        rewards.push({ text: '🏆 ACHIEVEMENT UNLOCKED: ' + updates._achievement_unlocked });
+        events.push({ type: 'system', message: '🏆 ACHIEVEMENT UNLOCKED: ' + updates._achievement_unlocked });
+        delete updates._achievement_unlocked;
       }
 
       const safeUpdates = Object.fromEntries(

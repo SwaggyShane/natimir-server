@@ -4,8 +4,7 @@ const jwt     = require('jsonwebtoken');
 const engine  = require('../game/engine');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_12345';
 
 module.exports = function(db) {
 
@@ -24,7 +23,6 @@ module.exports = function(db) {
     const chosenRace = validRaces.includes(race) ? race : 'human';
 
     try {
-      await db.run('BEGIN TRANSACTION');
       const hash = bcrypt.hashSync(password, 10);
       const playerResult = await db.run(
         'INSERT INTO players (username, password) VALUES (?, ?)', [username, hash]
@@ -63,7 +61,6 @@ module.exports = function(db) {
           buildings.bld_markets, buildings.bld_smithies, buildings.bld_mage_towers, buildings.bld_shrines, buildings.bld_outposts, buildings.bld_training
         ]
       );
-      await db.run('COMMIT');
       const token = jwt.sign(
         { playerId: playerResult.lastID, username, isAdmin: false },
         JWT_SECRET, { expiresIn: '30d' }
@@ -75,9 +72,8 @@ module.exports = function(db) {
         secure:   process.env.NODE_ENV === 'production',
       };
       res.cookie('token', token, cookieOpts);
-      res.json({ ok: true, username, kingdomName });
+      res.json({ ok: true, username, kingdomName, token });
     } catch (err) {
-      await db.run('ROLLBACK').catch(()=>{});
       if (err.message.includes('UNIQUE'))
         return res.status(409).json({ error: 'Username already taken' });
       console.error(err);
@@ -108,7 +104,7 @@ module.exports = function(db) {
       secure:   process.env.NODE_ENV === 'production',
     };
     res.cookie('token', token, cookieOpts);
-    res.json({ ok: true, username, isAdmin: player.is_admin === 1 });
+    res.json({ ok: true, username, isAdmin: player.is_admin === 1, token });
   });
 
   router.post('/logout', (_req, res) => {

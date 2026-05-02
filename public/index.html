@@ -64,6 +64,7 @@
     max-width: 100%;
     margin: 0;
     padding: 0;
+    padding-top: 64px; /* Ensure space for fixed topbar */
     overflow-x: hidden;
   }
   .topbar {
@@ -77,15 +78,15 @@
     border-bottom: 1px solid var(--border);
     gap: 4px;
     flex-shrink: 0;
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 1000;
+    left: 0;
+    right: 0;
+    z-index: 2000;
     width: 100%;
     box-sizing: border-box;
   }
   @media (max-width: 768px) {
-    .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 2000; }
-    .app { padding-top: 64px; }
     #kd-top { 
       background: var(--bg);
       border-bottom: 2px solid var(--border2);
@@ -351,6 +352,11 @@
 
   /* ── Badges ── */
   .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  @keyframes pulse {
+    0%   { transform:scale(1);    box-shadow:0 0 0 0 rgba(232,184,75,.7); }
+    50%  { transform:scale(1.15); box-shadow:0 0 0 8px rgba(232,184,75,0); }
+    100% { transform:scale(1);    box-shadow:0 0 0 0 rgba(232,184,75,0); }
+  }
   .badge-green { background: rgba(76,175,125,.15); color: var(--green); }
   .badge-gold { background: rgba(232,184,75,.15); color: var(--gold); }
   .badge-blue { background: rgba(91,156,245,.15); color: var(--blue); }
@@ -516,7 +522,9 @@
     border-bottom: 1px solid var(--border); 
     align-items: center; 
   }
-  .hire-row > div, .hire-row > span { justify-self: start; text-align: left; }
+  .hire-row > div:nth-child(1), .hire-row > span:nth-child(1) { justify-self: stretch; text-align: left; }
+  .hire-row > div:nth-child(2), .hire-row > span:nth-child(2) { justify-self: start; text-align: left; }
+  .hire-row > div:nth-child(3), .hire-row > span:nth-child(3) { justify-self: start; text-align: left; }
   .hire-row > .hbtns, .hire-row > div:last-child, .hire-row > span:last-child { justify-self: end; text-align: right; }
 
   @media (max-width: 1100px) {
@@ -524,6 +532,7 @@
   }
 
   @media (max-width: 768px) {
+    .hire-header { display: none !important; }
     .hire-row { grid-template-columns: 1fr 1fr; gap: 8px; justify-items: stretch; }
     .hire-row > div { justify-self: stretch; }
     .hire-row > div:nth-child(2) { text-align: left; justify-self: start; } 
@@ -989,7 +998,7 @@
         </div>
 
         <!-- Header row -->
-        <div class="hire-row" style="border-bottom:2px solid var(--border2); font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; padding-bottom:8px; margin-bottom:8px">
+        <div class="hire-row hire-header" style="border-bottom:2px solid var(--border2); font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; padding-bottom:8px; margin-bottom:8px">
           <span>Unit</span>
           <span>In service</span>
           <span>Price</span>
@@ -1298,6 +1307,17 @@
             <div class="card" style="margin:0">
               <div class="card-title">Library upgrades</div>
               <div id="library-upgrade-list"></div>
+            </div>
+
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;grid-column:1/-1;">
+            <div class="card" style="margin:0">
+              <div class="card-title">Lore</div>
+              <div id="library-lore-list" style="font-size:13px;color:var(--text2);display:flex;flex-direction:column;gap:8px">Loading lore...</div>
+            </div>
+            <div class="card" style="margin:0">
+              <div class="card-title">Achievements</div>
+              <div id="library-achievements" style="margin-bottom:12px;font-size:12px;display:flex;flex-direction:column;gap:8px"></div>
             </div>
           </div>
         </div>
@@ -1894,7 +1914,6 @@
           <button class="btn news-filter" data-filter="spell" onclick="setNewsFilter('spell',this)" style="font-size:12px;padding:4px 10px">✨ Spells</button>
           <button class="btn news-filter" data-filter="covert" onclick="setNewsFilter('covert',this)" style="font-size:12px;padding:4px 10px">🕵️ Covert</button>
           <button class="btn news-filter" data-filter="system" onclick="setNewsFilter('system',this)" style="font-size:12px;padding:4px 10px">📋 System</button>
-          <button class="btn news-filter" data-filter="lore" onclick="setNewsFilter('lore',this)" style="font-size:12px;padding:4px 10px">📜 Lore</button>
         </div>
         <div id="news-list">
           <div style="color:var(--text3);font-size:13px;padding:8px 0">Loading news...</div>
@@ -2767,10 +2786,7 @@
 <!-- ═══════════════════════════════════════════ EXPLORATION PANEL ══ -->
 <div id="exploration" class="panel" style="display:none">
 
-  <!-- Active expeditions bar -->
-  <div id="active-expeditions" style="display:none;margin-bottom:12px"></div>
 
-  <div class="r-grid-2 exp-grid">
 
     <!-- Left col: instant search + three expedition launchers -->
     <div style="display:flex;flex-direction:column;gap:12px">
@@ -2778,6 +2794,10 @@
       <!-- Instant search -->
       <div class="card">
         <div class="card-title">Instant search — <span style="color:var(--green);font-weight:400;font-size:12px">costs 1 turn</span></div>
+        
+        <!-- Active expeditions bar -->
+        <div id="active-expeditions" style="display:none;margin-bottom:12px"></div>
+
         <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Quick operations that return results immediately.</div>
         <div class="trow" style="margin-bottom:12px">
           <span class="name">Rangers</span>
@@ -3466,26 +3486,6 @@ async function launchExpedition(type) {
   updateExpeditionAvailability();
   await loadActiveExpeditions();
   toast(labels[type] + ' expedition launched!', 'success');
-  var icons = { scout: '🔭', deep: '🌲', dungeon: '⚔️' };
-  var turnCounts = { scout: 10, deep: 25, dungeon: 50 };
-  var log = document.getElementById('exploration-log');
-  if (log) {
-    var empty = log.querySelector('[style*="No expeditions"]');
-    if (empty) empty.remove();
-    // Remove any existing live entry for this type
-    var existing = document.getElementById('exp-log-live-' + type);
-    if (existing) existing.closest('.exp-log-entry') && existing.closest('.exp-log-entry').remove();
-
-    var entry = document.createElement('div');
-    entry.className = 'exp-log-entry';
-    entry.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px';
-    entry.innerHTML = '<span style="font-size:18px;flex-shrink:0">' + icons[type] + '</span>'
-      + '<div><div style="color:var(--text)">' + labels[type] + ' expedition launched</div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'
-      + rangers + ' rangers' + (fighters ? ', ' + fighters + ' fighters' : '')
-      + ' · <span id="exp-log-live-' + type + '">' + turnCounts[type] + ' turns remaining</span></div></div>';
-    log.insertBefore(entry, log.firstChild);
-  }
 }
 
 function logExpeditionEntry(icon, title, subtitle) {
@@ -3516,32 +3516,8 @@ async function loadActiveExpeditions() {
   var icons  = { scout:'🔭', deep:'🌲', dungeon:'⚔️' };
   var labels = { scout:'🔭 Scout expedition', deep:'🌲 Deep expedition', dungeon:'⚔️ Dungeon raid' };
 
-  // ── Ensure active expeditions have a live log entry ───────────────────────
-  active.forEach(function(exp) {
-    var liveId = 'exp-log-live-' + exp.id;
-    var liveSpan = document.getElementById(liveId);
-    if (liveSpan) {
-      liveSpan.textContent = exp.turns_left + ' turn' + (exp.turns_left===1?'':'s') + ' remaining';
-      return;
-    }
-
-    if (log) {
-      var entry = document.createElement('div');
-      entry.className = 'exp-log-entry';
-      entry.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px';
-      entry.innerHTML = '<span style="font-size:18px;flex-shrink:0">' + (icons[exp.type]||'🧭') + '</span>'
-        + '<div><div style="color:var(--text);font-weight:600">' + (labels[exp.type]||exp.type) + '</div>'
-        + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'
-        + exp.rangers.toLocaleString() + ' rangers'
-        + (exp.fighters > 0 ? ', ' + exp.fighters.toLocaleString() + ' fighters' : '')
-        + ' · <span id="' + liveId + '">' + exp.turns_left + ' turn' + (exp.turns_left===1?'':'s') + ' remaining</span>'
-        + '</div></div>';
-      var empty = log.querySelector('[data-empty]');
-      if (empty) empty.remove();
-      log.insertBefore(entry, log.firstChild);
-    }
-  });
-
+  // We no longer push 'active' to the log because they show up clearly outside.
+  
   // ── Render completed expeditions into the log ─────────────────────────────
   completed.forEach(function(exp) {
     var rewards = [];
@@ -3624,6 +3600,7 @@ async function loadActiveExpeditions() {
 
   if (active.length === 0) {
     bar.style.display = 'none';
+    bar.innerHTML = '';
     ['scout','deep','dungeon'].forEach(function(t) {
       var btn = document.getElementById('btn-exp-' + t);
       if (btn) { btn.disabled = false; btn.textContent = t === 'dungeon' ? 'Launch raid' : 'Launch expedition'; }
@@ -3631,17 +3608,19 @@ async function loadActiveExpeditions() {
     return;
   }
 
-  var colors = { scout:'var(--green)', deep:'var(--purple)', dungeon:'var(--red)' };
-  bar.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center';
+  bar.style.display = 'block';
+  bar.style.marginBottom = '12px';
   bar.innerHTML = active.map(function(exp) {
-    return '<div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid '+(colors[exp.type]||'var(--text3)')+';border-radius:var(--radius);padding:8px 12px;font-size:13px">'
-      + '<span style="font-weight:600;color:'+(colors[exp.type]||'var(--text)')+'">'+( {scout:'🔭 Scout',deep:'🌲 Deep',dungeon:'⚔️ Dungeon'}[exp.type]||exp.type)+'</span>'
-      + '<span style="color:var(--text3)">·</span>'
-      + '<span style="color:var(--text2)">'+exp.turns_left+' turn'+(exp.turns_left===1?'':'s')+' remaining</span>'
-      + '<span style="color:var(--text3)">·</span>'
-      + '<span style="color:var(--text3)">'+exp.rangers.toLocaleString()+' rangers'+(exp.fighters>0?', '+exp.fighters.toLocaleString()+' fighters':'')+'</span>'
-      + '<button class="btn btn-red" style="font-size:11px;padding:3px 8px;margin-left:4px" onclick="cancelExpedition('+exp.id+')">Cancel</button>'
-      + '</div>';
+    return '<div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin:0 0 12px 0">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between">'
+      + '<div style="font-weight:bold;color:var(--text);font-size:14px"><span style="margin-right:6px">' + (icons[exp.type]||'🧭') + '</span> ' + (labels[exp.type]||exp.type) + ' underway</div>'
+      + '<div style="color:var(--gold);font-weight:bold;font-size:13px">' + exp.turns_left + ' turn' + (exp.turns_left===1?'':'s') + ' left</div>'
+      + '</div>'
+      + '<div style="margin-top:6px;margin-left:28px;font-size:12px;color:var(--text2)">'
+      + 'Sent: ' + exp.rangers.toLocaleString() + ' rangers'
+      + (exp.fighters > 0 ? ', ' + exp.fighters.toLocaleString() + ' fighters' : '')
+      + '<button class="btn btn-red" style="font-size:10px;padding:2px 6px;margin-left:12px" onclick="cancelExpedition('+exp.id+')">Cancel</button>'
+      + '</div></div>';
   }).join('');
 
   ['scout','deep','dungeon'].forEach(function(t) {
@@ -4278,7 +4257,10 @@ async function marketTrade(resource, op) {
 
   toast(`${op.toUpperCase()} successful: ${qty.toLocaleString()} ${resource}`, 'success');
   loadMarket();
-  syncAll(); // refresh gold/resources
+  if (res.updates) {
+    applyServerUpdates(res.updates);
+    syncUI();
+  }
 }
 
 function setMktMax(resource, op, price) {
@@ -4579,7 +4561,7 @@ function showNewsBadge(count) {
   }
 }
 
-function toast(msg, type) {
+function toast(msg, type, duration) {
   // Attack insult logic
   if (msg && (msg.includes('attacked and') || msg.includes('raided your'))) {
     playInsult();
@@ -4590,19 +4572,15 @@ function toast(msg, type) {
   el.className = type || '';
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, duration || 2400);
 }
 
 function playInsult() {
-  if (typeof SpeechSynthesisUtterance !== 'undefined' && window.speechSynthesis) {
-    try {
-      var utterance = new SpeechSynthesisUtterance("I fart in your general direction!");
-      utterance.pitch = 1.2;
-      utterance.rate = 1.0;
-      utterance.volume = 0.8;
-      window.speechSynthesis.speak(utterance);
-    } catch(e) { console.error('Audio fail:', e); }
-  }
+  try {
+    var audio = new Audio('/fart.mp3');
+    audio.volume = 0.8;
+    audio.play();
+  } catch(e) { console.error('Audio fail:', e); }
 }
 
 function openDirectMessage(otherId, otherName) {
@@ -4832,6 +4810,31 @@ async function setTax(v) {
 
 
 var takingTurn = false;
+// ── Racial gift unlock sound ──────────────────────────────────────────────────
+function playRacialGiftSound() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Triumphant 3-note fanfare: C5 → E5 → G5 → C6
+    var notes = [523.25, 659.25, 783.99, 1046.50];
+    var times  = [0, 0.18, 0.36, 0.54];
+    var gains  = [0.5, 0.45, 0.45, 0.6];
+    notes.forEach(function(freq, i) {
+      var osc  = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      var t = ctx.currentTime + times[i];
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(gains[i], t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+      osc.start(t);
+      osc.stop(t + 0.6);
+    });
+  } catch(e) { /* Audio not available — silent fail */ }
+}
+
 async function takeTurn() {
   if (takingTurn) return;
   if ((state.turns_stored || 0) < 1) return toast('No turns available — refills in ' + document.getElementById('regen-countdown').textContent, 'warn');
@@ -4843,6 +4846,31 @@ async function takeTurn() {
   if (result.error) { if (btn) btn.style.opacity = '1'; return toast(result.error, 'error'); }
   applyServerUpdates(result.updates);
   if (result.turns_stored !== undefined) state.turns_stored = result.turns_stored;
+
+  // ── Racial gift first-unlock detection ───────────────────────────────────────
+  var rgKey = RACIAL_UNIT_MAP[state.race];
+  var newUnlocked = state.racial_bonuses_unlocked || {};
+  if (rgKey && newUnlocked[rgKey] && !window._racialGiftShown) {
+    window._racialGiftShown = true;
+    playRacialGiftSound();
+    // Big unlock toast
+    var giftText = RACIAL_BADGE_TEXT[state.race] || 'Racial gift unlocked!';
+    toast('🎉 RACIAL GIFT UNLOCKED! ' + giftText, 'success', 6000);
+    // Flash the training panel badge
+    var badge = document.getElementById('racial-gift-badge');
+    if (badge) {
+      badge.style.display = 'inline-block';
+      badge.style.animation = 'none';
+      setTimeout(function() { badge.style.animation = 'pulse 0.6s ease 3'; }, 50);
+    }
+    var banner = document.getElementById('racial-gift-banner');
+    if (banner) {
+      banner.style.display = 'block';
+      banner.style.boxShadow = '0 0 20px rgba(232,184,75,0.5)';
+      setTimeout(function() { banner.style.boxShadow = ''; }, 3000);
+    }
+  }
+
   syncUI();
   updateTurnsDisplay();
   document.getElementById('turn-num').textContent = state.turn;
@@ -4852,12 +4880,24 @@ async function takeTurn() {
     appendNewsItems(result.events);
   }
   if (btn) btn.style.opacity = (state.turns_stored || 0) > 0 ? '1' : '0.4';
-  toast('Turn ' + state.turn + ' · ' + (state.turns_stored || 0) + ' turns left', 'success');
+  if ((state.food || 0) < 1000) {
+    toast('Warning: Food levels are dangerously low!', 'warn');
+  }
+  if ((state.gold || 0) < 1000) {
+    toast('Warning: Gold reserves are almost empty!', 'warn');
+  }
+  if ((state.food || 0) >= 1000 && (state.gold || 0) >= 1000) {
+    toast('Turn ' + state.turn + ' · ' + (state.turns_stored || 0) + ' turns left', 'success');
+  }
   loadActiveExpeditions();
 }
 
 function syncUI() {
-  document.getElementById('m-gold').textContent = trunc(state.gold || 0);
+  var goldEl = document.getElementById('m-gold');
+  if (goldEl) {
+    goldEl.textContent = trunc(state.gold || 0);
+    goldEl.style.color = (state.gold || 0) < 1000 ? 'var(--red)' : '';
+  }
   document.getElementById('m-mana').textContent = trunc(state.mana || 0);
   document.getElementById('m-pop').textContent  = trunc(state.population || state.pop || 0);
   var HOUSING_CAP_BY_RACE = { dwarf:650, orc:600, human:500, dark_elf:450, high_elf:350, dire_wolf:700 };
@@ -4901,7 +4941,10 @@ function syncUI() {
   var hsp = document.getElementById('hire-strip-pop');
   if (hsp) hsp.textContent = fmt(state.population || state.pop || 0);
   var foodEl = document.getElementById('m-food');
-  if (foodEl) foodEl.textContent = trunc(state.food || 0);
+  if (foodEl) {
+    foodEl.textContent = trunc(state.food || 0);
+    foodEl.style.color = (state.food || 0) < 1000 ? 'var(--red)' : '';
+  }
   var farmsEl = document.getElementById('m-farms');
   if (farmsEl) farmsEl.textContent = fmt(state.bld_farms || 0);
   var fbEl = document.getElementById('m-food-balance');
@@ -5101,7 +5144,9 @@ function syncUI() {
   if (citBadgeMain) citBadgeMain.style.display = citadelEarned ? 'inline-block' : 'none';
 
   var rgBadge = document.getElementById('racial-gift-badge');
-  var rgActive = (state.racial_gift_active && state.racial_gift_active !== 'false');
+  var rgUnlocked = state.racial_bonuses_unlocked || {};
+  var rgKeyUnit  = RACIAL_UNIT_MAP[state.race];
+  var rgActive   = !!(rgKeyUnit && rgUnlocked[rgKeyUnit]);
   if (rgBadge) rgBadge.style.display = rgActive ? 'inline-block' : 'none';
 
   var th = document.getElementById('tools-hammers');
@@ -5637,6 +5682,11 @@ async function loadKingdom() {
     build_progress: (() => { try { return typeof kingdom.build_progress === 'string' ? JSON.parse(kingdom.build_progress||'{}') : (kingdom.build_progress||{}); } catch { return {}; } })(),
     build_allocation: (() => { try { return typeof kingdom.build_allocation === 'string' ? JSON.parse(kingdom.build_allocation||'{}') : (kingdom.build_allocation||{}); } catch { return {}; } })(),
   });
+
+  // Don't re-fire fanfare if gift was already unlocked before this session
+  var _rgKeyInit = RACIAL_UNIT_MAP[state.race];
+  window._racialGiftShown = !!(_rgKeyInit && (state.racial_bonuses_unlocked||{})[_rgKeyInit]);
+
   syncUI();
   updateTurnsDisplay();
   document.getElementById('turn-num').textContent = kingdom.turn;
@@ -5807,7 +5857,6 @@ var NEWS_META = {
   system:  { icon:'📋', color:'var(--text2)',  label:'System'     },
   alliance:{ icon:'🤝', color:'var(--blue)',   label:'Alliance'   },
   expedition:{ icon:'🧭', color:'var(--gold)', label:'Expedition' },
-  lore:      { icon:'📜', color:'var(--gold)', label:'Lore'       },
 };
 
 async function loadNews() {
@@ -5891,6 +5940,7 @@ async function clearNews() {
   if (result.error) return toast(result.error, 'error');
   var list = document.getElementById('news-list');
   if (list) list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">News cleared.</div>';
+  newsCache = [];
   toast('News cleared', 'success');
 }
 
@@ -6533,7 +6583,7 @@ function updateBuildDisplay() {
   var BLUEPRINT_REQUIRED  = new Set(['vaults','smithies','markets','mage_towers','training','castles','libraries']);
   var SCAFFOLDING_REQUIRED = new Set(['mage_towers','training','castles']);
   var bp = state.blueprints_stored || 0;
-  var sc = state.tools_scaffolding || 0;
+  var sc = state.scaffolding_stored || 0;
 
   BUILD_FIELDS.forEach(function(f) {
     var noticeId = 'tool-notice-' + f.key;
@@ -6858,7 +6908,7 @@ async function forgeScaffolding() {
   var smithies = state.bld_smithies || 0;
   if (smithies === 0) return toast('You need at least 1 smithy', 'error');
   var cap = smithies * 10;
-  if ((state.tools_scaffolding || 0) >= cap) return toast('Scaffolding storage full (' + cap + '/' + cap + ')', 'error');
+  if ((state.scaffolding_stored || 0) >= cap) return toast('Scaffolding storage full (' + cap + '/' + cap + ')', 'error');
   if ((state.gold || 0) < 2500) return toast('Need 2,500 gold to make scaffolding', 'error');
   var result = await apiCall('POST', '/api/kingdom/forge-tools', { toolType: 'scaffolding', quantity: 1 });
   if (result.error) return toast(result.error, 'error');
@@ -7285,6 +7335,7 @@ function showStudiesTab(id, btn) {
   document.querySelectorAll('#studies .admin-tab').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('stab-'+id).style.display='block';
   if (btn) btn.classList.add('active');
+  if (id === 'slibrary') renderLibraryPanel();
 }
 
 async function loadExploration() {
@@ -8092,6 +8143,25 @@ function closeKingdomProfile() {
   document.getElementById('kingdom-profile-modal').style.display = 'none';
 }
 
+// ── Lore Entry Modal ──────────────────────────────────────────────────────────
+
+function openLoreModal(title, msg) {
+  var modal = document.getElementById('lore-entry-modal');
+  var content = document.getElementById('lore-entry-content');
+  modal.style.display = 'flex';
+  content.innerHTML = '<div style="text-align:center;margin-bottom:20px">'
+    + '<div style="font-size:32px;margin-bottom:8px">📜</div>'
+    + '<h2 style="color:var(--gold);margin:0 0 4px;font-size:20px">' + escHtml(title) + '</h2>'
+    + '</div>'
+    + '<div style="font-size:14px;color:var(--text2);line-height:1.6;padding:12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)">'
+    + escHtml(msg)
+    + '</div>';
+}
+
+function closeLoreModal() {
+  document.getElementById('lore-entry-modal').style.display = 'none';
+}
+
 // ── XP & Level system ─────────────────────────────────────────────────────────
 
 function xpForLevel(level) {
@@ -8354,6 +8424,7 @@ function renderMageTowerPanel() {
 
 var RACIAL_UNIT_MAP = { dwarf:'engineers', high_elf:'mages', orc:'fighters', dark_elf:'ninjas', dire_wolf:'rangers', human:'clerics' };
 var RACIAL_BADGE_TEXT = {
+  dwarf:     '⚒️ Dwarven Mastery — War machines need only 1 engineer to crew',
   high_elf:  '🌿 Silverwood Mastery — Level 5+ mages produce 2 scrolls per craft',
   orc:       '⚔️ Orcish War Culture — Passively trains 1 fighter per 10 each turn',
   dark_elf:  '🕵️ Shadow Mastery — Assassinations leave no trace',
@@ -8415,9 +8486,75 @@ async function clearTowerItem(id) {
   toast('Removed from Mage Tower queue', 'success');
 }
 
+var _lastLoreFetch = 0;
 function renderLibraryPanel() {
   if (!studiesData) return;
   var el = function(id){ return document.getElementById(id); };
+
+  // Fetch lore asynchronously (at most once every 30 seconds to prevent spam)
+  if (el('stab-slibrary').style.display !== 'none' && Date.now() - _lastLoreFetch > 30000) {
+    _lastLoreFetch = Date.now();
+    apiCall('GET', '/api/kingdom/lore-and-achievements').then(res => {
+      try {
+        if (res && (res.raceLore || res.narmirLore || res.generalLore)) {
+          var aList = res.achievements || [];
+          var achStr = [];
+          const achDefs = [
+            { id: 'ach_grandmaster', text: '🏆 Grandmaster (100+ Mage Towers & Castles) [+1000 Land, +1000 Maps]' },
+            { id: 'ach_warlord', text: '🏆 Warlord (10,000+ Population) [+5000 Land]' },
+            { id: 'ach_wealthy', text: '🏆 Merchant King (10,000,000+ Gold) [+5000 Scaffolding]' },
+            { id: 'ach_arcane', text: '🏆 Arcane Overlord (1,000,000+ Mana) [+10,000 Scrolls]' },
+            { id: 'historian', text: '🏆 Historian (Found all library lore) [+5000 Maps]' },
+            { id: 'collector', text: '🏆 Field Collector (Found all expedition random events) [+5000 Maps]' }
+          ];
+
+          achDefs.forEach(function(ach) {
+            if (Array.isArray(aList) && aList.includes(ach.id)) {
+               achStr.push('<div style="background:rgba(232,184,75,.05);padding:8px 12px;border-radius:4px;border:1px solid rgba(232,184,75,.3);color:var(--gold);font-weight:bold;">' + ach.text + '</div>');
+            } else {
+               achStr.push('<div style="background:var(--bg3);padding:8px 12px;border-radius:4px;border:1px solid var(--border);color:var(--text3);font-size:11px;">' + ach.text.replace('🏆', '🔒') + '</div>');
+            }
+          });
+          
+          var achEl = el('library-achievements');
+          if (achEl) achEl.innerHTML = achStr.join('');
+
+          var listEl = el('library-lore-list');
+          if (listEl) {
+            try {
+              var buildLoreSection = function(title, arr) {
+                if (!Array.isArray(arr) || arr.length === 0) return '';
+                var html = '<div><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">' + title + '</div>';
+                html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">';
+                html += arr.map(l => {
+                  var lTitle = String(l.title || 'Lore Entry').replace(/'/g, "\\'");
+                  var lMsg = String(l.msg || l.content || (typeof l === 'string' ? l : '')).replace(/'/g, "\\'");
+                  return '<div onclick="openLoreModal(\'' + lTitle + '\', \'' + lMsg + '\')" style="background:var(--bg3);padding:8px;border-radius:4px;border:1px solid var(--border);cursor:pointer;color:var(--gold);font-weight:600;font-size:13px;transition: background-color 0.2s;" onmouseover="this.style.backgroundColor=\'var(--bg4)\'" onmouseout="this.style.backgroundColor=\'var(--bg3)\'">📜 ' + (l.title || 'Lore Entry') + '</div>';
+                }).join('');
+                html += '</div></div>';
+                return html;
+              };
+              
+              var outputHtml = buildLoreSection('Race Lore', res.raceLore) + 
+                               buildLoreSection('Narmir Lore', res.narmirLore) + 
+                               buildLoreSection('General Lore', res.generalLore);
+                               
+              if (!outputHtml) outputHtml = 'No lore discovered yet. Assign scribes to research.';
+              listEl.innerHTML = outputHtml;
+            } catch (err) {
+              listEl.innerHTML = '<span style="color:var(--red)">Failed to display lore. Error: ' + err.message + '</span>';
+            }
+          }
+        } else {
+          var listEl = el('library-lore-list');
+          if (listEl) listEl.innerHTML = '<span style="color:var(--red)">Failed to load lore: ' + (res ? res.error : 'unknown error') + '</span>';
+        }
+      } catch (err) {
+         var listEl = el('library-lore-list');
+         if (listEl) listEl.innerHTML = '<span style="color:var(--red)">Crash in processing lore: ' + err.message + '</span>';
+      }
+    });
+  }
 
   // Render Map Visualization
   var canvas = el('survey-map-canvas');
@@ -8496,8 +8633,8 @@ function renderLibraryPanel() {
       + '</div></div>';
   });
   
-  var el = document.getElementById('st-lib-list');
-  if (el) el.innerHTML = html;
+  var libListEl = document.getElementById('st-lib-list');
+  if (libListEl) libListEl.innerHTML = html;
 
   var mappedHtml = '';
   var foundDisc = state.discovered_kingdoms || {};
@@ -8920,6 +9057,14 @@ document.addEventListener('DOMContentLoaded', function() {
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:28px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;position:relative">
     <button onclick="closeKingdomProfile()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">✕</button>
     <div id="kingdom-profile-content"><div style="text-align:center;color:var(--text3);padding:40px">Loading...</div></div>
+  </div>
+</div>
+
+<!-- LORE ENTRY MODAL -->
+<div id="lore-entry-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeLoreModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:28px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;position:relative">
+    <button onclick="closeLoreModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">✕</button>
+    <div id="lore-entry-content"><div style="text-align:center;color:var(--text3);padding:40px">Loading...</div></div>
   </div>
 </div>
 

@@ -53,6 +53,9 @@ module.exports = function(db) {
     k.market_upgrades        = safeJsonParse(k.market_upgrades, {}, 'me:market_upgrades');
     k.tavern_upgrades        = safeJsonParse(k.tavern_upgrades, {}, 'me:tavern_upgrades');
     k.mercenaries            = safeJsonParse(k.mercenaries, [], 'me:mercenaries');
+    k.collected_lore         = safeJsonParse(k.collected_lore, [], 'me:collected_lore');
+    k.collected_events       = safeJsonParse(k.collected_events, [], 'me:collected_events');
+    k.achievements           = safeJsonParse(k.achievements, [], 'me:achievements');
     res.json(k);
   });
 
@@ -132,7 +135,7 @@ module.exports = function(db) {
   router.delete('/news/clear', requireAuth, async (req, res) => {
     const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-    await db.run("DELETE FROM news WHERE kingdom_id = ? AND type != 'lore'", [k.id]);
+    await db.run("DELETE FROM news WHERE kingdom_id = ?", [k.id]);
     res.json({ ok: true });
   });
 
@@ -169,7 +172,6 @@ module.exports = function(db) {
       filteredEvents.push(ev);
     }
 
-    await db.run('BEGIN');
     try {
       await applyUpdates(db, k.id, updates);
       for (const h of heroBatch) {
@@ -183,9 +185,8 @@ module.exports = function(db) {
         })));
         if (Math.random() < 0.05) await pruneNews(db, k.id, 200);
       }
-      await db.run('COMMIT');
     } catch (err) {
-      await db.run('ROLLBACK');
+      console.error('[runTurn] apply error:', err.message);
       throw err;
     }
 
@@ -415,7 +416,7 @@ module.exports = function(db) {
         const found       = Math.max(1, Math.floor(r * 0.04 * tacticsMult * diminish));
         updates.land      = (kAfterTurn.land || 0) + found;
         searchResult      = { found, unit: 'acres' };
-        searchMessage     = `🗺️ Rangers discovered +${found.toLocaleString()} acres${found < Math.floor(r * 0.04 * tacticsMult) ? ' <i>(land getting scarce)</i>' : ''}.`;
+        searchMessage     = `🗺️ Rangers discovered +${found.toLocaleString()} acres${found < Math.floor(r * 0.04 * tacticsMult) ? ' (land getting scarce)' : ''}.`;
       } else if (type === 'gold') {
         const found = Math.floor(r * 12 * tacticsMult);
         updates.gold = (updates.gold || kAfterTurn.gold || 0) + found;
@@ -1048,7 +1049,7 @@ module.exports = function(db) {
       [k.id]
     );
     const active = await db.all(
-      'SELECT * FROM expeditions WHERE kingdom_id = ? AND turns_left > 0 ORDER BY created_at DESC',
+      'SELECT * FROM expeditions WHERE kingdom_id = ? AND (turns_left > 0 OR (turns_left = 0 AND rewards IS NULL)) ORDER BY created_at DESC',
       [k.id]
     );
     res.json({ active, completed });
@@ -1239,7 +1240,7 @@ module.exports = function(db) {
     // Impact market: increased demand raises price slightly
     await db.run('UPDATE market_prices SET current_price = current_price * (1 + ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?', [0.0001 * qty, resource]);
 
-    res.json({ ok: true, bought: qty, cost, new_gold: (k.gold || 0) - cost });
+    res.json({ ok: true, bought: qty, cost, updates: { gold: (k.gold || 0) - cost, [resource]: (k[resource] || 0) + qty } });
   });
 
   router.post('/market/sell', requireAuth, async (req, res) => {
@@ -1260,7 +1261,7 @@ module.exports = function(db) {
     // Impact market: increased supply lowers price slightly
     await db.run('UPDATE market_prices SET current_price = current_price * (1 - ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?', [0.0001 * qty, resource]);
 
-    res.json({ ok: true, sold: qty, gain, new_gold: (k.gold || 0) + gain });
+    res.json({ ok: true, sold: qty, gain, updates: { gold: (k.gold || 0) + gain, [resource]: (k[resource] || 0) - qty } });
   });
 
   // ── Research focus ────────────────────────────────────────────────────────────
@@ -1667,6 +1668,7 @@ async function applyUpdates(db, kingdomId, updates) {
     'research_allocation','training_allocation',
     'library_allocation','library_progress','tower_progress',
     'mage_tower_allocation','shrine_allocation',
+    'collected_lore','last_lore_id','collected_events','last_event_id','achievements',
     'updated_at',
   ]);
   const safe = Object.fromEntries(

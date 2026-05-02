@@ -1,8 +1,7 @@
 const jwt    = require('jsonwebtoken');
 const engine = require('./engine');
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_12345';
 const onlinePlayers = new Map(); // playerId → { socketId, username, race, isMod, isAdmin, kingdomName }
 
 module.exports = function(io, db) {
@@ -60,7 +59,6 @@ module.exports = function(io, db) {
       const result = engine.resolveMilitaryAttack(attacker, defender, Number(fighters), Number(mages) || 0);
       if (result.error) return ack?.({ error: result.error });
       try {
-        await db.run('BEGIN TRANSACTION');
         result.attackerUpdates.turns_stored = attacker.turns_stored - 1;
         await applyUpdates(db, attacker.id, result.attackerUpdates);
         await applyUpdates(db, defender.id, result.defenderUpdates);
@@ -68,13 +66,11 @@ module.exports = function(io, db) {
           [attacker.id, defender.id, 'military', result.win?1:0, result.report.landTransferred, JSON.stringify(result.report)]);
         await insertNews(db, attacker.id, 'attack', result.atkEvent);
         await insertNews(db, defender.id, 'attack', result.defEvent);
-        await db.run('COMMIT');
         const defInfo = onlinePlayers.get(defender.player_id);
         if (defInfo) io.to(defInfo.socketId).emit('event:attack_received', { from: attacker.name, message: result.defEvent, report: result.report });
         ack?.({ ok: true, report: result.report, turns_stored: result.attackerUpdates.turns_stored });
-      } catch (_) {
-        await db.run('ROLLBACK').catch(()=>{});
-        console.error(_);
+      } catch (err) {
+        console.error(err);
         ack?.({ error: 'Database error' });
       }
     });
@@ -88,19 +84,17 @@ module.exports = function(io, db) {
       const result = engine.castSpell(caster, target, data.spellId, Boolean(data.obscure));
       if (result.error) return ack?.({ error: result.error });
       try {
-        await db.run('BEGIN TRANSACTION');
         result.casterUpdates.turns_stored = caster.turns_stored - 1;
         await applyUpdates(db, caster.id, result.casterUpdates);
         if (result.targetUpdates && Object.keys(result.targetUpdates).length)
           await applyUpdates(db, target.id, result.targetUpdates);
         if (result.casterEvent) await insertNews(db, caster.id, 'spell', result.casterEvent);
         if (result.targetEvent) await insertNews(db, target.id, 'spell', result.targetEvent);
-        await db.run('COMMIT');
         const tgtInfo = onlinePlayers.get(target.player_id);
         if (tgtInfo && result.targetEvent) io.to(tgtInfo.socketId).emit('event:spell_received', { from: data.obscure?null:caster.name, spellId: data.spellId, message: result.targetEvent });
         ack?.({ ok: true, report: result.report, turns_stored: result.casterUpdates.turns_stored });
-      } catch (_) {
-        await db.run('ROLLBACK').catch(()=>{});
+      } catch (err) {
+        console.error(err);
         ack?.({ error: 'Database error' });
       }
     });
@@ -112,16 +106,14 @@ module.exports = function(io, db) {
       if (!target) return ack?.({ error: 'Target not found' });
       const result = engine.covertSpy(spy, target, Number(data.units)||100);
       try {
-        await db.run('BEGIN TRANSACTION');
         const upd = result.spyUpdates||{}; const xp = engine.awardXp(spy,'covert',1);
         upd.xp = xp.xp; upd.level = xp.level;
         if (Object.keys(upd).length) await applyUpdates(db, spy.id, upd);
         await insertNews(db, spy.id, 'covert', result.spyEvent);
         if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
-        await db.run('COMMIT');
         ack?.({ ok:true, success:result.success, report:result.report||null });
-      } catch (_) {
-        await db.run('ROLLBACK').catch(()=>{});
+      } catch (err) {
+        console.error(err);
         ack?.({ error: 'Database error' });
       }
     });
@@ -133,17 +125,15 @@ module.exports = function(io, db) {
       const result = engine.covertLoot(thief, target, data.lootType, Number(data.thieves)||100);
       if (result.error) return ack?.({ error: result.error });
       try {
-        await db.run('BEGIN TRANSACTION');
         const upd = result.thiefUpdates||{}; const xp = engine.awardXp(thief,'covert',1);
         upd.xp = xp.xp; upd.level = xp.level;
         if (Object.keys(upd).length) await applyUpdates(db, thief.id, upd);
         if (result.success && result.targetUpdates) await applyUpdates(db, target.id, result.targetUpdates);
         await insertNews(db, thief.id, 'covert', result.thiefEvent||result.event);
         if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
-        await db.run('COMMIT');
         ack?.({ ok:true, success:result.success, stolen:result.stolen });
-      } catch (_) {
-        await db.run('ROLLBACK').catch(()=>{});
+      } catch (err) {
+        console.error(err);
         ack?.({ error: 'Database error' });
       }
     });
@@ -155,17 +145,15 @@ module.exports = function(io, db) {
       const result = engine.covertAssassinate(assassin, target, Number(data.ninjas)||50, data.unitType);
       if (result.error) return ack?.({ error: result.error });
       try {
-        await db.run('BEGIN TRANSACTION');
         const upd = result.assassinUpdates||{}; const xp = engine.awardXp(assassin,'covert',1);
         upd.xp = xp.xp; upd.level = xp.level;
         if (Object.keys(upd).length) await applyUpdates(db, assassin.id, upd);
         if (result.success && result.targetUpdates) await applyUpdates(db, target.id, result.targetUpdates);
         await insertNews(db, assassin.id, 'covert', result.assassinEvent||result.event);
         if (result.targetEvent) { await insertNews(db, target.id, 'covert', result.targetEvent); const ti = onlinePlayers.get(target.player_id); if(ti) io.to(ti.socketId).emit('event:covert',{message:result.targetEvent}); }
-        await db.run('COMMIT');
         ack?.({ ok:true, success:result.success, killed:result.killed });
-      } catch (_) {
-        await db.run('ROLLBACK').catch(()=>{});
+      } catch (err) {
+        console.error(err);
         ack?.({ error: 'Database error' });
       }
     });
@@ -201,8 +189,8 @@ module.exports = function(io, db) {
           const newColor = args[0];
           if (!newColor) return ack?.({ error: 'Usage: /color <hex_code or css_color>' });
           // Basic validation (hex or simple names)
-          if (!newColor.match(/^#[0-9a-fA-F]{3,6}$/)) {
-            return ack?.({ error: 'Invalid color format. Use a hex code like #ff6600.' });
+          if (!newColor.match(/^#[0-9a-fA-F]{3,6}$/) && !newColor.match(/^[a-z]+$/i)) {
+            return ack?.({ error: 'Invalid color format. Use #hex or name.' });
           }
           await db.run('UPDATE players SET chat_color = ? WHERE id = ?', [newColor, playerId]);
           const info = onlinePlayers.get(playerId);

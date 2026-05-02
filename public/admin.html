@@ -109,6 +109,7 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <button class="admin-tab" onclick="showAdminTab('kingdoms',this)">🏰 Kingdoms</button>
     <button class="admin-tab" onclick="showAdminTab('events',this)">📅 Events</button>
     <button class="admin-tab" onclick="showAdminTab('config',this)">🛠️ Configs</button>
+    <button class="admin-tab" onclick="showAdminTab('lore',this)">📖 Lore & Trips</button>
     <button class="admin-tab" onclick="showAdminTab('changelog',this)">📋 Changelog</button>
   </div>
 
@@ -159,6 +160,12 @@ textarea{width:100%;resize:vertical;min-height:60px}
       <button class="btn btn-purple" onclick="promotePlayer()" style="padding:9px 16px">Promote</button>
     </div>
     <div id="promote-result" style="margin-top:8px;font-size:13px"></div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Audio test</h2>
+    <button class="btn" onclick="testInsult()">💨 Test attack insult</button>
+    <span style="font-size:12px;color:var(--text3);margin-left:10px">Plays when a kingdom is attacked</span>
   </div>
 
   </div><!-- end atab-manage -->
@@ -332,6 +339,31 @@ textarea{width:100%;resize:vertical;min-height:60px}
   </div>
 </div>
 
+<!-- TAB: Lore & Trips -->
+<div id="atab-lore" class="atab" style="display:none">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+    
+    <!-- Lore Entries -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0;color:var(--gold)">📜 Lore Entries</h2>
+        <button class="btn btn-gold" onclick="addLoreEntry()" style="padding:4px 8px;font-size:12px">+ Add Lore</button>
+      </div>
+      <div id="lore-list" style="display:flex;flex-direction:column;gap:10px">Loading lore...</div>
+    </div>
+
+    <!-- Random Expedition Events -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0;color:var(--gold)">🏕️ Random Expedition Events</h2>
+        <button class="btn btn-gold" onclick="addRandomEvent()" style="padding:4px 8px;font-size:12px">+ Add Event</button>
+      </div>
+      <div id="random-events-list" style="display:flex;flex-direction:column;gap:10px">Loading events...</div>
+    </div>
+
+  </div>
+</div>
+
 <div id="atab-changelog" class="atab" style="display:none">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
 
@@ -339,23 +371,13 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <div class="card">
       <h2 style="margin-top:0;color:var(--green)">✅ Completed Features</h2>
 
-      <div class="cl-section" style="color:var(--gold); font-size: 13px">🔒 SECURITY & HYGIENE (MAY 2026)</div>
-      <div class="cl-item">✅ <b>Admin route protection</b> — /api/admin/seed-ai and /api/admin/reset-ai now require a valid admin JWT (were unauthenticated)</div>
-      <div class="cl-item">✅ <b>Hardened JWT secret</b> — server refuses to start if JWT_SECRET env var is missing; hardcoded fallback removed</div>
-      <div class="cl-item">✅ <b>Token no longer in response body</b> — login and register return only httpOnly cookie; token stripped from JSON response</div>
-      <div class="cl-item">✅ <b>Rate limiter trust proxy</b> — app now sets trust proxy so req.ip resolves correctly behind Render's load balancer</div>
-      <div class="cl-item">✅ <b>Payload size limits</b> — 50kb JSON body cap; direct messages capped at 2,000 chars</div>
-      <div class="cl-item">✅ <b>Orphan file cleanup</b> — removed update_inputs.js, public/fix.js, public/client.js, and unused app/ directory</div>
-
       <div class="cl-section" style="color:var(--gold); font-size: 13px">🔥 LATEST UPDATES (APRIL 2026)</div>
-      <div class="cl-item">✅ <b>System Hygiene & Efficiency</b> — Cleaned orphan React files, converted to lean ES Modules, added SQL indexes for DMs/Bounties</div>
-      <div class="cl-item">✅ <b>Real-time Direct Messages</b> — Sockets added for instant persistent message delivery and badges</div>
-      <div class="cl-item">✅ <b>Rankings Action Buttons</b> — Direct ✉️ Message and 💰 Bounty buttons added to leaderboards</div>
-      <div class="cl-item">✅ <b>Bounty System Polish</b> — Search suggestions, automatic claims on win, and land/rank visibility</div>
-      <div class="cl-item">✅ <b>Race Lore Expansion</b> — Random flavor events during turns referencing regional history</div>
-      <div class="cl-item">✅ <b>Alliance Region Conquest</b> — Contested regions, capture progress, and global alliance bonuses</div>
-      <div class="cl-item">✅ <b>Alliance Leaderboards</b> — New rankings view for coalition total land and membership</div>
-      <div class="cl-item">✅ <b>Kingdom Lore/Bios</b> — Persisted custom descriptions shown on public profiles</div>
+      <div class="cl-item">✅ <b>WISH-LIST DELIVERIES</b> — Seasons/Daily Events, Trade System, Bounty Board, Direct Messaging, Mercenary Camp</div>
+      <div class="cl-item">✅ <b>INTERFACE PATCH (1.0.6)</b> — Library correctly houses scribes only, new badges (Siege, Racial Gift, Citadel), Rankings refresh (troop counts private), Market Clear Logs button, Hire page rework, Library sync fix</div>
+      <div class="cl-item">✅ <b>RACE LORE EXPANSION</b> — New in-game events referencing regional history</div>
+      <div class="cl-item">✅ <b>REGION CAPTURE & MASTERY</b> — Alliances can contest territories for +10% global faction bonus</div>
+      <div class="cl-item">✅ <b>ALLIANCE LEADERBOARDS</b> — New rankings tab for coalition total land and membership</div>
+      <div class="cl-item">✅ <b>KINGDOM LORE/BIOS</b> — Persisted custom descriptions shown on public profiles</div>
       <div class="cl-item">✅ <b>NARMIR REBORN</b> — Aesthetic rebrand to "Pure. Damn. Evil."</div>
       <div class="cl-item">✅ <b>Racial Unit Bonuses (Lv 5+)</b> — Dwarf Engines, HE Scrolls, Orc Free Training, DE Silent Kills, DW Fast Expeditions, Human Morale Aura</div>
       <div class="cl-item">✅ <b>Persistent Personalization</b> — Saved chat nicknames and colors via `/nick` and `/color`</div>
@@ -569,12 +591,11 @@ textarea{width:100%;resize:vertical;min-height:60px}
       <div class="cl-item">✅ Promote to admin</div>
       <div class="cl-item">✅ Admin notes textarea — saves to localStorage</div>
       <div class="cl-item">✅ Changelog and wishlist panel (this panel)</div>
-      <div class="cl-item">✅ <b>Admin route auth</b> — seed-ai and reset-ai endpoints require admin JWT (May 2026)</div>
     </div>
 
     <!-- Wishlist -->
     <div>
-      <div class="card" style="margin-bottom:16px;">
+      <div class="card" style="margin-bottom:16px; display:none">
         <h2 style="margin-top:0;color:var(--green)">✅ Recently Completed (From Wishlist)</h2>
         <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Player requests that have been implemented.</div>
         <div class="cl-item">✅ Bounty board — Place bounties on rivals.</div>
@@ -590,15 +611,13 @@ textarea{width:100%;resize:vertical;min-height:60px}
 
         <div class="cl-section">Gameplay</div>
         <div class="cl-item wish">⬜ Spell casting target history — remember last target per spell</div>
-        <div class="cl-item wish">✅ Bounty board — COMPLETED</div>
         <div class="cl-item wish">⬜ Diplomacy — formal non-aggression pacts and tribute</div>
-        <div class="cl-item wish">✅ Seasons — COMPLETED (spring/summer/fall/winter cycle with daily events, farm yield multipliers, race-specific events)</div>
         <div class="cl-item wish">⬜ Prestige / reset system — kingdoms that reach max level can prestige for a permanent bonus</div>
         <div class="cl-item wish">⬜ Named hero units — single high-level units with unique abilities</div>
 
         <div class="cl-section">Combat</div>
         <div class="cl-item wish">⬜ Alliance war — alliances can declare war on each other</div>
-        <div class="cl-item wish">✅ Siege mechanics — COMPLETED (castle walls, guard towers, outposts, citadel — wall damage on attack, castle defence bonus, full Defence panel)</div>
+        <div class="cl-item wish">⬜ Siege mechanics — castle walls reduce land capture percentage</div>
         <div class="cl-item wish">⬜ Battle replay — animated step-by-step battle report</div>
 
         <div class="cl-section">Economy</div>
@@ -610,6 +629,7 @@ textarea{width:100%;resize:vertical;min-height:60px}
         <div class="cl-item wish">⬜ More races — Gnome (inventor), Vampire (undead mage), Troll (regenerating fighter)</div>
 
         <div class="cl-section">Polish</div>
+        <div class="cl-item wish">⬜ Custom kingdom banner/sigil generator</div>
         <div class="cl-item wish">⬜ iOS layout testing and fixes</div>
         <div class="cl-item wish">⬜ Sound effects — combat, level up, expedition return</div>
         <div class="cl-item wish">⬜ Dark/light theme toggle</div>
@@ -916,6 +936,16 @@ async function loadAiSynopsis() {
 
 function fmt(n) { if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e3) return (n/1e3).toFixed(1)+'k'; return String(n||0); }
 
+function testInsult() {
+  try {
+    var audio = new Audio('/fart.mp3');
+    audio.volume = 1.0;
+    audio.play();
+  } catch(e) {
+    alert('Audio playback failed: ' + e.message);
+  }
+}
+
 async function flushLocations() {
   if (!confirm('This will clear ALL location maps and discovered kingdoms for every player. Are you sure?')) return;
   var r = await api('POST', '/api/admin/flush-locations');
@@ -983,6 +1013,60 @@ function showAdminTab(id, btn) {
   if (id === 'events') { loadEventLog(); loadEventList(); }
   if (id === 'changelog') { loadSuggestions(); }
   if (id === 'config') { loadGameConfigs(); }
+  if (id === 'lore') { loadLoreList(); loadRandomEventsList(); }
+}
+
+async function loadLoreList() {
+  const result = await api('GET', '/api/admin/lore');
+  if (result.error) return;
+  const list = document.getElementById('lore-list');
+  list.innerHTML = result.list.map(l => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:8px">
+      <div style="font-size:12px;color:var(--text);margin-bottom:6px">${l.content}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-red" onclick="deleteLore(${l.id})" style="padding:2px 6px;font-size:11px">Delete</button>
+      </div>
+    </div>
+  `).join('');
+  if (!result.list.length) list.innerHTML = '<div style="color:var(--text3);font-size:12px">No lore found.</div>';
+}
+
+async function loadRandomEventsList() {
+  const result = await api('GET', '/api/admin/random_events');
+  if (result.error) return;
+  const list = document.getElementById('random-events-list');
+  list.innerHTML = result.list.map(l => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:8px">
+      <div style="font-size:12px;color:var(--text);margin-bottom:6px">${l.content}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-red" onclick="deleteRandomEvent(${l.id})" style="padding:2px 6px;font-size:11px">Delete</button>
+      </div>
+    </div>
+  `).join('');
+  if (!result.list.length) list.innerHTML = '<div style="color:var(--text3);font-size:12px">No random events found.</div>';
+}
+
+async function addLoreEntry() {
+  const c = prompt('Enter new lore content:');
+  if (!c) return;
+  await api('POST', '/api/admin/lore', { content: c });
+  loadLoreList();
+}
+async function deleteLore(id) {
+  if (!confirm('Delete this lore entry?')) return;
+  await api('DELETE', '/api/admin/lore/'+id);
+  loadLoreList();
+}
+async function addRandomEvent() {
+  const c = prompt('Enter new random expedition event text:');
+  if (!c) return;
+  await api('POST', '/api/admin/random_events', { content: c });
+  loadRandomEventsList();
+}
+async function deleteRandomEvent(id) {
+  if (!confirm('Delete this event?')) return;
+  await api('DELETE', '/api/admin/random_events/'+id);
+  loadRandomEventsList();
 }
 
 async function loadSuggestions() {
