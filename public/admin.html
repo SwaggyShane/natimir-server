@@ -937,14 +937,12 @@ async function loadAiSynopsis() {
 function fmt(n) { if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e3) return (n/1e3).toFixed(1)+'k'; return String(n||0); }
 
 function testInsult() {
-  if (typeof SpeechSynthesisUtterance !== 'undefined' && window.speechSynthesis) {
-    var utterance = new SpeechSynthesisUtterance("I fart in your general direction!");
-    utterance.pitch = 1.2;
-    utterance.rate = 1.0;
-    utterance.volume = 1.0;
-    window.speechSynthesis.speak(utterance);
-  } else {
-    alert('Speech synthesis not available in this browser.');
+  try {
+    var audio = new Audio('/fart.mp3');
+    audio.volume = 1.0;
+    audio.play();
+  } catch(e) {
+    alert('Audio playback failed: ' + e.message);
   }
 }
 

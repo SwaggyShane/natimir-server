@@ -4449,15 +4449,11 @@ function toast(msg, type, duration) {
 }
 
 function playInsult() {
-  if (typeof SpeechSynthesisUtterance !== 'undefined' && window.speechSynthesis) {
-    try {
-      var utterance = new SpeechSynthesisUtterance("I fart in your general direction!");
-      utterance.pitch = 1.2;
-      utterance.rate = 1.0;
-      utterance.volume = 0.8;
-      window.speechSynthesis.speak(utterance);
-    } catch(e) { console.error('Audio fail:', e); }
-  }
+  try {
+    var audio = new Audio('/fart.mp3');
+    audio.volume = 0.8;
+    audio.play();
+  } catch(e) { console.error('Audio fail:', e); }
 }
 
 function openDirectMessage(otherId, otherName) {
