@@ -352,6 +352,11 @@
 
   /* ── Badges ── */
   .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  @keyframes pulse {
+    0%   { transform:scale(1);    box-shadow:0 0 0 0 rgba(232,184,75,.7); }
+    50%  { transform:scale(1.15); box-shadow:0 0 0 8px rgba(232,184,75,0); }
+    100% { transform:scale(1);    box-shadow:0 0 0 0 rgba(232,184,75,0); }
+  }
   .badge-green { background: rgba(76,175,125,.15); color: var(--green); }
   .badge-gold { background: rgba(232,184,75,.15); color: var(--gold); }
   .badge-blue { background: rgba(91,156,245,.15); color: var(--blue); }
@@ -4429,7 +4434,7 @@ function showNewsBadge(count) {
   }
 }
 
-function toast(msg, type) {
+function toast(msg, type, duration) {
   // Attack insult logic
   if (msg && (msg.includes('attacked and') || msg.includes('raided your'))) {
     playInsult();
@@ -4440,7 +4445,7 @@ function toast(msg, type) {
   el.className = type || '';
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, duration || 2400);
 }
 
 function playInsult() {
@@ -4679,6 +4684,31 @@ async function setTax(v) {
 
 
 var takingTurn = false;
+// ── Racial gift unlock sound ──────────────────────────────────────────────────
+function playRacialGiftSound() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Triumphant 3-note fanfare: C5 → E5 → G5 → C6
+    var notes = [523.25, 659.25, 783.99, 1046.50];
+    var times  = [0, 0.18, 0.36, 0.54];
+    var gains  = [0.5, 0.45, 0.45, 0.6];
+    notes.forEach(function(freq, i) {
+      var osc  = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      var t = ctx.currentTime + times[i];
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(gains[i], t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+      osc.start(t);
+      osc.stop(t + 0.6);
+    });
+  } catch(e) { /* Audio not available — silent fail */ }
+}
+
 async function takeTurn() {
   if (takingTurn) return;
   if ((state.turns_stored || 0) < 1) return toast('No turns available — refills in ' + document.getElementById('regen-countdown').textContent, 'warn');
@@ -4690,6 +4720,31 @@ async function takeTurn() {
   if (result.error) { if (btn) btn.style.opacity = '1'; return toast(result.error, 'error'); }
   applyServerUpdates(result.updates);
   if (result.turns_stored !== undefined) state.turns_stored = result.turns_stored;
+
+  // ── Racial gift first-unlock detection ───────────────────────────────────────
+  var rgKey = RACIAL_UNIT_MAP[state.race];
+  var newUnlocked = state.racial_bonuses_unlocked || {};
+  if (rgKey && newUnlocked[rgKey] && !window._racialGiftShown) {
+    window._racialGiftShown = true;
+    playRacialGiftSound();
+    // Big unlock toast
+    var giftText = RACIAL_BADGE_TEXT[state.race] || 'Racial gift unlocked!';
+    toast('🎉 RACIAL GIFT UNLOCKED! ' + giftText, 'success', 6000);
+    // Flash the training panel badge
+    var badge = document.getElementById('racial-gift-badge');
+    if (badge) {
+      badge.style.display = 'inline-block';
+      badge.style.animation = 'none';
+      setTimeout(function() { badge.style.animation = 'pulse 0.6s ease 3'; }, 50);
+    }
+    var banner = document.getElementById('racial-gift-banner');
+    if (banner) {
+      banner.style.display = 'block';
+      banner.style.boxShadow = '0 0 20px rgba(232,184,75,0.5)';
+      setTimeout(function() { banner.style.boxShadow = ''; }, 3000);
+    }
+  }
+
   syncUI();
   updateTurnsDisplay();
   document.getElementById('turn-num').textContent = state.turn;
@@ -4963,7 +5018,9 @@ function syncUI() {
   if (citBadgeMain) citBadgeMain.style.display = citadelEarned ? 'inline-block' : 'none';
 
   var rgBadge = document.getElementById('racial-gift-badge');
-  var rgActive = (state.racial_gift_active && state.racial_gift_active !== 'false');
+  var rgUnlocked = state.racial_bonuses_unlocked || {};
+  var rgKeyUnit  = RACIAL_UNIT_MAP[state.race];
+  var rgActive   = !!(rgKeyUnit && rgUnlocked[rgKeyUnit]);
   if (rgBadge) rgBadge.style.display = rgActive ? 'inline-block' : 'none';
 
   var th = document.getElementById('tools-hammers');
@@ -5499,6 +5556,11 @@ async function loadKingdom() {
     build_progress: (() => { try { return typeof kingdom.build_progress === 'string' ? JSON.parse(kingdom.build_progress||'{}') : (kingdom.build_progress||{}); } catch { return {}; } })(),
     build_allocation: (() => { try { return typeof kingdom.build_allocation === 'string' ? JSON.parse(kingdom.build_allocation||'{}') : (kingdom.build_allocation||{}); } catch { return {}; } })(),
   });
+
+  // Don't re-fire fanfare if gift was already unlocked before this session
+  var _rgKeyInit = RACIAL_UNIT_MAP[state.race];
+  window._racialGiftShown = !!(_rgKeyInit && (state.racial_bonuses_unlocked||{})[_rgKeyInit]);
+
   syncUI();
   updateTurnsDisplay();
   document.getElementById('turn-num').textContent = kingdom.turn;
@@ -8236,6 +8298,7 @@ function renderMageTowerPanel() {
 
 var RACIAL_UNIT_MAP = { dwarf:'engineers', high_elf:'mages', orc:'fighters', dark_elf:'ninjas', dire_wolf:'rangers', human:'clerics' };
 var RACIAL_BADGE_TEXT = {
+  dwarf:     '⚒️ Dwarven Mastery — War machines need only 1 engineer to crew',
   high_elf:  '🌿 Silverwood Mastery — Level 5+ mages produce 2 scrolls per craft',
   orc:       '⚔️ Orcish War Culture — Passively trains 1 fighter per 10 each turn',
   dark_elf:  '🕵️ Shadow Mastery — Assassinations leave no trace',
