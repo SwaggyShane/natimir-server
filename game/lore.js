@@ -21,7 +21,7 @@ cats.forEach(c => {
   for (let i = currentCount + 1; i <= 25; i++) {
     LORE[c].push({
       id: `${c}_${i}`,
-      title: `${c.charAt(0).toUpperCase() + c.slice(1).replace('_', ' ')} Lore Vol. ${i}`,
+      title: `${c.charAt(0).toUpperCase() + c.slice(1).replace(/_/g, ' ')} Lore Vol. ${i}`,
       msg: `[Placeholder for ${c} lore entry ${i}. You can edit this in game/lore.js]`
     });
   }

@@ -257,45 +257,53 @@ module.exports = function(db, io) {
 
   // GET /api/admin/ai-synopsis — snapshot of all AI kingdom states
   router.get('/ai-synopsis', async (_req, res) => {
-    const aiPlayers = await db.all('SELECT id, username FROM players WHERE is_ai = 1');
-    if (aiPlayers.length === 0) return res.json([]);
+    const kingdoms = await db.all(`
+      SELECT k.id, k.name, k.race, k.level, k.land, k.gold, k.population,
+             k.turns_stored, k.morale, k.food, k.fighters, k.rangers, k.mages,
+             k.thieves, k.ninjas, k.bld_farms, k.bld_barracks, k.bld_housing,
+             k.bld_schools, k.res_military, k.res_economy, k.res_spellbook,
+             k.build_allocation, k.research_allocation
+      FROM kingdoms k
+      JOIN players p ON k.player_id = p.id
+      WHERE p.is_ai = 1
+    `);
+    if (kingdoms.length === 0) return res.json([]);
 
-    const rows = [];
-    for (const p of aiPlayers) {
-      const k = await db.get(`
-        SELECT k.*, p.username
-        FROM kingdoms k JOIN players p ON k.player_id = p.id
-        WHERE k.player_id = ?`, [p.id]);
-      if (!k) continue;
+    const kIds = kingdoms.map(k => k.id);
+    const ph = kIds.map(() => '?').join(',');
 
-      // Count war log actions by this AI as attacker
-      const attacks   = await db.get('SELECT COUNT(*) as c FROM war_log WHERE attacker_id = ? AND action_type = ?', [k.id, 'attack']);
-      const coverts   = await db.get('SELECT COUNT(*) as c FROM war_log WHERE attacker_id = ? AND action_type IN (?,?,?,?,?)', [k.id, 'spy','loot','assassinate','sabotage','covert']);
-      const wins      = await db.get('SELECT COUNT(*) as c FROM war_log WHERE attacker_id = ? AND outcome = ?', [k.id, 'victory']);
-      const losses    = await db.get('SELECT COUNT(*) as c FROM war_log WHERE attacker_id = ? AND action_type = ? AND outcome = ?', [k.id, 'attack', 'repelled']);
-      const timesHit  = await db.get('SELECT COUNT(*) as c FROM war_log WHERE defender_id = ?', [k.id]);
+    const attackerStats = await db.all(`
+      SELECT attacker_id as kingdom_id,
+             SUM(CASE WHEN action_type = 'attack' THEN 1 ELSE 0 END) as attacks,
+             SUM(CASE WHEN action_type IN ('spy','loot','assassinate','sabotage','covert') THEN 1 ELSE 0 END) as covert_ops,
+             SUM(CASE WHEN outcome = 'victory' THEN 1 ELSE 0 END) as wins,
+             SUM(CASE WHEN action_type = 'attack' AND outcome = 'repelled' THEN 1 ELSE 0 END) as losses
+      FROM war_log WHERE attacker_id IN (${ph}) GROUP BY attacker_id
+    `, kIds);
+    const aMap = Object.fromEntries(attackerStats.map(r => [r.kingdom_id, r]));
 
-      // Parse JSON fields safely
+    const defenderStats = await db.all(`
+      SELECT defender_id as kingdom_id, COUNT(*) as times_hit
+      FROM war_log WHERE defender_id IN (${ph}) GROUP BY defender_id
+    `, kIds);
+    const dMap = Object.fromEntries(defenderStats.map(r => [r.kingdom_id, r]));
+
+    const rows = kingdoms.map(k => {
       let buildAlloc = {};
       let resAlloc = {};
       try { buildAlloc = JSON.parse(k.build_allocation || '{}'); } catch {}
       try { resAlloc   = JSON.parse(k.research_allocation || '{}'); } catch {}
 
       const topBuild = Object.entries(buildAlloc)
-        .filter(([,v]) => v > 0)
-        .sort((a,b) => b[1]-a[1])
-        .slice(0,3)
-        .map(([k,v]) => `${k}:${v}`)
-        .join(', ') || 'none';
-
+        .filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).slice(0,3)
+        .map(([key,v]) => `${key}:${v}`).join(', ') || 'none';
       const topResearch = Object.entries(resAlloc)
-        .filter(([,v]) => v > 0)
-        .sort((a,b) => b[1]-a[1])
-        .slice(0,3)
-        .map(([k,v]) => `${k}:${v}`)
-        .join(', ') || 'none';
+        .filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).slice(0,3)
+        .map(([key,v]) => `${key}:${v}`).join(', ') || 'none';
 
-      rows.push({
+      const as = aMap[k.id] || {};
+      const ds = dMap[k.id] || {};
+      return {
         id: k.id, name: k.name, race: k.race, level: k.level || 1,
         land: k.land, gold: k.gold, population: k.population,
         turns_stored: k.turns_stored, morale: k.morale, food: k.food,
@@ -306,11 +314,11 @@ module.exports = function(db, io) {
         res_military: k.res_military, res_economy: k.res_economy,
         res_spellbook: k.res_spellbook,
         top_build: topBuild, top_research: topResearch,
-        attacks: attacks?.c || 0, covert_ops: coverts?.c || 0,
-        wins: wins?.c || 0, losses: losses?.c || 0,
-        times_hit: timesHit?.c || 0,
-      });
-    }
+        attacks: as.attacks || 0, covert_ops: as.covert_ops || 0,
+        wins: as.wins || 0, losses: as.losses || 0,
+        times_hit: ds.times_hit || 0,
+      };
+    });
     res.json(rows);
   });
 
@@ -416,43 +424,63 @@ module.exports = function(db, io) {
   });
 
   router.get('/lore', async (_req, res) => {
-    const list = await db.all("SELECT * FROM lore_entries ORDER BY id ASC");
-    res.json({ ok:true, list });
+    try {
+      const list = await db.all("SELECT * FROM lore_entries ORDER BY id ASC");
+      res.json({ ok:true, list });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
   router.post('/lore', async (req, res) => {
-    await db.run("INSERT INTO lore_entries (content) VALUES (?)", [req.body.content||'']);
-    await require('../../index').refreshLore();
-    res.json({ ok:true });
+    try {
+      if (!req.body.content) return res.status(400).json({ error: 'Content required' });
+      const result = await db.run("INSERT INTO lore_entries (content) VALUES (?)", [req.body.content]);
+      await require('../../index').refreshLore();
+      res.json({ ok:true, id: result.lastID });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
   router.put('/lore/:id', async (req, res) => {
-    await db.run("UPDATE lore_entries SET content=? WHERE id=?", [req.body.content||'', req.params.id]);
-    await require('../../index').refreshLore();
-    res.json({ ok:true });
+    try {
+      if (!req.body.content) return res.status(400).json({ error: 'Content required' });
+      await db.run("UPDATE lore_entries SET content=? WHERE id=?", [req.body.content, req.params.id]);
+      await require('../../index').refreshLore();
+      res.json({ ok:true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
   router.delete('/lore/:id', async (req, res) => {
-    await db.run("DELETE FROM lore_entries WHERE id=?", [req.params.id]);
-    await require('../../index').refreshLore();
-    res.json({ ok:true });
+    try {
+      await db.run("DELETE FROM lore_entries WHERE id=?", [req.params.id]);
+      await require('../../index').refreshLore();
+      res.json({ ok:true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
   router.get('/random_events', async (_req, res) => {
-    const list = await db.all("SELECT * FROM random_events ORDER BY id ASC");
-    res.json({ ok:true, list });
+    try {
+      const list = await db.all("SELECT * FROM random_events ORDER BY id ASC");
+      res.json({ ok:true, list });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
   router.post('/random_events', async (req, res) => {
-    await db.run("INSERT INTO random_events (content) VALUES (?)", [req.body.content||'']);
-    await require('../../index').refreshLore();
-    res.json({ ok:true });
+    try {
+      if (!req.body.content) return res.status(400).json({ error: 'Content required' });
+      const result = await db.run("INSERT INTO random_events (content) VALUES (?)", [req.body.content]);
+      await require('../../index').refreshLore();
+      res.json({ ok:true, id: result.lastID });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
   router.put('/random_events/:id', async (req, res) => {
-    await db.run("UPDATE random_events SET content=? WHERE id=?", [req.body.content||'', req.params.id]);
-    await require('../../index').refreshLore();
-    res.json({ ok:true });
+    try {
+      if (!req.body.content) return res.status(400).json({ error: 'Content required' });
+      await db.run("UPDATE random_events SET content=? WHERE id=?", [req.body.content, req.params.id]);
+      await require('../../index').refreshLore();
+      res.json({ ok:true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
   router.delete('/random_events/:id', async (req, res) => {
-    await db.run("DELETE FROM random_events WHERE id=?", [req.params.id]);
-    await require('../../index').refreshLore();
-    res.json({ ok:true });
+    try {
+      await db.run("DELETE FROM random_events WHERE id=?", [req.params.id]);
+      await require('../../index').refreshLore();
+      res.json({ ok:true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
   return router;
