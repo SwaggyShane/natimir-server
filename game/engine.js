@@ -2078,36 +2078,101 @@ function castSpell(caster, target, spellId, obscure) {
 
 // ── Covert ops ────────────────────────────────────────────────────────────────
 
-function covertSpy(spy, target, unitsSent) {
-  const stealthMulti = raceBonus(spy, 'stealth') * unitLevelMult(spy, 'thieves');
-  const success = (spy.thieves + spy.ninjas) * stealthMulti > target.fighters * 0.02 + target.bld_guard_towers * 5;
+function covertSpy(spy, target, thievesSent) {
+  const sent = Math.min(Math.max(1, thievesSent || 0), spy.thieves || 0);
+  if (sent < 1) return { error: 'No thieves available' };
 
-  if (!success) {
-    const caught = Math.floor(unitsSent * 0.3);
-    return {
-      success: false,
-      spyUpdates:    { thieves: spy.thieves - caught },
-      targetUpdates: {},
-      spyEvent:      `Spy mission on ${target.name} failed — ${caught} thieves caught.`,
-      targetEvent:   `${spy.name} attempted to spy on you — caught ${caught} thieves.`,
+  // Attack: thieves sent × attacker stealth race bonus × thief level
+  const atkStealth = raceBonus(spy, 'stealth') * raceBonus(spy, 'covert');
+  const atkLevel   = unitLevelMult(spy, 'thieves');
+  const spyPower   = sent * atkStealth * atkLevel;
+
+  // Defense: guard towers + thieves on watch × defender stealth × level
+  const defStealth     = raceBonus(target, 'stealth') * raceBonus(target, 'covert');
+  const defLevel       = unitLevelMult(target, 'thieves');
+  const thievesOnWatch = Math.min(target.thieves || 0, (target.bld_guard_towers || 0) * 10);
+  const defPower       = (target.bld_guard_towers || 0) * 50
+                       + thievesOnWatch * 15 * defLevel * defStealth;
+
+  const ratio = defPower > 0 ? spyPower / defPower : spyPower > 0 ? 3 : 0.1;
+  // ±30% luck swing keeps outcomes interesting at the margins
+  const effective = ratio * (0.7 + Math.random() * 0.6);
+
+  function noise(n, pct) {
+    return Math.max(0, Math.floor(n * (1 - pct + Math.random() * pct * 2)));
+  }
+
+  let outcome, report = null, caught = 0, targetEvent = null;
+
+  if (effective >= 1.2) {
+    outcome = 'full';
+  } else if (effective >= 0.7) {
+    outcome = 'partial';
+  } else if (effective >= 0.4) {
+    outcome = 'partial_failure';
+    caught = Math.floor(sent * 0.1 * (1 - effective));
+  } else {
+    caught = Math.floor(sent * 0.35 * (1 - effective * 0.5));
+    outcome = Math.random() < 0.08 ? 'disinformation' : 'total_failure';
+  }
+
+  if (outcome === 'full') {
+    report = {
+      race: target.race, land: noise(target.land, 0.05),
+      population: noise(target.population, 0.05),
+      gold: noise(target.gold, 0.08), food: noise(target.food, 0.08),
+      morale: noise(target.morale, 0.05),
+      fighters: noise(target.fighters, 0.05), rangers: noise(target.rangers, 0.05),
+      clerics:  noise(target.clerics,  0.05), mages:   noise(target.mages,   0.05),
+      thieves:  noise(target.thieves,  0.10), ninjas:  noise(target.ninjas,  0.10),
+    };
+  } else if (outcome === 'partial') {
+    report = {
+      race: target.race, land: noise(target.land, 0.20),
+      fighters: noise(target.fighters, 0.20), rangers: noise(target.rangers, 0.20),
+      mages:    noise(target.mages,    0.20), thieves: noise(target.thieves, 0.25),
+      ninjas:   noise(target.ninjas,   0.25),
+    };
+  } else if (outcome === 'disinformation') {
+    // Intentionally misleading — makes target look very weak
+    report = {
+      race: target.race,
+      land:     Math.floor(50  + Math.random() * 150),
+      fighters: Math.floor(50  + Math.random() * 200),
+      rangers:  Math.floor(10  + Math.random() * 50),
+      mages:    Math.floor(5   + Math.random() * 30),
+      thieves:  Math.floor(5   + Math.random() * 20),
+      gold:     Math.floor(100 + Math.random() * 500),
     };
   }
 
-  function noise(n) { return Math.floor(n * (0.85 + Math.random() * 0.30)); }
-  const report = {
-    name: target.name, race: target.race,
-    land: noise(target.land), fighters: noise(target.fighters),
-    mages: noise(target.mages), gold: noise(target.gold),
+  if (caught > 0) {
+    targetEvent = `${spy.name} attempted to spy on you — caught ${caught} thieves.`;
+  }
+
+  const OUTCOME_EVENTS = {
+    full:             `🔍 Full intelligence report on ${target.name} retrieved.`,
+    partial:          `🔍 Partial intelligence report on ${target.name} retrieved.`,
+    partial_failure:  `🕵️ Spy mission on ${target.name} failed — agents retreated${caught > 0 ? ` (${caught} caught)` : ''}.`,
+    disinformation:   `🔍 Intelligence report on ${target.name} retrieved.`,
+    total_failure:    `💀 Spy mission on ${target.name} failed — ${caught} thieves caught.`,
   };
 
-  // Award thief XP for successful spy
-  const tXp = awardTroopXp(spy, 'thieves', 12);
+  const spyUpdates = {};
+  if (caught > 0) spyUpdates.thieves = Math.max(0, (spy.thieves || 0) - caught);
+  if (outcome === 'full' || outcome === 'partial') {
+    const tXp = awardTroopXp(spy, 'thieves', outcome === 'full' ? 15 : 8);
+    if (tXp.troop_levels) spyUpdates.troop_levels = tXp.troop_levels;
+  }
+
   return {
-    success: true, report,
-    spyUpdates: { troop_levels: tXp.troop_levels },
+    outcome,
+    success: outcome === 'full' || outcome === 'partial' || outcome === 'disinformation',
+    report,
+    spyUpdates,
     targetUpdates: {},
-    spyEvent: `Spy report on ${target.name} retrieved successfully.`,
-    targetEvent: null,
+    spyEvent:    OUTCOME_EVENTS[outcome],
+    targetEvent,
   };
 }
 

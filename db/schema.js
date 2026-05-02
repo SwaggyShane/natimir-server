@@ -229,6 +229,21 @@ async function initDb() {
   await _db.run(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id)`);
 
   await _db.run(`
+    CREATE TABLE IF NOT EXISTS spy_reports (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      kingdom_id          INTEGER NOT NULL REFERENCES kingdoms(id),
+      target_id           INTEGER NOT NULL REFERENCES kingdoms(id),
+      target_name         TEXT    NOT NULL,
+      outcome             TEXT    NOT NULL,
+      report              TEXT,
+      shared_to_alliance  INTEGER NOT NULL DEFAULT 0,
+      created_at          INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
+  await _db.run(`CREATE INDEX IF NOT EXISTS idx_spy_reports_kingdom ON spy_reports(kingdom_id, created_at DESC)`);
+  await _db.run(`CREATE INDEX IF NOT EXISTS idx_spy_reports_target  ON spy_reports(target_id)`);
+
+  await _db.run(`
     CREATE TABLE IF NOT EXISTS bounties (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       placer_id     INTEGER NOT NULL REFERENCES players(id),

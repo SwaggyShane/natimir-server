@@ -2628,6 +2628,17 @@
       </div>
     </div>
   </div>
+
+  <!-- Spy report history -->
+  <div style="margin-top:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:600;color:var(--text)">🕵️ Intelligence Reports</div>
+      <button class="btn" style="font-size:11px;padding:3px 10px" onclick="loadSpyReports()">↻ Refresh</button>
+    </div>
+    <div id="spy-report-list" style="display:flex;flex-direction:column;gap:10px">
+      <div style="color:var(--text3);font-size:13px;text-align:center;padding:24px 0">No spy reports yet.</div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════ TRAINING PANEL ══ -->
@@ -2949,6 +2960,16 @@
           <div style="display:flex;gap:8px">
             <input type="text" id="ally-msg" placeholder="Message your alliance..." style="flex:1;width:auto" maxlength="300" onkeydown="if(event.key==='Enter')sendAllyMsg()">
             <button class="btn btn-purple" onclick="sendAllyMsg()">Send</button>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="card-title" style="margin:0">🔍 Alliance Intelligence</div>
+            <button class="btn" style="font-size:11px;padding:3px 10px" onclick="loadAllianceIntel()">↻ Refresh</button>
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Spy reports shared by alliance members.</div>
+          <div id="alliance-intel-list" style="display:flex;flex-direction:column;gap:8px">
+            <div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">No shared intel yet.</div>
           </div>
         </div>
       </div>
@@ -3871,11 +3892,14 @@ async function covertOp(op) {
   if (result.error) return toast(result.error, 'error');
 
   if (op === 'spy') {
-    if (result.success && result.report) {
-      showSpyReport(result.report, t.name);
+    var outcomeColor = { full:'var(--green)', partial:'var(--gold)', partial_failure:'var(--red)', total_failure:'var(--red)', disinformation:'var(--green)' };
+    var outcomeLabel = { full:'Full Success', partial:'Partial Success', partial_failure:'Partial Failure', total_failure:'Mission Failed', disinformation:'Intel Received' };
+    if (result.report) {
+      showSpyReport(result.report, t.name, result.outcome, result.reportId);
     } else {
-      toast(result.event || 'Spy mission failed', 'error');
+      toast(result.event || 'Spy mission failed', result.success ? 'success' : 'error');
     }
+    loadSpyReports();
   } else if (op === 'loot') {
     if (result.success) {
       toast(result.event || 'Loot successful!', 'success');
@@ -3967,23 +3991,81 @@ function showBattleReport(data) {
   document.getElementById('battle-overlay').style.display = 'flex';
 }
 
-function showSpyReport(report, targetName) {
-  var name = targetName || report.name || 'Unknown';
-  var html = '<div class="br-title" style="color:var(--blue)">🕵️ Spy report — ' + name + '</div>';
-  var rows = [
-    ['Race',        report.race || '?'],
-    ['Land',        fmt(report.land || 0) + ' acres (approx)'],
-    ['Fighters',    fmt(report.fighters || 0)],
-    ['Mages',       fmt(report.mages || 0)],
-    ['Gold',        fmt(report.gold || 0)],
-    ['Accuracy',    '±15% — not fully reliable'],
+function showSpyReport(report, targetName, outcome, reportId) {
+  var name = targetName || 'Unknown';
+  var OUTCOME_META = {
+    full:           { label:'Full Report',    color:'var(--green)', note:'±5% accuracy — highly reliable' },
+    partial:        { label:'Partial Report', color:'var(--gold)',  note:'±20% accuracy — army composition only' },
+    disinformation: { label:'Intel Received', color:'var(--green)', note:'Accuracy unknown — verify with another spy' },
+  };
+  var meta = OUTCOME_META[outcome] || { label:'Spy Report', color:'var(--blue)', note:'Report retrieved' };
+  var html = '<div class="br-title" style="color:' + meta.color + '">🕵️ ' + meta.label + ' — ' + name + '</div>';
+
+  var fieldDefs = [
+    ['race',       'Race',       function(v){ return v; }],
+    ['land',       'Land',       function(v){ return fmt(v) + ' acres'; }],
+    ['population', 'Population', function(v){ return fmt(v); }],
+    ['gold',       'Gold',       function(v){ return fmt(v); }],
+    ['food',       'Food',       function(v){ return fmt(v); }],
+    ['morale',     'Morale',     function(v){ return v + '%'; }],
+    ['fighters',   'Fighters',   function(v){ return fmt(v); }],
+    ['rangers',    'Rangers',    function(v){ return fmt(v); }],
+    ['clerics',    'Clerics',    function(v){ return fmt(v); }],
+    ['mages',      'Mages',      function(v){ return fmt(v); }],
+    ['thieves',    'Thieves',    function(v){ return fmt(v); }],
+    ['ninjas',     'Ninjas',     function(v){ return fmt(v); }],
   ];
-  html += rows.map(function(r){
-    return '<div class="spy-row"><span style="color:var(--text2)">' + r[0] + '</span><span style="color:var(--text)">' + r[1] + '</span></div>';
-  }).join('');
-  html += '<div style="font-size:12px;color:var(--text3);margin-top:10px">Spy again to confirm. Report degrades with distance.</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px">';
+  fieldDefs.forEach(function(f) {
+    if (report[f[0]] === undefined) return;
+    html += '<div style="display:contents"><span style="color:var(--text3);font-size:12px">' + f[1] + '</span>'
+          + '<span style="color:var(--text);font-size:12px;font-weight:600">' + f[2](report[f[0]]) + '</span></div>';
+  });
+  html += '</div>';
+  html += '<div style="font-size:11px;color:var(--text3);margin-top:10px">' + meta.note + '</div>';
+  if (reportId) {
+    html += '<button class="btn" style="margin-top:10px;font-size:12px" onclick="shareSpyReport(' + reportId + ',this)">📡 Share to Alliance</button>';
+  }
   document.getElementById('battle-content').innerHTML = html;
   document.getElementById('battle-overlay').style.display = 'flex';
+}
+
+async function shareSpyReport(reportId, btn) {
+  var result = await apiCall('POST', '/api/kingdom/spy-reports/' + reportId + '/share', {});
+  if (result.error) return toast(result.error, 'error');
+  btn.textContent = result.shared ? '✅ Shared with Alliance' : '📡 Share to Alliance';
+  toast(result.shared ? 'Report shared with your alliance' : 'Report unshared', 'success');
+  loadSpyReports();
+}
+
+async function loadSpyReports() {
+  var list = document.getElementById('spy-report-list');
+  if (!list) return;
+  var rows = await apiCall('GET', '/api/kingdom/spy-reports');
+  if (!rows || rows.error || rows.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">No spy reports yet.</div>';
+    return;
+  }
+  var OUTCOME_BADGE = {
+    full:           '<span style="background:#1a4a2a;color:#4caf80;font-size:10px;padding:2px 6px;border-radius:4px">FULL</span>',
+    partial:        '<span style="background:#3a3010;color:#c8a020;font-size:10px;padding:2px 6px;border-radius:4px">PARTIAL</span>',
+    disinformation: '<span style="background:#1a2a4a;color:#4a90d9;font-size:10px;padding:2px 6px;border-radius:4px">INTEL</span>',
+    partial_failure:'<span style="background:#3a1a1a;color:#c84040;font-size:10px;padding:2px 6px;border-radius:4px">FAILED</span>',
+    total_failure:  '<span style="background:#3a1a1a;color:#c84040;font-size:10px;padding:2px 6px;border-radius:4px">CAUGHT</span>',
+  };
+  list.innerHTML = rows.map(function(r) {
+    var badge = OUTCOME_BADGE[r.outcome] || '';
+    var ago = timeAgo(r.created_at);
+    var shareBtn = r.report ? '<button class="btn" style="font-size:10px;padding:2px 8px;margin-left:auto" onclick="shareSpyReport(' + r.id + ',this)">'
+                            + (r.shared_to_alliance ? '✅ Shared' : '📡 Share') + '</button>' : '';
+    var viewBtn = r.report ? '<button class="btn" style="font-size:10px;padding:2px 8px" onclick=\'showSpyReport(' + JSON.stringify(r.report) + ',"' + r.target_name.replace(/"/g,'\\"') + '","' + r.outcome + '",' + r.id + ')\'>View</button>' : '';
+    return '<div style="border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px">'
+         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+         + badge + '<span style="font-size:13px;font-weight:600;color:var(--text)">' + r.target_name + '</span>'
+         + '<span style="font-size:11px;color:var(--text3);margin-left:auto">' + ago + '</span></div>'
+         + '<div style="display:flex;gap:6px">' + viewBtn + shareBtn + '</div>'
+         + '</div>';
+  }).join('');
 }
 
 function closeBattle() {
@@ -4293,6 +4375,41 @@ async function loadAlliancePanel() {
   renderAllyList(data.members);
   populateDismissList(data.members);
   loadAllianceChatHistory(data.alliance.id);
+  loadAllianceIntel();
+}
+
+async function loadAllianceIntel() {
+  var el = document.getElementById('alliance-intel-list');
+  if (!el) return;
+  var rows = await apiCall('GET', '/api/kingdom/spy-reports/alliance');
+  if (!rows || !rows.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">No shared intel yet.</div>';
+    return;
+  }
+  var outcomeColors = { full:'var(--green)', partial:'var(--gold)', partial_failure:'var(--amber)', total_failure:'var(--red)', disinformation:'var(--purple)' };
+  var outcomeLabels = { full:'Full Success', partial:'Partial Success', partial_failure:'Partial Failure', total_failure:'Failed', disinformation:'Disinformation' };
+  el.innerHTML = rows.map(function(r) {
+    var color = outcomeColors[r.outcome] || 'var(--text3)';
+    var label = outcomeLabels[r.outcome] || r.outcome;
+    var rpt = r.report;
+    var fields = '';
+    if (rpt) {
+      var order = ['fighters','rangers','clerics','mages','thieves','ninjas','engineers','war_machines','land'];
+      order.forEach(function(k) {
+        if (rpt[k] !== undefined) {
+          fields += '<span style="color:var(--text3)">' + k.replace(/_/g,' ') + ':</span> <strong>' + fmt(rpt[k]) + '</strong>  ';
+        }
+      });
+    }
+    return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-size:12px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+        + '<span style="font-weight:600;color:var(--text)">' + r.target_name + '</span>'
+        + '<span style="color:' + color + ';font-size:11px">' + label + '</span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">Shared by <strong style="color:var(--text2)">' + r.shared_by_name + '</strong></div>'
+      + (fields ? '<div style="line-height:2;word-break:break-all">' + fields + '</div>' : '<div style="color:var(--text3);font-style:italic">No intel gathered.</div>')
+      + '</div>';
+  }).join('');
 }
 
 function renderAllyList(members) {
@@ -4583,6 +4700,9 @@ function switchTab(id, btn) {
     var mapWarn = document.getElementById('atk-map-warn');
     if (mapWarn) mapWarn.style.display = (state.maps || 0) < 1 ? 'block' : 'none';
     updateAtkEstimate();
+  }
+  if (id === 'covert') {
+    loadSpyReports();
   }
   if (id === 'globalchat' || id === 'alliances') {
     var badge = document.getElementById('chat-badge');
