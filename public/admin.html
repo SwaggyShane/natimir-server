@@ -109,6 +109,7 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <button class="admin-tab" onclick="showAdminTab('kingdoms',this)">🏰 Kingdoms</button>
     <button class="admin-tab" onclick="showAdminTab('events',this)">📅 Events</button>
     <button class="admin-tab" onclick="showAdminTab('config',this)">🛠️ Configs</button>
+    <button class="admin-tab" onclick="showAdminTab('sounds',this)">🎵 Sounds</button>
     <button class="admin-tab" onclick="showAdminTab('lore',this)">📖 Lore & Trips</button>
     <button class="admin-tab" onclick="showAdminTab('changelog',this)">📋 Changelog</button>
   </div>
@@ -332,6 +333,23 @@ textarea{width:100%;resize:vertical;min-height:60px}
     <div style="padding:24px;color:var(--text3);grid-column:1/-1;">Loading...</div>
   </div>
 </div>
+
+<!-- TAB: Sounds -->
+<div id="atab-sounds" class="atab" style="display:none">
+  <div class="card">
+    <h2 style="margin-top:0">Upload Sound</h2>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Upload .mp3 or .wav files to use in the game.</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
+      <input type="file" id="sound-upload-file" accept=".mp3,.wav" style="font-size:12px;color:var(--text)">
+      <button class="btn btn-gold" onclick="uploadSound()">Upload</button>
+    </div>
+    
+    <h3 style="margin-top:24px;border-bottom:1px solid var(--border);padding-bottom:8px">Available Sounds</h3>
+    <div id="sounds-list" style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <!-- loaded via JS -->
+    </div>
+  </div>
+</div><!-- end atab-sounds -->
 
 <!-- TAB: Lore & Trips -->
 <div id="atab-lore" class="atab" style="display:none">
@@ -998,6 +1016,64 @@ function showAdminTab(id, btn) {
   if (id === 'changelog') { loadSuggestions(); }
   if (id === 'config') { loadGameConfigs(); }
   if (id === 'lore') { loadLoreList(); loadRandomEventsList(); }
+  if (id === 'sounds') { loadSounds(); }
+}
+
+async function loadSounds() {
+  var res = await api('GET', '/api/admin/sounds');
+  var list = document.getElementById('sounds-list');
+  if (!res || !res.sounds || res.sounds.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3)">No sounds uploaded.</div>';
+    return;
+  }
+  var html = '';
+  res.sounds.forEach(function(s) {
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;">' +
+      '<div style="font-size:13px;color:var(--text)">' + s + '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button class="btn btn-purple" style="padding:4px 8px;font-size:11px" onclick="playSound(\'' + s + '\')">Play</button>' +
+        '<button class="btn btn-red" style="padding:4px 8px;font-size:11px" onclick="deleteSound(\'' + s + '\')">Delete</button>' +
+      '</div>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function playSound(filename) {
+  var audio = new Audio('/sounds/' + filename);
+  audio.play();
+}
+
+async function uploadSound() {
+  var fileInput = document.getElementById('sound-upload-file');
+  if (!fileInput.files || fileInput.files.length === 0) return toast('Select a file first', 'error');
+  var file = fileInput.files[0];
+  
+  var formData = new FormData();
+  formData.append('soundFile', file);
+  
+  try {
+    var raw = await fetch('/api/admin/sounds/upload', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+      body: formData
+    });
+    var res = await raw.json();
+    if (res.error) return toast(res.error, 'error');
+    toast('Sound uploaded!', 'success');
+    fileInput.value = '';
+    loadSounds();
+  } catch(e) {
+    toast('Upload failed', 'error');
+  }
+}
+
+async function deleteSound(filename) {
+  if (!confirm('Delete ' + filename + '?')) return;
+  var res = await api('POST', '/api/admin/sounds/delete', { filename: filename });
+  if (res.error) return toast(res.error, 'error');
+  toast('Deleted!', 'success');
+  loadSounds();
 }
 
 async function loadLoreList() {

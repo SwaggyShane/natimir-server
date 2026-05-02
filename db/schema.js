@@ -287,6 +287,7 @@ async function initDb() {
   await _db.run(`
     CREATE TABLE IF NOT EXISTS lore_entries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL DEFAULT '',
       content TEXT NOT NULL,
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     )
@@ -631,6 +632,10 @@ async function initDb() {
       await _db.run("INSERT INTO random_events (content) VALUES (?)", [e]);
     }
   }
+
+  const loreColsRes = await _db.all("PRAGMA table_info(lore_entries)");
+  const loreCols = loreColsRes.map(c => c.name);
+  if (!loreCols.includes('title')) await addColumn('lore_entries', 'title', "TEXT NOT NULL DEFAULT ''");
 
   const hasLore = await _db.get("SELECT 1 FROM lore_entries LIMIT 1");
   if (!hasLore) {
