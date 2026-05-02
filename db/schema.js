@@ -487,26 +487,37 @@ async function initDb() {
     await _db.run('INSERT OR IGNORE INTO market_prices (id, current_price, base_price) VALUES (?, ?, ?)', [id, current, base]);
   }
 
+  await _db.exec(`
+    CREATE TABLE IF NOT EXISTS war_log (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      action_type     TEXT    NOT NULL,
+      attacker_id     INTEGER REFERENCES kingdoms(id),
+      attacker_name   TEXT,
+      defender_id     INTEGER REFERENCES kingdoms(id),
+      defender_name   TEXT,
+      outcome         TEXT    NOT NULL,
+      detail          TEXT,
+      obscured        INTEGER NOT NULL DEFAULT 0,
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_war_log_time ON war_log(created_at DESC);
+  `);
+
   // ── Season & events migrations ────────────────────────────────────────────────
   if (!cols.includes('last_event_at'))         await addColumn('kingdoms', 'last_event_at',         'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('active_event'))          await addColumn('kingdoms', 'active_event',          "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('discovered_kingdoms'))   await addColumn('kingdoms', 'discovered_kingdoms',   "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('location_maps_wip'))     await addColumn('kingdoms', 'location_maps_wip',     "TEXT NOT NULL DEFAULT '[]'");
   
-  // trades table (referenced in trade/clear-logs route)
+  // Market Prices table procedural check
   await _db.exec(`
-    CREATE TABLE IF NOT EXISTS trades (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      sender_id   INTEGER NOT NULL REFERENCES kingdoms(id),
-      receiver_id INTEGER NOT NULL REFERENCES kingdoms(id),
-      offer       TEXT    NOT NULL,
-      request     TEXT    NOT NULL,
-      status      TEXT    NOT NULL DEFAULT 'pending',
-      created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+    CREATE TABLE IF NOT EXISTS market_prices (
+      id            TEXT PRIMARY KEY,
+      current_price REAL NOT NULL,
+      base_price    REAL NOT NULL,
+      updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
-
-  // Seed missing market prices (safe to run on any deploy)
   const freshDefaultPrices = [
     ['food',    0.5, 0.5],
     ['mana',    2.0, 2.0],

@@ -389,6 +389,9 @@ module.exports = function(db) {
     res.json({ ok:true, bought, cost:actualCost, scaffolding_stored:newScaff, gold:(k.gold||0)-actualCost });
   });
 
+  router.post('/smithy-allocation', requireAuth, async (_req, res) => {
+    res.json({ ok:true });
+  });
   router.post('/search', requireAuth, async (req, res) => {
     const { type, rangers } = req.body;
     const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
@@ -1145,6 +1148,16 @@ module.exports = function(db) {
     const SEASON_ICONS = { spring:'🌸', summer:'☀️', fall:'🍂', winter:'❄️' };
     const daysLeft = Math.max(0, SEASON_DUR[season] - (Date.now()/1000-startedAt)/86400);
     res.json({ season, daysLeft: daysLeft.toFixed(1), icon: SEASON_ICONS[season]||'🌸' });
+  });
+
+  // ── Location — get my discovered kingdoms ─────────────────────────────────────
+  router.get('/locations', requireAuth, async (req, res) => {
+    const k = await db.get('SELECT discovered_kingdoms, location_maps_wip FROM kingdoms WHERE player_id=?', [req.player.playerId]);
+    if (!k) return res.status(404).json({ error:'Kingdom not found' });
+    let disc={}, wip=[];
+    try { disc = JSON.parse(k.discovered_kingdoms||'{}'); } catch {}
+    try { wip  = JSON.parse(k.location_maps_wip||'[]');   } catch {}
+    res.json({ discovered: disc, wip });
   });
 
   // ── Location — steal map (covert action) ──────────────────────────────────────

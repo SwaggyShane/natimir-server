@@ -1,5 +1,4 @@
 const express = require('express');
-const path    = require('path');
 const { requireAdmin } = require('./middleware');
 const router = express.Router();
 
@@ -323,6 +322,7 @@ module.exports = function(db, io) {
 
   router.get('/config', async (_req, res) => {
     const fs = require('fs');
+    const path = require('path');
     const config = require('../game/config');
     let overrides = {};
     try {
@@ -336,6 +336,7 @@ module.exports = function(db, io) {
 
   router.post('/config', async (req, res) => {
     const fs = require('fs');
+    const path = require('path');
     const config = require('../game/config');
     const { overrides } = req.body;
     if (!overrides) return res.status(400).json({ error: 'overrides required' });
@@ -454,170 +455,5 @@ module.exports = function(db, io) {
     res.json({ ok:true });
   });
 
-  // ── Lore static (reads/writes from game/lore.js) ──────────────────────────────
-  router.get('/lore-static', async (_req, res) => {
-    try {
-      // Force fresh require
-      delete require.cache[require.resolve('../game/lore')];
-      const LORE = require('../game/lore');
-      // Split into race / narmir / general
-      const races = ['dwarf','high_elf','orc','dark_elf','human','dire_wolf'];
-      const race = {};
-      races.forEach(function(r) { race[r] = LORE[r] || []; });
-      res.json({ lore: { race, narmir: LORE.narmir || [], general: LORE.general || [] } });
-    } catch(e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  router.post('/lore-static/save', async (req, res) => {
-    const { id, cat, race, title, content } = req.body;
-    if (!title || !content || !cat) return res.status(400).json({ error: 'title, content, cat required' });
-    try {
-      delete require.cache[require.resolve('../game/lore')];
-      const LORE = require('../game/lore');
-      const entry = { id: id || (cat+'_'+Date.now()), title, msg: content };
-      if (cat === 'race' && race) {
-        if (!LORE[race]) LORE[race] = [];
-        if (id) {
-          const idx = LORE[race].findIndex(function(e){ return e.id === id; });
-          if (idx >= 0) LORE[race][idx] = entry; else LORE[race].push(entry);
-        } else {
-          LORE[race].push(entry);
-        }
-      } else {
-        if (!LORE[cat]) LORE[cat] = [];
-        if (id) {
-          const idx = LORE[cat].findIndex(function(e){ return e.id === id; });
-          if (idx >= 0) LORE[cat][idx] = entry; else LORE[cat].push(entry);
-        } else {
-          LORE[cat].push(entry);
-        }
-      }
-      await writeLoreFile(LORE);
-      res.json({ ok: true });
-    } catch(e) { res.status(500).json({ error: e.message }); }
-  });
-
-  router.post('/lore-static/delete', async (req, res) => {
-    const { id, cat, race } = req.body;
-    try {
-      delete require.cache[require.resolve('../game/lore')];
-      const LORE = require('../game/lore');
-      if (cat === 'race' && race) {
-        LORE[race] = (LORE[race] || []).filter(function(e){ return e.id !== id; });
-      } else {
-        LORE[cat] = (LORE[cat] || []).filter(function(e){ return e.id !== id; });
-      }
-      await writeLoreFile(LORE);
-      res.json({ ok: true });
-    } catch(e) { res.status(500).json({ error: e.message }); }
-  });
-
-  // ── Junk prizes ───────────────────────────────────────────────────────────────
-  router.get('/junk-prizes', async (_req, res) => {
-    try {
-      const config = require('../game/config');
-      res.json({ list: config.JUNK_PRIZES || [] });
-    } catch(e) { res.status(500).json({ error: e.message }); }
-  });
-
-  router.post('/junk-prizes/save', async (req, res) => {
-    const { list } = req.body;
-    if (!Array.isArray(list)) return res.status(400).json({ error: 'list must be array' });
-    try {
-      const config = require('../game/config');
-      config.JUNK_PRIZES.length = 0;
-      list.forEach(function(item){ config.JUNK_PRIZES.push(item); });
-      res.json({ ok: true, count: list.length });
-    } catch(e) { res.status(500).json({ error: e.message }); }
-  });
-
-  // ── Sound management ──────────────────────────────────────────────────────────
-  const multer = (() => { try { return require('multer'); } catch { return null; } })();
-  const soundsDir = path.join(__dirname, '../public/sounds');
-  const fs = require('fs');
-
-  // Ensure sounds dir exists
-  if (!fs.existsSync(soundsDir)) fs.mkdirSync(soundsDir, { recursive: true });
-
-  // Sound config stored as JSON file
-  const soundConfigPath = path.join(soundsDir, 'config.json');
-  function loadSoundConfig() {
-    try { return JSON.parse(fs.readFileSync(soundConfigPath, 'utf8')); } catch { return {}; }
-  }
-  function saveSoundConfig(cfg) {
-    fs.writeFileSync(soundConfigPath, JSON.stringify(cfg, null, 2));
-  }
-
-  router.get('/sounds', async (_req, res) => {
-    res.json({ sounds: loadSoundConfig() });
-  });
-
-  if (multer) {
-    const storage = multer.diskStorage({
-      destination: function(_req, _file, cb) { cb(null, soundsDir); },
-      filename: function(req, file, cb) {
-        const key = (req.body.key || 'unknown').replace(/[^a-z0-9_]/gi, '_');
-        const ext = path.extname(file.originalname).toLowerCase() || '.mp3';
-        cb(null, key + ext);
-      }
-    });
-    const upload = multer({
-      storage,
-      limits: { fileSize: 5 * 1024 * 1024 },
-      fileFilter: (_req, file, cb) => {
-        const ok = /\.(mp3|wav|ogg)$/i.test(file.originalname);
-        cb(null, ok);
-      }
-    });
-    router.post('/sounds/upload', upload.single('sound'), async (req, res) => {
-      if (!req.file) return res.status(400).json({ error: 'No file uploaded or invalid type (mp3/wav/ogg only)' });
-      const key = (req.body.key || '').replace(/[^a-z0-9_]/gi, '_');
-      if (!key) return res.status(400).json({ error: 'key required' });
-      const filename = req.file.filename;
-      const cfg = loadSoundConfig();
-      cfg[key] = filename;
-      saveSoundConfig(cfg);
-      res.json({ ok: true, filename });
-    });
-  } else {
-    router.post('/sounds/upload', async (_req, res) => {
-      res.status(503).json({ error: 'multer not installed — run: npm install multer' });
-    });
-  }
-
-  router.post('/sounds/remove', async (req, res) => {
-    const { key } = req.body;
-    if (!key) return res.status(400).json({ error: 'key required' });
-    const cfg = loadSoundConfig();
-    const filename = cfg[key];
-    if (filename) {
-      const fp = path.join(soundsDir, filename);
-      if (fs.existsSync(fp)) fs.unlinkSync(fp);
-    }
-    delete cfg[key];
-    saveSoundConfig(cfg);
-    res.json({ ok: true });
-  });
-
   return router;
 };
-
-// Helper: write lore.js back to disk
-const fs_lore = require('fs');
-async function writeLoreFile(LORE) {
-  const fp = path.join(__dirname, '../game/lore.js');
-  const races = ['dwarf','high_elf','orc','dark_elf','human','dire_wolf'];
-  const serialise = (arr) => JSON.stringify(arr, null, 2)
-    .replace(/^\[/, '  [').replace(/\]$/, '  ]');
-
-  let out = 'const LORE = {\n\n';
-  out += '  narmir: ' + JSON.stringify(LORE.narmir||[], null, 4).replace(/^/gm,'  ').trim() + ',\n\n';
-  out += '  general: ' + JSON.stringify(LORE.general||[], null, 4).replace(/^/gm,'  ').trim() + ',\n\n';
-  for (const race of races) {
-    out += `  ${race}: ` + JSON.stringify(LORE[race]||[], null, 4).replace(/^/gm,'  ').trim() + ',\n\n';
-  }
-  out += '};\n\nmodule.exports = LORE;\n';
-  fs_lore.writeFileSync(fp, out, 'utf8');
-}

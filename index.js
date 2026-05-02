@@ -9,7 +9,6 @@ const { initDb, getDb } = require('./db/schema');
 const setupSockets    = require('./game/sockets');
 const { requireAuth } = require('./routes/middleware');
 const config = require('./game/config');
-const engine = require('./game/engine');
 
 async function refreshLore() {
   try {
@@ -106,7 +105,7 @@ async function seedAiKingdoms(db) {
 }
 
 async function processAiTurns(db) {
-  // engine is required at top-level
+  const engine = require('./game/engine');
   const aiPlayers = await db.all('SELECT id FROM players WHERE is_ai = 1');
   if (aiPlayers.length === 0) return;
 
@@ -478,7 +477,7 @@ async function runRegen(db) {
 
   // Resolve regions - calculate dominance and capture progress
   try {
-    // engine is required at top-level
+    const engine = require('./game/engine');
     await engine.resolveRegions(db, global._narmir_io);
   } catch(e) {
     console.error('[regions] resolution error:', e.message);
@@ -844,7 +843,7 @@ async function start() {
   });
 
   setupSockets(io, db);
-  // engine is required at top-level
+  const engine = require('./game/engine');
   engine.io = io;
   global._narmir_io = io;
   console.log('[socket.io] Real-time handlers registered');
