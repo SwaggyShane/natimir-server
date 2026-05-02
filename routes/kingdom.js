@@ -1583,7 +1583,8 @@ module.exports = function(db) {
       });
     } catch (err) {
       console.error('Error in /lore-and-achievements:', err);
-      res.status(500).json({ error: 'Internal server error: ' + err.message });
+      console.error('[lore] GET lore-and-achievements:', err.message);
+      res.status(500).json({ error: 'Failed to load lore' });
     }
   });
 
@@ -1598,20 +1599,19 @@ module.exports = function(db) {
         [k.id]
       );
       res.json(rows.map(r => ({ ...r, report: r.report ? JSON.parse(r.report) : null })));
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[spy] GET spy-reports:', e.message); res.status(500).json({ error: 'Failed to load spy reports' }); }
   });
 
   router.post('/spy-reports/:id/share', requireAuth, async (req, res) => {
     try {
       const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
       if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-      // Verify the report belongs to this kingdom
       const report = await db.get('SELECT id, shared_to_alliance FROM spy_reports WHERE id = ? AND kingdom_id = ?', [req.params.id, k.id]);
       if (!report) return res.status(404).json({ error: 'Report not found' });
       const newVal = report.shared_to_alliance ? 0 : 1;
       await db.run('UPDATE spy_reports SET shared_to_alliance = ? WHERE id = ?', [newVal, report.id]);
       res.json({ ok: true, shared: newVal === 1 });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[spy] POST spy-reports/share:', e.message); res.status(500).json({ error: 'Failed to update report' }); }
   });
 
   router.get('/spy-reports/alliance', requireAuth, async (req, res) => {
@@ -1630,7 +1630,7 @@ module.exports = function(db) {
         ORDER BY sr.created_at DESC LIMIT 50
       `, [membership.alliance_id]);
       res.json(rows.map(r => ({ ...r, report: r.report ? JSON.parse(r.report) : null })));
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[spy] GET spy-reports/alliance:', e.message); res.status(500).json({ error: 'Failed to load alliance intel' }); }
   });
 
   return router;

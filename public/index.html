@@ -4030,6 +4030,12 @@ function showSpyReport(report, targetName, outcome, reportId) {
   document.getElementById('battle-overlay').style.display = 'flex';
 }
 
+function viewSpyReport(reportId) {
+  var r = _spyReportStore[reportId];
+  if (!r) return;
+  showSpyReport(r.report, r.target_name, r.outcome, r.id);
+}
+
 async function shareSpyReport(reportId, btn) {
   var result = await apiCall('POST', '/api/kingdom/spy-reports/' + reportId + '/share', {});
   if (result.error) return toast(result.error, 'error');
@@ -4037,6 +4043,8 @@ async function shareSpyReport(reportId, btn) {
   toast(result.shared ? 'Report shared with your alliance' : 'Report unshared', 'success');
   loadSpyReports();
 }
+
+var _spyReportStore = {};
 
 async function loadSpyReports() {
   var list = document.getElementById('spy-report-list');
@@ -4046,6 +4054,8 @@ async function loadSpyReports() {
     list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">No spy reports yet.</div>';
     return;
   }
+  _spyReportStore = {};
+  rows.forEach(function(r) { _spyReportStore[r.id] = r; });
   var OUTCOME_BADGE = {
     full:           '<span style="background:#1a4a2a;color:#4caf80;font-size:10px;padding:2px 6px;border-radius:4px">FULL</span>',
     partial:        '<span style="background:#3a3010;color:#c8a020;font-size:10px;padding:2px 6px;border-radius:4px">PARTIAL</span>',
@@ -4058,7 +4068,7 @@ async function loadSpyReports() {
     var ago = timeAgo(r.created_at);
     var shareBtn = r.report ? '<button class="btn" style="font-size:10px;padding:2px 8px;margin-left:auto" onclick="shareSpyReport(' + r.id + ',this)">'
                             + (r.shared_to_alliance ? '✅ Shared' : '📡 Share') + '</button>' : '';
-    var viewBtn = r.report ? '<button class="btn" style="font-size:10px;padding:2px 8px" onclick=\'showSpyReport(' + JSON.stringify(r.report) + ',"' + r.target_name.replace(/"/g,'\\"') + '","' + r.outcome + '",' + r.id + ')\'>View</button>' : '';
+    var viewBtn = r.report ? '<button class="btn" style="font-size:10px;padding:2px 8px" onclick="viewSpyReport(' + r.id + ')">View</button>' : '';
     return '<div style="border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px">'
          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
          + badge + '<span style="font-size:13px;font-weight:600;color:var(--text)">' + r.target_name + '</span>'
