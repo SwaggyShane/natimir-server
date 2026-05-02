@@ -555,9 +555,17 @@ module.exports = function(db, io) {
   });
 
   if (multer) {
+    const storage = multer.diskStorage({
+      destination: function(_req, _file, cb) { cb(null, soundsDir); },
+      filename: function(req, file, cb) {
+        const key = (req.body.key || 'unknown').replace(/[^a-z0-9_]/gi, '_');
+        const ext = path.extname(file.originalname).toLowerCase() || '.mp3';
+        cb(null, key + ext);
+      }
+    });
     const upload = multer({
-      dest: soundsDir,
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+      storage,
+      limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         const ok = /\.(mp3|wav|ogg)$/i.test(file.originalname);
         cb(null, ok);
@@ -565,14 +573,9 @@ module.exports = function(db, io) {
     });
     router.post('/sounds/upload', upload.single('sound'), async (req, res) => {
       if (!req.file) return res.status(400).json({ error: 'No file uploaded or invalid type (mp3/wav/ogg only)' });
-      const key = req.body.key;
+      const key = (req.body.key || '').replace(/[^a-z0-9_]/gi, '_');
       if (!key) return res.status(400).json({ error: 'key required' });
-      // Rename to key.ext
-      const ext = path.extname(req.file.originalname).toLowerCase();
-      const filename = key.replace(/[^a-z0-9_]/gi,'_') + ext;
-      const dest = path.join(soundsDir, filename);
-      if (fs.existsSync(dest)) fs.unlinkSync(dest);
-      fs.renameSync(req.file.path, dest);
+      const filename = req.file.filename;
       const cfg = loadSoundConfig();
       cfg[key] = filename;
       saveSoundConfig(cfg);
