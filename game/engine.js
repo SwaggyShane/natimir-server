@@ -17,7 +17,7 @@ const {
   SPELL_DEFS, SCROLL_REQUIREMENTS, SCRIBE_ITEMS, SUPPORT_CAP_RACE, WM_CREW_REQUIRED,
   RESEARCH_MAP, BUILDING_ALIASES, RACIAL_UNITS,
   WORLD_FRAGMENTS, JUNK_PRIZES, ULTRA_RARE_PRIZES, THRONE_OF_NAZDREG, EXPEDITION_TURNS,
-  LORE_EVENTS, CAPS, BUILDING_COL, TOOL_COL, TOOL_GOLD_COST, BLUEPRINT_REQUIRED: BP_REQ,
+  CAPS, BUILDING_COL, TOOL_COL, TOOL_GOLD_COST, BLUEPRINT_REQUIRED: BP_REQ,
   SCAFFOLDING_REQUIRED: SCAFF_REQ, SCAFFOLDING_BONUS_BUILDINGS: SCAFF_BONUS, HERO_CLASSES
 } = config;
 
@@ -669,8 +669,12 @@ function processTurn(k) {
   if (changed) updates.active_event = JSON.stringify(activeEv2);
 
   // ── 5. Lore Events ────────────────────────────────────────────────────────────
-  if (Math.random() < 0.10) {
-    const raceLore = LORE_EVENTS[k.race] || [];
+  // 0.1% chance ~ 24000 turns needed for 24 drops
+  if (Math.random() < 0.001) {
+    const LORE = require('./lore');
+    const cats = ['narmir', 'general', k.race];
+    const cat = cats[Math.floor(Math.random() * cats.length)];
+    const raceLore = LORE[cat] || [];
     if (raceLore.length > 0) {
       const loreCollected = safeJsonParse(updates.collected_lore || k.collected_lore, [], 'processTurn:lore');
       const lastId = updates.last_lore_id || k.last_lore_id;
@@ -683,7 +687,7 @@ function processTurn(k) {
           loreCollected.push(ev.id);
           updates.collected_lore = JSON.stringify(loreCollected);
           
-          if (loreCollected.length >= raceLore.length) {
+          if (loreCollected.length >= Object.values(LORE).flat().length) {
             updates._historian_unlocked = true;
           }
         }

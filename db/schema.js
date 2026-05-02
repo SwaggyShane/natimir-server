@@ -238,7 +238,9 @@ async function initDb() {
   if (!cols.includes('armor_stockpile'))     await addColumn('kingdoms', 'armor_stockpile',     'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('description'))         await addColumn('kingdoms', 'description',         'TEXT');
   if (!cols.includes('collected_lore'))      await addColumn('kingdoms', 'collected_lore',      'TEXT NOT NULL DEFAULT "[]"');
+  if (!cols.includes('last_lore_id'))        await addColumn('kingdoms', 'last_lore_id',        'TEXT');
   if (!cols.includes('collected_events'))    await addColumn('kingdoms', 'collected_events',    'TEXT NOT NULL DEFAULT "[]"');
+  if (!cols.includes('last_event_id'))       await addColumn('kingdoms', 'last_event_id',       'TEXT');
   if (!cols.includes('achievements'))        await addColumn('kingdoms', 'achievements',        'TEXT NOT NULL DEFAULT "[]"');
 
   await _db.run(`

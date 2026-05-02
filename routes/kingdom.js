@@ -172,7 +172,6 @@ module.exports = function(db) {
       filteredEvents.push(ev);
     }
 
-    await db.run('BEGIN');
     try {
       await applyUpdates(db, k.id, updates);
       for (const h of heroBatch) {
@@ -186,9 +185,8 @@ module.exports = function(db) {
         })));
         if (Math.random() < 0.05) await pruneNews(db, k.id, 200);
       }
-      await db.run('COMMIT');
     } catch (err) {
-      await db.run('ROLLBACK');
+      console.error('[runTurn] apply error:', err.message);
       throw err;
     }
 
@@ -418,7 +416,7 @@ module.exports = function(db) {
         const found       = Math.max(1, Math.floor(r * 0.04 * tacticsMult * diminish));
         updates.land      = (kAfterTurn.land || 0) + found;
         searchResult      = { found, unit: 'acres' };
-        searchMessage     = `🗺️ Rangers discovered +${found.toLocaleString()} acres${found < Math.floor(r * 0.04 * tacticsMult) ? ' <i>(land getting scarce)</i>' : ''}.`;
+        searchMessage     = `🗺️ Rangers discovered +${found.toLocaleString()} acres${found < Math.floor(r * 0.04 * tacticsMult) ? ' (land getting scarce)' : ''}.`;
       } else if (type === 'gold') {
         const found = Math.floor(r * 12 * tacticsMult);
         updates.gold = (updates.gold || kAfterTurn.gold || 0) + found;
@@ -1047,7 +1045,7 @@ module.exports = function(db) {
       [k.id]
     );
     const active = await db.all(
-      'SELECT * FROM expeditions WHERE kingdom_id = ? AND turns_left > 0 ORDER BY created_at DESC',
+      'SELECT * FROM expeditions WHERE kingdom_id = ? AND (turns_left > 0 OR (turns_left = 0 AND rewards IS NULL)) ORDER BY created_at DESC',
       [k.id]
     );
     res.json({ active, completed });
@@ -1238,7 +1236,7 @@ module.exports = function(db) {
     // Impact market: increased demand raises price slightly
     await db.run('UPDATE market_prices SET current_price = current_price * (1 + ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?', [0.0001 * qty, resource]);
 
-    res.json({ ok: true, bought: qty, cost, new_gold: (k.gold || 0) - cost });
+    res.json({ ok: true, bought: qty, cost, updates: { gold: (k.gold || 0) - cost, [resource]: (k[resource] || 0) + qty } });
   });
 
   router.post('/market/sell', requireAuth, async (req, res) => {
@@ -1259,7 +1257,7 @@ module.exports = function(db) {
     // Impact market: increased supply lowers price slightly
     await db.run('UPDATE market_prices SET current_price = current_price * (1 - ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?', [0.0001 * qty, resource]);
 
-    res.json({ ok: true, sold: qty, gain, new_gold: (k.gold || 0) + gain });
+    res.json({ ok: true, sold: qty, gain, updates: { gold: (k.gold || 0) + gain, [resource]: (k[resource] || 0) - qty } });
   });
 
   // ── Research focus ────────────────────────────────────────────────────────────
@@ -1542,23 +1540,48 @@ module.exports = function(db) {
   });
 
   router.get('/lore-and-achievements', requireAuth, async (req, res) => {
-    const k = await db.get('SELECT race, collected_lore, achievements FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
-    if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-    
-    let collectedLore = [];
-    try { collectedLore = JSON.parse(k.collected_lore || '[]'); } catch(e){}
-    
-    let achievements = [];
-    try { achievements = JSON.parse(k.achievements || '[]'); } catch(e){}
+    try {
+      const k = await db.get('SELECT race, collected_lore, achievements FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+      if (!k) return res.status(404).json({ error: 'Kingdom not found' });
+      
+      let collectedLore = [];
+      try {
+        let raw = k.collected_lore;
+        // In case it's stored as 'null' literally, or similar
+        if (!raw || raw === 'null') raw = '[]';
+        collectedLore = JSON.parse(raw);
+        if (!Array.isArray(collectedLore)) collectedLore = [];
+      } catch {
+        collectedLore = [];
+      }
+      
+      let achievements = [];
+      try {
+        let rawAch = k.achievements;
+        if (!rawAch || rawAch === 'null') rawAch = '[]';
+        achievements = JSON.parse(rawAch);
+        if (!Array.isArray(achievements)) achievements = [];
+      } catch {
+        achievements = [];
+      }
 
-    const config = require('../game/config');
-    // Extract lore strings based on IDs
-    let allLore = config.LORE_EVENTS[k.race] || [];
-    
-    // Always show the first lore entry as a default blurb
-    const unLockedLoreTexts = allLore.filter((l, idx) => idx === 0 || collectedLore.includes(l.id)).map(l => ({ id: l.id, title: l.title, msg: l.msg }));
+      const LORE = require('../game/lore');
+      
+      const filterLore = (categoryList) => {
+        return (categoryList || []).filter((l, idx) => idx === 0 || collectedLore.includes(l.id))
+          .map(l => ({ id: l.id, title: l.title, msg: l.msg }));
+      };
 
-    res.json({ lore: unLockedLoreTexts, achievements });
+      res.json({
+        raceLore: filterLore(LORE[k.race]),
+        narmirLore: filterLore(LORE['narmir']),
+        generalLore: filterLore(LORE['general']),
+        achievements 
+      });
+    } catch (err) {
+      console.error('Error in /lore-and-achievements:', err);
+      res.status(500).json({ error: 'Internal server error: ' + err.message });
+    }
   });
 
   return router;

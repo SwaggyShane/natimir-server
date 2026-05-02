@@ -38,8 +38,6 @@ module.exports = function(db) {
     if (error) return res.status(400).json({ error });
 
     try {
-      await db.run('BEGIN TRANSACTION');
-      
       const result = await db.run(
         `INSERT INTO heroes (kingdom_id, name, class, level, xp, abilities, status, hp, max_hp)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -56,11 +54,8 @@ module.exports = function(db) {
         [k.id, 'system', `✨ ${hero.name} the ${heroClass} has joined your cause!`, k.turn]
       );
       
-      await db.run('COMMIT');
-      
       res.json({ ok: true, heroId: result.lastID });
     } catch (err) {
-      await db.run('ROLLBACK');
       console.error('[recruit] error:', err.message);
       res.status(500).json({ error: 'Recruitment failed' });
     }

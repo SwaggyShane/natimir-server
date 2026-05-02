@@ -23,7 +23,7 @@ async function refreshLore() {
     const junkRows = await db.all("SELECT id, content FROM random_events");
     config.JUNK_PRIZES.length = 0;
     junkRows.forEach(r => config.JUNK_PRIZES.push(r));
-  } catch(e) {}
+  } catch {}
 }
 
 const app    = express();

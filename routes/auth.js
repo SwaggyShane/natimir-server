@@ -23,7 +23,6 @@ module.exports = function(db) {
     const chosenRace = validRaces.includes(race) ? race : 'human';
 
     try {
-      await db.run('BEGIN TRANSACTION');
       const hash = bcrypt.hashSync(password, 10);
       const playerResult = await db.run(
         'INSERT INTO players (username, password) VALUES (?, ?)', [username, hash]
@@ -62,7 +61,6 @@ module.exports = function(db) {
           buildings.bld_markets, buildings.bld_smithies, buildings.bld_mage_towers, buildings.bld_shrines, buildings.bld_outposts, buildings.bld_training
         ]
       );
-      await db.run('COMMIT');
       const token = jwt.sign(
         { playerId: playerResult.lastID, username, isAdmin: false },
         JWT_SECRET, { expiresIn: '30d' }
@@ -76,7 +74,6 @@ module.exports = function(db) {
       res.cookie('token', token, cookieOpts);
       res.json({ ok: true, username, kingdomName, token });
     } catch (err) {
-      await db.run('ROLLBACK').catch(()=>{});
       if (err.message.includes('UNIQUE'))
         return res.status(409).json({ error: 'Username already taken' });
       console.error(err);
