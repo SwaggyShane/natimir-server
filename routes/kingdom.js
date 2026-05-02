@@ -942,12 +942,18 @@ module.exports = function(db) {
   router.post('/library-craft', requireAuth, async (req, res) => {
     const { item, qty } = req.body;
     if (!item || qty <= 0) return res.status(400).json({ error: 'Invalid input' });
-    const k = await db.get('SELECT id, bld_libraries, library_allocation FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    const k = await db.get('SELECT id, bld_libraries, library_allocation, library_upgrades FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
     if ((k.bld_libraries || 0) === 0) return res.status(400).json({ error: 'You need at least 1 library first' });
     
     let alloc = {};
     try { alloc = JSON.parse(k.library_allocation || '{}'); } catch {}
+
+    if (item === 'certified_blueprint') {
+      let upg = {}; try { upg = JSON.parse(k.library_upgrades || '{}'); } catch {}
+      if (!upg.mason_sigil) return res.status(403).json({ error: 'You need the Master Mason Sigil upgrade to craft Certified Blueprints' });
+    }
+
     if (alloc.scribe_craft) { alloc[alloc.scribe_craft] = alloc.scribe_target || 999; delete alloc.scribe_craft; delete alloc.scribe_target; }
     
     alloc[item] = (alloc[item] || 0) + Number(qty);

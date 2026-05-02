@@ -219,6 +219,7 @@ const config = {
   SCRIBE_ITEMS: {
     map:          { scribes: 3,  turns: 10, desc: 'Required to interact with another kingdom' },
     blueprint:    { scribes: 5,  turns: 20, desc: 'Boosts construction speed by 10% when used' },
+    certified_blueprint: { scribes: 20, turns: 60, desc: 'Required for constructing Master Mason Certified structures' },
     location_map: { scribes: 10, turns: 5,  desc: 'Uses 1 map to scribe an unmapped location into a usable map' },
     hybrid_blueprint: { scribes: 100, turns: 500, desc: 'Study a World Fragment to randomly devise a unique building upgrade' },
   },

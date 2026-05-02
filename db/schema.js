@@ -394,6 +394,7 @@ async function initDb() {
   if (!cols.includes('scrolls'))             await addColumn('kingdoms', 'scrolls',             "TEXT NOT NULL DEFAULT '{}'");
   if (!cols.includes('maps'))                await addColumn('kingdoms', 'maps',                'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('blueprints_stored'))   await addColumn('kingdoms', 'blueprints_stored',   'INTEGER NOT NULL DEFAULT 1');
+  if (!cols.includes('certified_blueprints_stored')) await addColumn('kingdoms', 'certified_blueprints_stored', 'INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('active_effects'))      await addColumn('kingdoms', 'active_effects',      "TEXT NOT NULL DEFAULT '{}'");
 
   if (!cols.includes('bld_walls'))          await addColumn('kingdoms', 'bld_walls',          'INTEGER NOT NULL DEFAULT 0');

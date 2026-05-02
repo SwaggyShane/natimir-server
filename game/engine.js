@@ -345,7 +345,9 @@ function checkCitadel(k, events) {
 function getMasonSigilResist(k) {
   let upg = {};
   try { upg = JSON.parse(k.library_upgrades || '{}'); } catch {}
-  return upg.mason_sigil ? 0.5 : 1.0;
+  if (!upg.mason_sigil) return 1.0;
+  // Master Mason Sigil gives 0.75 resist by default, 0.5 if we have certified blueprints in stock
+  return (k.certified_blueprints_stored > 0) ? 0.5 : 0.75;
 }
 
 // Process building warmachine damage on successful attack (no walls = building damage)
@@ -2611,7 +2613,7 @@ async function resolveExpeditions(db, k, engine) {
         'war_machines','weapons_stockpile','armor_stockpile',
         'res_economy','res_weapons','res_armor','res_military','res_attack_magic',
         'res_defense_magic','res_entertainment','res_construction','res_war_machines','res_spellbook',
-        'bld_farms','bld_barracks','bld_markets','bld_mage_towers','blueprints_stored','maps',
+        'bld_farms','bld_barracks','bld_markets','bld_mage_towers','blueprints_stored','certified_blueprints_stored','maps',
         'troop_levels','xp','level','discovered_kingdoms','world_fragments',
         'collected_events', 'last_event_id', 'achievements'
       ]);
@@ -2902,6 +2904,9 @@ function processLibrary(k, events) {
           hbp[frag + '_' + Date.now()] = { fragment: frag, building: targetBld, assigned: false };
           updates.hybrid_blueprints = JSON.stringify(hbp);
           events.push({ type: 'system', message: `✨ Your scribes fully studied a ${frag} and devised an alternate blueprint for ${targetBld.replace('_', ' ')}!` });
+        } else if (task === 'certified_blueprint') {
+          updates.certified_blueprints_stored = (updates.certified_blueprints_stored !== undefined ? updates.certified_blueprints_stored : k.certified_blueprints_stored || 0) + 1;
+          events.push({ type: 'system', message: `📜 Your scribes completed a Certified Blueprint! Your structures are now imbued with Master Mason resilience.` });
         } else {
           updates.blueprints_stored = (updates.blueprints_stored !== undefined ? updates.blueprints_stored : k.blueprints_stored || 0) + 1;
           events.push({ type: 'system', message: `⚙️ Your scribes completed a blueprint in the Library — construction speed bonus applied.` });

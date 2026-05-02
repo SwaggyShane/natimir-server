@@ -71,12 +71,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px;
+    padding: 0 16px;
     height: 56px;
     background: rgba(10, 10, 11, 0.98);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
-    gap: 4px;
+    gap: 8px;
     flex-shrink: 0;
     position: fixed;
     top: 0;
@@ -135,10 +135,23 @@
   }
   body.panel-news #kd-top,
   body.panel-rankings #kd-top,
+  body.panel-worldmap #kd-top,
   body.panel-exploration #kd-top,
   body.panel-globalchat #kd-top,
   body.panel-alliances #kd-top,
-  body.panel-stats #kd-top { display: none; }
+  body.panel-chat #kd-top,
+  body.panel-stats #kd-top,
+  body.panel-settings #kd-top { display: none !important; }
+  
+  body.panel-news .main,
+  body.panel-rankings .main,
+  body.panel-exploration .main,
+  body.panel-worldmap .main,
+  body.panel-alliances .main,
+  body.panel-chat .main,
+  body.panel-stats .main,
+  body.panel-settings .main { padding-top: 0 !important; }
+
   body.panel-defense #kd-top { display: none !important; }
 
   /* Ensure content doesn't jump when top header is hidden or shown */
@@ -288,17 +301,17 @@
   .metric { 
     background: var(--bg2); 
     border: 1px solid var(--border); 
-    border-radius: 24px; 
-    padding: 16px 20px; 
+    border-radius: 12px; 
+    padding: 12px 14px; 
     transition: transform 0.2s, border-color 0.2s;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
   }
   .metric:hover { border-color: rgba(99,102,241,0.2); }
-  .metric .lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; margin: 0; }
-  .metric .val { font-size: 20px; font-weight: 700; color: #fff; line-height: 1.2; margin: 0; }
-  .metric .sub { font-size: 11px; color: var(--text3); margin: 0; display: flex; align-items: center; gap: 4px; opacity: 0.8; }
+  .metric .lbl { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin: 0; }
+  .metric .val { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.1; margin: 0; }
+  .metric .sub { font-size: 10px; color: var(--text3); margin: 0; display: flex; align-items: center; gap: 4px; opacity: 0.8; }
   .metric.gold .val { color: var(--gold); }
   .metric.alert .val { color: var(--red); }
 
@@ -560,6 +573,7 @@
       max-width: none; 
       overflow-x: visible; 
       position: static;
+      padding-top: 0; /* Remove mobile padding-top in grid mode */
     }
     .topbar { grid-column: 1 / -1; padding: 0 20px; height: 56px; position: sticky; top: 0; width: auto !important; }
     .sidebar { display: flex; flex-direction: column; gap: 4px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 12px; overflow-y: auto; }
@@ -578,11 +592,11 @@
     .tstat .val { font-size: 15px; }
     .tstat .lbl { font-size: 11px; }
     .turn-btn { padding: 8px 18px; font-size: 13px; }
-    .metrics { grid-template-columns: repeat(6, minmax(0,1fr)); gap: 12px; margin-bottom: 24px; }
-    .metric { padding: 12px 14px; gap: 2px; }
-    .metric .val { font-size: 18px; }
-    .metric .lbl { font-size: 9px; letter-spacing: 1px; }
-    .metric .sub { font-size: 11px; }
+    .metrics { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .metric { padding: 10px 12px; gap: 1px; }
+    .metric .val { font-size: 16px; }
+    .metric .lbl { font-size: 9px; letter-spacing: 0.5px; }
+    .metric .sub { font-size: 10px; }
     .card { padding: 20px 24px; margin-bottom: 16px; }
     .card-title { font-size: 13px; }
     .two-col { grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -624,7 +638,7 @@
 
   <!-- Topbar -->
   <header class="topbar">
-    <div style="display:flex;align-items:center;gap:12px">
+    <div style="display:flex;align-items:center;gap:8px">
       <div class="logo">NARMIR REBORN <span>Pure. Damn. Evil.</span></div>
     </div>
     <div class="topbar-stats">
@@ -633,12 +647,12 @@
         <div style="text-align:right">
           <div style="display:flex;align-items:center;gap:4px">
             <span style="font-size:12px;color:var(--text2)" class="hide-xs">Turns:</span>
-            <span id="turns-stored-disp" style="font-size:14px;font-weight:700;color:var(--gold)">400</span>
+            <span id="turns-stored-disp" style="font-size:15px;font-weight:700;color:var(--gold)">400</span>
             <span style="font-size:11px;color:var(--text3)" class="hide-xs">/400</span>
           </div>
-          <div class="countdown">+7 in <span id="regen-countdown">25:00</span></div>
+          <div class="countdown" style="font-size:10px">+7 in <span id="regen-countdown">25:00</span></div>
         </div>
-        <button class="turn-btn" style="padding:6px 14px; font-size:11px" onclick="takeTurn()">Take Turn</button>
+        <button class="turn-btn" style="padding:6px 14px; font-size:12px" onclick="takeTurn()">Take Turn</button>
       </div>
     </div>
   </header>
@@ -678,23 +692,23 @@
 
     <div id="kd-top">
   <!-- Kingdom header -->
-  <div class="kingdom-header" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+  <div class="kingdom-header" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
     <div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--text);line-height:1.1" id="kingdom-name">—</h1>
-      <div style="color:var(--text2);font-size:12px;margin-top:2px">
+      <h1 style="font-size:18px;font-weight:700;color:var(--text);line-height:1.1" id="kingdom-name">—</h1>
+      <div style="color:var(--text2);font-size:11px;margin-top:1px">
         <span id="kingdom-owner-line">—</span> · Turn <span id="turn-num" style="color:var(--text);font-weight:600">0</span> ·
-        <span id="season-badge" style="font-size:11px;color:var(--text3)">🌸 Spring</span>
-        <span id="protection-badge" class="badge badge-green" style="display:none;padding:2px 6px">🛡️ Protected</span>
+        <span id="season-badge" style="font-size:10px;color:var(--text3)">🌸 Spring</span>
+        <span id="protection-badge" class="badge badge-green" style="display:none;padding:1px 5px">🛡️ Protected</span>
       </div>
-      <div style="margin-top:4px"><span class="race-tag" id="race-tag-display" onclick="openRaceLore()" style="cursor:pointer;padding:2px 8px;font-size:11px" title="Click for race lore">—</span></div>
-      <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--text3);cursor:pointer" onclick="showXpModal()" title="Click for XP breakdown">Level <span id="kingdom-level" style="color:var(--gold);font-weight:700;font-size:14px;text-decoration:underline dotted;text-underline-offset:2px">1</span></span>
-        <div style="flex:1;min-width:100px;max-width:180px;cursor:pointer" onclick="showXpModal()" title="Click for XP breakdown">
-          <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
-            <div id="xp-bar" style="height:4px;width:0%;background:linear-gradient(90deg,var(--purple),var(--gold));border-radius:2px;transition:width .4s"></div>
+      <div style="margin-top:2px"><span class="race-tag" id="race-tag-display" onclick="openRaceLore()" style="cursor:pointer;padding:1px 6px;font-size:10px" title="Click for race lore">—</span></div>
+      <div style="margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text3);cursor:pointer" onclick="showXpModal()" title="Click for XP breakdown">Level <span id="kingdom-level" style="color:var(--gold);font-weight:700;font-size:13px;text-decoration:underline dotted;text-underline-offset:2px">1</span></span>
+        <div style="flex:1;min-width:80px;max-width:150px;cursor:pointer" onclick="showXpModal()" title="Click for XP breakdown">
+          <div style="height:3px;background:var(--bg4);border-radius:1.5px;overflow:hidden">
+            <div id="xp-bar" style="height:3px;width:0%;background:linear-gradient(90deg,var(--purple),var(--gold));border-radius:1.5px;transition:width .4s"></div>
           </div>
         </div>
-        <span id="xp-label" style="font-size:10px;color:var(--text3);cursor:pointer" onclick="showXpModal()">0/100 XP</span>
+        <span id="xp-label" style="font-size:9px;color:var(--text3);cursor:pointer" onclick="showXpModal()">0/100 XP</span>
       </div>
     </div>
   </div>
@@ -3233,8 +3247,9 @@ function populateInputs() {
   if (state.training_allocation) {
     TROOP_TYPES.forEach(function(u) {
       var el = document.getElementById('ta-' + u);
-      if (el && (!el.value || el.value === "0" || el.dataset.firstLoad === "true")) {
+      if (el && (!el.value || el.value === "0" || el.value === "" || el.dataset.initialized !== "true")) {
          el.value = state.training_allocation[u] || 0;
+         el.dataset.initialized = "true";
       }
     });
     updateTrainingDisplay();
@@ -8196,6 +8211,48 @@ async function saveTrainingAllocation() {
   loadTrainingAllocation();
 }
 
+function updateTrainingDisplay() {
+  var total = 0;
+  TROOP_TYPES.forEach(function(u) {
+    var val = parseInt(document.getElementById('ta-' + u)?.value) || 0;
+    total += val;
+  });
+  
+  var fields = state.bld_training || 0;
+  var capacity = fields * 50;
+  var el = document.getElementById('tr-capacity-used');
+  if (el) {
+    el.textContent = total;
+    el.style.color = total > capacity ? 'var(--red)' : 'var(--green)';
+  }
+
+  var trFields = document.getElementById('tr-fields');
+  var trCap    = document.getElementById('tr-capacity');
+  if (trFields) trFields.textContent = fmt(state.bld_training || 0);
+  if (trCap) {
+    trCap.textContent = fmt(capacity);
+    trCap.style.color = total > capacity ? 'var(--red)' : 'var(--gold)';
+  }
+  var trW = document.getElementById('tr-weapons');
+  var trA = document.getElementById('tr-armor');
+  if (trW) trW.textContent = fmt(state.weapons_stockpile || 0);
+  if (trA) trA.textContent = fmt(state.armor_stockpile || 0);
+
+  var rb = document.getElementById('tr-race-bonus');
+  if (rb && state.race) {
+    var texts = {
+      high_elf:  '+50% XP for Clerics & Mages<br>+30% XP for Researchers',
+      dwarf:     '+30% XP for Fighters<br>+50% XP for Engineers',
+      dire_wolf: '+80% XP for Fighters<br>+50% XP for Rangers',
+      dark_elf:  '+80% XP for Ninjas<br>+50% XP for Thieves<br>+30% XP for Rangers',
+      human:     '+10% XP for Fighters, Rangers, Clerics, Mages, Thieves, Ninjas',
+      orc:       '+60% XP for Fighters<br>+20% XP for Clerics'
+    };
+    rb.innerHTML = texts[state.race] || '—';
+  }
+}
+
+// Helper to init training inputs
 function updateTroopLevelDisplay() {
   TROOP_TYPES.forEach(function(unit) {
     var data = getTroopLevel(unit);
@@ -8224,33 +8281,16 @@ function getAllocatedTraining() {
   }, 0);
 }
 
-function updateTrainingDisplay() {
-  var capacity = (state.bld_training || 0) * 50;
-  var allocated = getAllocatedTraining();
-  var trFields = document.getElementById('tr-fields');
-  var trCap    = document.getElementById('tr-capacity');
-  if (trFields) trFields.textContent = fmt(state.bld_training || 0);
-  if (trCap) {
-    trCap.textContent = fmt(capacity);
-    trCap.style.color = allocated > capacity ? 'var(--red)' : 'var(--gold)';
-  }
-  var trW = document.getElementById('tr-weapons');
-  var trA = document.getElementById('tr-armor');
-  if (trW) trW.textContent = fmt(state.weapons_stockpile || 0);
-  if (trA) trA.textContent = fmt(state.armor_stockpile || 0);
-
-  var rb = document.getElementById('tr-race-bonus');
-  if (rb && state.race) {
-    var texts = {
-      high_elf:  '+50% XP for Clerics & Mages<br>+30% XP for Researchers',
-      dwarf:     '+30% XP for Fighters<br>+50% XP for Engineers',
-      dire_wolf: '+80% XP for Fighters<br>+50% XP for Rangers',
-      dark_elf:  '+80% XP for Ninjas<br>+50% XP for Thieves<br>+30% XP for Rangers',
-      human:     '+10% XP for Fighters, Rangers, Clerics, Mages, Thieves, Ninjas',
-      orc:       '+60% XP for Fighters<br>+20% XP for Clerics'
-    };
-    rb.innerHTML = texts[state.race] || '—';
-  }
+function setTrainingInputsFromState() {
+  if (!state.training_allocation) return;
+  TROOP_TYPES.forEach(function(u) {
+    var el = document.getElementById('ta-' + u);
+    if (el) {
+      el.value = state.training_allocation[u] || 0;
+      el.dataset.initialized = "true";
+    }
+  });
+  updateTrainingDisplay();
 }
 
 function setTrainingMax(unit) {
@@ -8570,14 +8610,26 @@ function renderLibraryPanel() {
   var alloc = state.library_allocation || {};
   if (typeof alloc === 'string') { try { alloc = JSON.parse(alloc); } catch(e){ alloc={}; } }
 
+  var scribeItems = ['map', 'blueprint', 'location_map', 'hybrid_blueprint'];
+  var upg = {}; try { upg = JSON.parse(state.library_upgrades || '{}'); } catch {}
+  if (upg.mason_sigil) scribeItems.splice(2, 0, 'certified_blueprint');
+
   var html = '';
-  ['map', 'blueprint', 'location_map', 'hybrid_blueprint'].forEach(function(item) {
-    var currInv = item === 'map' ? (state.maps||0) : item === 'blueprint' ? (state.blueprints_stored||0) : 0;
-    var info = item === 'map' ? 'World exploration • 3 scribes • 10 turns' : item === 'blueprint' ? 'Construction bonus • 5 scribes • 20 turns' : item === 'location_map' ? 'Map a known location (uses 1 map) • 10 scribes • 5 turns' : 'Study a World Fragment • 100 scribes • 500 turns';
-    if (item === 'location_map') currInv = '-';
-    if (item === 'hybrid_blueprint') {
+  scribeItems.forEach(function(item) {
+    var currInv = 0;
+    if (item === 'map') currInv = state.maps || 0;
+    else if (item === 'blueprint') currInv = state.blueprints_stored || 0;
+    else if (item === 'certified_blueprint') currInv = state.certified_blueprints_stored || 0;
+    
+    var info = '';
+    if (item === 'map') info = 'World exploration • 3 scribes • 10 turns';
+    else if (item === 'blueprint') info = 'Construction bonus • 5 scribes • 20 turns';
+    else if (item === 'certified_blueprint') info = 'Protective plans • 20 scribes • 60 turns';
+    else if (item === 'location_map') { info = 'Map a known location (uses 1 map) • 10 scribes • 5 turns'; currInv = '-'; }
+    else if (item === 'hybrid_blueprint') {
       var frags = []; try { frags = JSON.parse(state.world_fragments || '[]'); } catch {}
       currInv = frags.length;
+      info = 'Study a World Fragment • 100 scribes • 500 turns';
     }
     var queued = alloc[item] || 0;
     var qText = queued > 0 ? '<div style="color:var(--green);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:8px"><span>Queued: <strong>' + queued + '</strong></span><button class="btn" style="padding:2px 6px;font-size:11px;min-height:0;background:var(--red);color:#fff;border:none" onclick="clearLibraryItem(\'' + item + '\')">Cancel</button></div>' : '';
@@ -8631,6 +8683,7 @@ function renderLibraryPanel() {
         var label = '', pct = 0, color = '';
         if (item === 'map') { pct = Math.min(100, Math.floor((p / 10) * 100)); label = '🗺️ Map'; color = 'var(--green)'; }
         else if (item === 'blueprint') { pct = Math.min(100, Math.floor((p / 20) * 100)); label = '⚙️ Blueprint'; color = 'var(--amber)'; }
+        else if (item === 'certified_blueprint') { pct = Math.min(100, Math.floor((p / 60) * 100)); label = '📜 Certified Blueprint'; color = 'var(--gold)'; }
         else if (item === 'location_map') { pct = Math.min(100, Math.floor((p / 5) * 100)); label = '📍 Location Map'; color = 'var(--purple)'; }
         else if (item === 'hybrid_blueprint') { pct = Math.min(100, Math.floor((p / 500) * 100)); label = '🔮 Hybrid Blueprint'; color = 'var(--blue)'; }
         items.push({ label: label, pct: pct, color: color });
