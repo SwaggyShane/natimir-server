@@ -3,38 +3,68 @@
 
 ---
 
-### Latest Updates (April 2026)
-- **WISH-LIST DELIVERIES** — We've checked off several major requests:
-  - **Seasons & Daily Events** — Dynamic world weather and events integrated.
-  - **Trade System** — Player-to-player commodity exchange active.
-  - **Bounty Board** — Place hits on rivals.
-  - **Direct Messaging** — Private 1-on-1 kingdom chat.
-  - **Mercenary Camp** — Hire temporary soldiers for gold.
-- **INTERFACE PATCH (1.0.6)** — Major UI cleanup:
-  - **Library Residents** — Libraries now correctly house scribes only.
-  - **Badges** — Added "Siege" (Status), "Racial Gift" (Training), and "Citadel" (Defense) badges.
-  - **Rankings Refresh** — Modernized columns: Player, Kingdom, Score, Level, Turns. Troop counts are now private for rivals.
-  - **Market Upgrade** — Added "Clear Logs" button for trade history.
-  - **Hire Page Rework** — High-contrast yellow labels and improved column alignment.
-  - **Library Sync** — Upgrades are now synced with latest configuration.
-- **RACE LORE EXPANSION** — New in-game events referencing regional history have been added. Discover the secrets of Narmir as you take your turns.
-- **REGION CAPTURE & MASTERY** — Alliances can now contest and capture territories. Holding a region grants a global +10% bonus to the alliance's signature stat (Military, Magic, Economy, etc.).
-- **ALLIANCE LEADERBOARDS** — New rankings tab showing total alliance land, member counts, and average power. Rank your coalition against the world.
-- **BOUNTY BOARD** — Players can now place gold bounties on rival kingdoms. The first player to defeat a bountied target claims the reward instantly.
-- **DIRECT MESSAGING** — New private messaging system between kingdoms. Start conversations from the rankings table or a player's profile.
-- **KINGDOM LORE** — Players can now set a custom bio for their kingdom on the status panel, visible to everyone on their public profiles.
-- **NAKED EVIL REBRAND** — Complete overhaul to the "NARMIR REBORN" aesthetic.
-- **Racial Specializations (Level 5+)** — Unique bonuses unlocked at high unit levels:
-  - 🔨 **Dwarf Engineers** — Solo-crew war machines (normally requires full crew).
-  - ✨ **High Elf Mages** — Double scroll production (2 scrolls per craft).
-  - 🪓 **Orc Fighters** — War Culture: 1 free fighter trained per 10 every turn.
-  - 🕵️ **Dark Elf Ninjas** — Silent Assassination: Targets no longer receive news of the deed.
-  - 🐺 **Dire Wolf Rangers** — Fast Expeditions: Scouts and Dungeons return 1 turn early.
-  - 💚 **Human Clerics** — Morale Aura: Passive +1 morale to the kingdom every turn.
-- **Chat Personalization** — New commands `/nick <name>` and `/color <hex>` persist correctly across sessions.
-- **Extended Protection** — Newbie protection now lasts until Turn 400 to allow deeper development before open warfare.
-- **Economic Stability** — Fixed tax slider persistence and synchronized UI updates across all panels.
-- **Starting Advantages** — Each race now begins with a set of starting buildings tailored to their strengths.
+### v1.1.0 — May 2026 (Current)
+
+#### New Features
+- **Certified Blueprints & Masonry Upgrades** — New certified blueprint system for advanced construction. Masonry upgrade tree unlocks enhanced wall and structure capabilities.
+- **Full Spy System** — Tiered spy outcomes (surveillance, partial intel, full report). Alliance intel sharing — members can share spy reports with the alliance board. Spy report history panel with per-report share toggle.
+- **Hero System** — Named hero units with unique abilities. Heroes gain XP from combat and turn activity. Hero bonuses apply to kingdom stats each turn. Idle heroes contribute passive bonuses.
+- **World Fragments & Hybrid Blueprints** — Rare world fragment drops from expeditions. Hybrid blueprints combine two building types for unique bonuses. Assign hybrid blueprints for 500k gold + 100k mana.
+- **Prestige / Rebirth** — Kingdoms at Level 50 can Rebirth for a permanent prestige level bonus. Rebirth resets the kingdom with carry-over advantages.
+- **Lore & Achievements Collection** — Players discover and collect lore entries as they play. 200 total lore entries across 8 categories (Narmir world lore, general wisdom, and 6 race-specific histories). Achievements tracked and displayed in the Library panel.
+- **Race Lore — 25 entries per race** — Deep narrative lore written for all 6 races plus Narmir world history and general wisdom entries. Visible in the Library as kingdoms unlock them through play.
+- **Racial Gift Fanfare** — On first reaching unit Level 5, a 4-note ascending fanfare plays, a 6-second toast fires, and the racial gift badge pulses on the Training panel.
+- **Attack Insult (MP3)** — `fart.mp3` plays when your kingdom is attacked. Replaces the old text-to-speech system. Test button in Admin → Manage.
+- **Tax Rate Strip** — Tax %, Income/turn, Upkeep/turn, and Net/turn shown below the resource metrics strip on the status panel.
+
+#### Fixes & Improvements
+- **Colosseums removed** — `bld_colosseums` building type retired. Entertainment handled through Taverns.
+- **Dwarf badge text added** — `RACIAL_BADGE_TEXT` now includes Dwarf (⚒️ Dwarven Mastery — war machines need only 1 engineer to crew).
+- **Spell "undefined" fixed** — SCROLL_DEFS uses `label` not `name`. Both the main spell panel and warfare spell tab now use `sp.label` with safe fallbacks.
+- **Racial gift badge state** — `syncUI` now correctly reads `racial_bonuses_unlocked` instead of the non-existent `racial_gift_active`.
+- **state.loaded guard** — `syncUI` now bails early until `loadKingdom()` has fully populated state, preventing the countdown timer from overwriting correct values with defaults every second.
+- **Kingdom header writes in syncUI** — Name, owner line, and turn number are now written inside `syncUI` using state, so they stay current across all updates not just on login.
+- **Toast duration parameter** — `toast()` now accepts an optional duration argument (used for 6-second racial gift unlock message).
+- **Alliance panel mobile** — Single column on mobile (<900px), two columns on desktop.
+- **Studies/Defence/Economy grids** — All inner two-column grids collapse to single column on mobile (<600px).
+- **Tab strips** — All panel tab strips now use `flex-wrap` so tabs wrap instead of overflowing on small screens. Tab font 15px mobile / 19px desktop.
+- **Admin changelog** — Updated to include all features through v1.1.0.
+- **Admin events panel** — 📅 Events tab: event log with kingdom/season filter, full event editor (create/edit/delete/toggle) with effect type dropdown.
+- **Admin audio test** — 💨 Test attack insult button in Admin → Manage tab.
+- **Flush locations button** — Admin → Manage → 🗺️ Flush all locations clears discovered_kingdoms and location_maps_wip for all players.
+
+---
+
+### v1.0.6 — April 2026
+
+- **Seasons & Daily Events** — 13-day real-time cycle: Spring (3d) → Summer (5d) → Fall (2d) → Winter (3d). One event per kingdom per real day. 21 seeded events with seasonal and racial variants. Farm yield modified by season (Summer ×1.20, Winter ×0.70). Season badge on status panel.
+- **Location System** — Kingdoms must be discovered before interaction. Scout expeditions 10–15% discovery chance. 10 scribes × 5 turns creates a location map (consumes 1 blank map). Auto-stored on being attacked or caught. Map theft covert action.
+- **Smithy Overhaul** — Hammers (25 GC) and scaffolding (2,500 GC) purchased directly for gold. No more engineer allocation sliders. Max button fills to max affordable.
+- **Warfare Panel** — Single panel replacing separate Attack/Spells/Covert nav items. War log at top, three tabs: ⚔️ Attack · ✨ Spells · 🕵️ Covert. All single-column mobile layout.
+- **Hire Panel Rebuild** — Grid layout with unit name, count, price (race-adjusted), input + Hire/Fire buttons stacked right-justified. Variable prices per unit and race shown per row.
+- **Shrine Clerics** — Studies shrine tab now has cleric allocation input and Save button wired to shrine-allocation route.
+- **Tavern in Build Panel** — Tavern row added with ba-tavern input. Added to BUILD_FIELDS, BA_FIELDS, BUILDING_COST, BUILDING_COL, BUILDING_GOLD_COST in engine.
+- **Turns to 400/day** — Regen: +7 turns every 25 minutes, max 400. Schema default updated.
+- **Rankings fix** — loadRankings shows error message instead of silently bailing. Auto-retry after 500ms on auth error. Always force-refreshes on tab switch.
+- **Resource strip hidden** — kd-top hidden on Warfare, News, Rankings, Exploration, Studies, Training, Alliances, Hire, Defence, Chat panels via CSS body class.
+- **War Log fix** — Route now returns `{rows:[]}` format. Both loadWarLog and loadWarfarePanel handle both formats.
+
+---
+
+### v1.0.5 — April 2026
+
+- WISH-LIST DELIVERIES — Trade System, Bounty Board, Direct Messaging, Mercenary Camp all shipped.
+- INTERFACE PATCH — Library correctly houses scribes only. New badges (Siege, Racial Gift, Citadel). Rankings refresh. Market Clear Logs. Hire page rework.
+- REGION CAPTURE & MASTERY — Alliances can contest and capture territories for +10% faction bonus.
+- ALLIANCE LEADERBOARDS — Coalition total land / member rankings.
+- BOUNTY BOARD — Gold bounties on rival kingdoms; first attacker to win claims the reward.
+- DIRECT MESSAGING — Private 1-on-1 kingdom chat from rankings or profile.
+- KINGDOM LORE/BIOS — Custom kingdom description on public profile.
+- NARMIR REBORN — Aesthetic rebrand to "Pure. Damn. Evil."
+- Racial Unit Bonuses (Lv 5+) — All 6 races implemented and verified.
+- Persistent chat personalization — `/nick` and `/color` commands.
+- Extended Protection — Newbie shield until Turn 400.
+- Race Starting Buildings — Custom starting kits per race.
 
 ---
 
@@ -42,195 +72,139 @@
 - Registration, login, JWT auth with httpOnly cookie
 - Turn system — +7 every 25 min, max 400, crash-safe boot catch-up
 - 6 playable races with unique bonuses and penalties (Dwarf, High Elf, Orc, Dark Elf, Human, Dire Wolf)
-- Kingdom status panel with resource tiles, XP bar, protection badge
+- Kingdom status panel with resource tiles, XP bar, protection badge, season badge, tax strip
 - Three-column desktop status layout (military, research, buildings)
-- Newbie protection — kingdoms under Turn 200 cannot be attacked, spelled, or covert-targeted
-- Active effects bar — fog, blight, silence, plague, shield displayed as pill badges on status panel
+- Newbie protection — kingdoms under Turn 400 cannot be attacked, spelled, or covert-targeted
+- Active effects bar — fog, blight, silence, plague, shield displayed as pill badges
 
 ---
 
 ### Economy
-- Race-adjusted gold production:
-  - Dwarf 457 · Orc 418 · High Elf 399 · Human 399 · Dark Elf 342 · Dire Wolf 266 GC/turn (404 land, 42% tax baseline)
-- Tax slider with lock — persists server-side, loads correctly on login
+- Race-adjusted gold production: Dwarf 457 · Orc 418 · High Elf/Human 399 · Dark Elf 342 · Dire Wolf 266 GC/turn baseline
+- Tax slider with lock — persists server-side
 - Markets and castles add flat gold bonuses per building
+- Taverns provide entertainment bonus and mercenary board
 
 ---
 
 ### Buildings
-- 14 building types — continuous build from engineer allocation
+- 13 building types (colosseums removed in v1.1.0)
 - Build queue shows turn estimate per building type
 - Building caps scale with kingdom level
-
-**Tool system:**
-- **Blueprints** — crafted by scribes in library, stored in smithy (cap: 25/smithy), required for 100t+ buildings (vaults, smithies, markets, libraries, mage towers, training fields, castles), consumed on completion, 20% drop chance from dungeons
-- **Hammers** — produced in smithy (1 turn each, cap: 25/smithy), +5% build speed each, degrade over 20 turns of active use with live durability display
-- **Scaffolding** — produced in smithy (1 turn + 2,500 GC each, cap: 10/smithy), required for buildings >100t base, speed bonus for buildings <100t (scales inversely), single use consumed on completion
-
-**Smithy panel:** Displays stored hammers (with durability %), scaffolding count, blueprints count, all caps, and production allocation sliders for hammer/scaffolding output per turn.
-
-**Build panel notices:** 📐 Blueprint needed / 🪜 Scaffolding needed badges appear beside building rows where engineers are allocated but tools are missing.
+- Blueprints — crafted by scribes, required for 100t+ buildings, drop from dungeons
+- Hammers — 25 GC each, +5% build speed, degrade over use
+- Scaffolding — 2,500 GC each, required for >100t buildings, single use
+- Certified blueprints — advanced construction tier (v1.1.0)
+- Masonry upgrades — wall and structure enhancement tree (v1.1.0)
 
 ---
 
 ### Units & Upkeep
 - 9 hirable unit types: fighters, rangers, clerics, mages, thieves, ninjas, researchers, engineers, scribes
-
-**Housing capacity by race (per house):**
-- Dire Wolf 700 (+40%) · Dwarf 650 (+30%) · Orc 600 (+20%) · Human 500 (base) · Dark Elf 450 (−10%) · High Elf 350 (−30%)
-- Dire Wolf overcrowding morale penalty ×0.5 · High Elf ×2.0
-
-**Support unit housing (free upkeep if housed):**
-- Researchers → Schools: 100/school base (racial multipliers apply)
-- Engineers → Smithies: 50/smithy base
-- Scribes → Libraries: 20/library base
-- Overflow units beyond capacity pay normal upkeep; combat troops always pay upkeep
-
-**Upkeep race multipliers:**
-- Dwarf ×0.85 · Human/High Elf ×1.00 · Dark Elf ×1.10 · Orc ×1.15 · Dire Wolf ×1.20
-- Barracks discount: up to 50% off military upkeep
-
-Hire panel shows school/smithy/library capacity with overflow highlighted red.
+- Housing capacity by race (per house): Dire Wolf 700 · Dwarf 650 · Orc 600 · Human 500 · Dark Elf 450 · High Elf 350
+- Support unit housing — researchers in schools, engineers in smithies, scribes in libraries
+- Upkeep race multipliers: Dwarf ×0.85 · Human/High Elf ×1.00 · Dark Elf ×1.10 · Orc ×1.15 · Dire Wolf ×1.20
+- Variable hire prices — race multipliers applied per unit type in hire panel
 
 ---
 
 ### Research
-- 10 research disciplines with engineer/researcher allocation panel
+- 10 research disciplines
+- Single discipline focus (Repository upgrade unlocks 2nd slot)
 - Distribute evenly and Release all buttons
-- Research bars only — no percentage display
-- Silence debuff suppresses research for 3 turns
 
 ---
 
 ### Exploration
-- Three expedition types: Scout (10t), Deep (25t), Dungeon (50t)
-- Gold formula: `rangers × 12 × tacBonus × raceBonus × rangerLevelMult × turns × rand(1.05–1.30)`
-
-**Race exploration bonuses:**
-- Dire Wolf ×1.40 · Dark Elf ×1.25 · Human ×1.10 · Orc ×1.05 · High Elf ×0.95 · Dwarf ×0.90
-- Dire Wolf and Dark Elf also suffer reduced ranger attrition (×0.5 and ×0.6 respectively)
-
-**Item drops:**
-- Maps: Scout 5% · Deep 15% · Dungeon 25%
-- Blueprints: Dungeon 20% on success
-
-**Ultra-rare prizes (0.5% deep, 1% dungeon):**
-- 🥚 Ancient Dragon Egg — +75 attack magic, +50 spellbook, +5,000 mana
-- 📖 Tome of Forgotten Kings — +80 military, +50 weapons, +50 armor
-- 💎 Crystalline Mana Heart — +20,000 mana, +60 defense magic, +100 spellbook
-- 💰 Vault of the Ancients — +500,000 gold, +60 economy
-- ⚔️ Banner of the Lost Legion — +10,000 fighters, +40 military
-- 🌳 Seed of the World Tree — +500 land, +100 farms, +50,000 population
-
-**The Throne of Nazdreg Grishnak** (0.1% chance, unique — one per server, forever):
-> *Nazdreg Grishnak · August 13, 1975 — August 19, 2012*
->
-> Awards all stats +100, 1,000,000 gold, 1,000 land, 100,000 population, +50 morale, +50,000 fighters.
-> Broadcasts to every kingdom's news feed and global chat on discovery. Once found it is gone forever.
-
-Cancel expedition button available on all active expeditions.
+- Scout (10t), Deep (25t), Dungeon (50t) expedition types
+- Race bonuses: Dire Wolf ×1.40 · Dark Elf ×1.25 · Human ×1.10 · Orc ×1.05 · High Elf ×0.95 · Dwarf ×0.90
+- Ultra-rare drops including the unique Throne of Nazdreg Grishnak (0.1%, one per server)
+- World Fragment drops → Hybrid Blueprint crafting (v1.1.0)
 
 ---
 
 ### Magic & Library
 - 16 spells across 4 tiers — scroll-based casting with obscure option
-- Mages craft scrolls in library; scribes craft maps and blueprints
-- Map required to interact with other kingdoms (attack, spell, covert)
-- Mage tower mana production
-- Shrine morale and healing
-- Spell target selector panel — own kingdom list in spell panel, pre-selects from rankings
+- Mage tower mana production and upgrade tree
+- Shrine morale, healing, and Divine Sanctuary auto-stabilise
+- Library: scribes craft maps, blueprints, and blank scrolls
+- Lore & Achievements collection panel (v1.1.0)
 
 ---
 
 ### Combat & Covert
 - Military attack with power comparison and full battle report
-- Win probability shown in attack panel and rankings table
-- Covert ops — spy, loot, assassinate
-- War log panel with full history
+- Bully ratio detection — morale penalty and public shame event at ×8
+- Covert ops — spy (tiered reports), loot, assassinate, sabotage, trade route raiding
+- Spy report history with alliance intel sharing (v1.1.0)
+- Map theft covert action
+- War log with full history
 
 ---
 
 ### Unit XP & Levelling
-All units gain XP from activity each turn. Level scaling: **+0.5% effectiveness per level, max +50% at level 100.**
+- All 9 units gain XP from activity. +0.5% effectiveness per level, max +50% at level 100
+- Racial gift unlocked at unit level 5 — unique per-race passive bonus
+- Fanfare sound + badge pulse + 6-second toast on first unlock (v1.1.0)
 
-| Unit | XP sources | What scales |
-|---|---|---|
-| Engineers | +10 per building completed | Build speed |
-| Researchers | +5 per discipline advanced | Research increment |
-| Mages | +2/turn mana, +20/scroll completed | Mana production, scroll speed |
-| Scribes | +15 per map/blueprint completed | Craft speed |
-| Rangers | +3/turn exploring, +8/20/40 by expedition type | Expedition rewards, land discovery |
-| Fighters | +30 combat win, +10 combat loss · bounty claiming | Combat power |
-| Thieves | +12 spy success, +20 loot success | Loot amount, success chance |
-| Ninjas | +30 assassination success | Kills, success chance |
+---
 
-**Hire dilution:** `new_avg_xp = (old_xp × old_count) / (old_count + hired)` — new recruits lower the average.
-
-Training fields award passive XP with equipment bonuses.
-
-**Racial unique bonuses (unlocked at unit level 5+):**
-- 🔨 **Dwarf engineers** — can solo-crew war machines (normally needs a full crew)
-- ✨ **High Elf mages** — scrolls crafted produce 2 instead of 1
-- ⚔️ **Orc fighters** — every 10 fighters trains 1 free fighter per turn
-- 🕵️ **Dark Elf ninjas** — silent assassination, target receives no news event
-- 🐺 **Dire Wolf rangers** — expeditions tick down 2 turns per turn (return 1 turn early)
-- 💚 **Human clerics** — +1 morale aura per turn across the kingdom
+### Heroes (v1.1.0)
+- Named hero units with unique passive abilities
+- Heroes gain XP from combat participation
+- Hero bonuses applied to kingdom stats each turn
+- Hero status displayed on status/training panels
 
 ---
 
 ### Social & Communication
-- Global chat with Socket.io — real-time, username-based (not kingdom name)
-- Online users sidebar with race icons and MOD badges
-- IRC commands for all users: `/me <action>`, `/msg <username> <text>`
-- Moderator-only commands: `/kick`, `/ban`, `/unban`, `/delete`
-- Whispers shown in amber to both sender and recipient
-- /me actions render as centred italic emotes (not chat bubbles)
-- Alliance system — create, invite, dismiss, pledge (0–10%), chat board
-- Rankings panel with win probability and one-click ⚔️ / ✨ / 🕵️ action buttons per kingdom
-- Protected kingdoms show 🛡️ badge and greyed-out action buttons in rankings
-- News panel with type filters (All / Combat / Spells / Covert / System) and icons
+- Global chat with Socket.io — real-time, race icons, MOD badges
+- IRC commands: `/me`, `/msg`, `/nick`, `/color`
+- Moderator commands: `/kick`, `/ban`, `/unban`, `/delete`
+- Alliance system — create, invite, dismiss, pledge, chat board, signal tower warnings
+- Region capture and alliance leaderboards
+- Direct messaging between kingdoms
+- Rankings panel with win probability and action buttons
+- News panel with type filters
 
 ---
 
 ### Admin
-- Tab layout: ⚙️ Manage · 🏰 Kingdoms · 📋 Changelog
-- Full kingdom edit modal — live data fetched from server
-- Promote/demote chat moderators by username
-- Chat ban list with unban button per player
-- Ban reason stored and displayed
-- AI kingdoms with race-aware economic and military behaviour
-- Global announcement broadcast to all players
-- Promote to admin
-- Admin notes textarea — saves to localStorage
+- Tab layout: ⚙️ Manage · 🏰 Kingdoms · 📅 Events · 📋 Changelog
+- Full kingdom edit modal
+- Promote/demote chat moderators
+- Chat ban list with reasons
+- AI kingdoms with race-aware behaviour
+- Global announcement broadcast
+- Events panel — log viewer + full event editor
+- Flush all locations button
+- Audio test button (💨)
+- Admin notes (localStorage)
 
 ---
 
 ### Wishlist — Future Additions
 
 **Gameplay**
-- Seasons & weather — affects food production and troop movement
-- Trade system — player-to-player commodity exchange
-- Spell casting target history — remember last target per spell
-- Bounty board — place gold bounties on other kingdoms
+- Spell casting target history
 - Diplomacy — formal non-aggression pacts and tribute
-- Prestige / reset system — kingdoms that reach max level can prestige for a permanent bonus
-- Named hero units — single high-level units with unique abilities
+- Named hero abilities tree expansion
 
 **Combat**
-- Alliance war — alliances can declare war on each other
-- Siege mechanics — castle walls reduce land capture percentage
-- Battle replay — animated step-by-step battle report
+- Alliance war — formal war declarations between alliances
+- Siege mechanics — castle walls reduce land capture
+- Battle replay — animated step-by-step report
+
+**Economy**
+- Variable commodity prices — supply/demand shifts ±30% hourly
+- Prestige economy — permanent market bonuses after rebirth
 
 **World**
-- World map — visual representation of kingdom territories
 - More races — Gnome (inventor), Vampire (undead mage), Troll (regenerating fighter)
 
 **Polish**
 - Custom kingdom banner/sigil generator
 - iOS layout testing and fixes
-- Sound effects — combat, level up, expedition return
-- Dark/light theme toggle
-- Email notifications — optional alerts for attacks and expedition return
+- Email notifications — attacks and expedition return
 - Tutorial / new player guide
-- Achievements system
-
+- Dark/light theme toggle
