@@ -137,7 +137,6 @@
   body.panel-exploration .main,
   body.panel-worldmap .main,
   body.panel-stats .main,
-  body.panel-alliances .main,
   body.panel-settings .main { padding-top: 0 !important; }
   
   /* Fix for Full-Screen Chat Layout */
@@ -3024,7 +3023,7 @@
   </div>
 </div>
 
-<div id="alliances" class="panel" style="display:none; margin-top: -12px;">
+<div id="alliances" class="panel" style="display:none">
 
   <!-- Not in alliance -->
   <div id="ally-none" style="display:none">
@@ -3045,10 +3044,8 @@
   </div>
 
   <!-- In alliance -->
-  <div id="ally-active" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box;">
-    <div class="r-grid-sidebar">
+  <div id="ally-active" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px;">
 
-      <div style="display:flex;flex-direction:column;gap:14px">
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
             <div>
@@ -3072,9 +3069,7 @@
             <button class="btn btn-purple" onclick="sendAllyMsg()">Send</button>
           </div>
         </div>
-      </div>
 
-      <div style="display:flex;flex-direction:column;gap:14px">
         <div class="card">
           <div class="card-title">Pledge level</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7">When an ally is attacked, this % of your troops auto-deploy to their defence.</div>
@@ -3104,8 +3099,7 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
+
   </div>
 
 </div>
