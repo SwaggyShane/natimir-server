@@ -100,6 +100,7 @@
     position: sticky;
     top: 56px;
     z-index: 100;
+    margin-top: -12px;
     background: var(--bg);
     padding-top: 8px;
     padding-bottom: 8px;
@@ -117,14 +118,15 @@
       border-bottom: 1px solid var(--border);
       padding-bottom: 12px; 
       margin-bottom: 12px;
-      position: relative; /* Not sticky, as requested */
-      top: unset;
-      box-shadow: none;
+      position: sticky;
+      top: 56px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
   }
   @media (min-width: 700px) {
     #kd-top {
       top: 56px;
+      margin-top: -24px;
       margin-left: -24px;
       margin-right: -24px;
       padding-left: 24px;
@@ -145,14 +147,21 @@
   body.panel-messages .main { 
     display: flex;
     flex-direction: column;
-    padding-bottom: 80px !important; /* bottom nav clearance */
+    padding: 0 !important;
   }
   #globalchat.panel.active,
   #messages.panel.active {
     display: flex;
     flex-direction: column;
-    flex: 1;
     min-height: 0;
+    margin: 0;
+    height: calc(100vh - 56px); /* Desktop fallback */
+  }
+  @media (max-width: 768px) {
+    #globalchat.panel.active,
+    #messages.panel.active {
+      height: calc(100dvh - 56px - 60px); /* 56px topbar, ~60px bottomnav */
+    }
   }
 
 
@@ -2946,7 +2955,7 @@
 <!-- ═══════════════════════════════════════════ ALLIANCES PANEL ══ -->
 <!-- GLOBAL CHAT -->
 <div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box; width: 100%;">
-  <div class="globalchat-container card" style="display:flex;min-height:300px;padding:0;overflow:hidden">
+  <div class="globalchat-container card" style="display:flex;flex:1;min-height:300px;padding:0;overflow:hidden">
 
     <!-- Messages area -->
     <div style="flex:1;display:flex;flex-direction:column;min-width:0">
