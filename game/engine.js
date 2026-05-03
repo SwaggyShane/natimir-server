@@ -162,8 +162,9 @@ function researchIncrement(k, discipline, researchersAssigned, currentLevel) {
   
   let factor = 1.0;
   if (currentLevel > 100) {
-    // Exponentially harder: +10% cost every 10 points above 100
-    factor = Math.pow(1.10, (currentLevel - 100) / 10);
+    // Exponentially harder: +5% cost compounding per point above 100
+    // Level 150 requires ~11x more researchers, Level 200 requires ~131x more.
+    factor = Math.pow(1.05, currentLevel - 100);
   }
 
   if (effective >= Math.floor(2000 * factor)) return 5;
@@ -896,9 +897,12 @@ function processTurn(k) {
       const effective = Math.floor(perSlot * schoolBonus * d.multi * curriculumMult);
       rProgress[d.col] = (rProgress[d.col] || 0) + effective;
       
-      // We scale the cost slightly for higher amounts to preserve the old balance somewhat,
-      // but generally 200 points = 1%. We'll just use a flat 200 for simplicity and partial accumulation.
-      const COST_PER_PCT = 200;
+      let factor = 1.0;
+      if (current > 100) {
+        factor = Math.pow(1.05, current - 100);
+      }
+      const COST_PER_PCT = Math.floor(200 * factor);
+
       let inc = 0;
       if (rProgress[d.col] >= COST_PER_PCT) {
         inc = Math.floor(rProgress[d.col] / COST_PER_PCT);
@@ -1692,7 +1696,18 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   const defMageLvl    = effectiveTroopLevel(defender, 'mages')    / 50;
   const defNinjaLvl   = effectiveTroopLevel(defender, 'ninjas')   / 50;
 
-  // ── Step 1: Thief sabotage — disable some defender war machines ───────────
+  // ── Step 1: Defending troops (exclude training fields) ────────────────────
+  const defAvail = {
+    fighters:    getAvailableUnits(defender, 'fighters'),
+    rangers:     getAvailableUnits(defender, 'rangers'),
+    mages:       getAvailableUnits(defender, 'mages'),
+    ninjas:      getAvailableUnits(defender, 'ninjas'),
+    thieves:     getAvailableUnits(defender, 'thieves'),
+    clerics:     getAvailableUnits(defender, 'clerics'),
+    engineers:   getAvailableUnits(defender, 'engineers')
+  };
+
+  // ── Step 1b: Thief sabotage — disable some defender war machines ───────────
   let defWmActive = defender.war_machines || 0;
   let thiefSabotage = 0;
   if (sent.thieves > 0) {
@@ -1707,13 +1722,13 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   let ninjaIntercepted = 0;
   if (sent.ninjas > 0) {
     const strikeRate  = 0.01 + Math.min(0.03, sent.ninjas * 0.0001 * atkNinjaLvl * raceBonus(attacker, 'stealth'));
-    const rawKills    = Math.floor((defender.fighters || 0) * strikeRate);
+    const rawKills    = Math.floor(defAvail.fighters * strikeRate);
     // Defender ninjas intercept at 50% effectiveness
-    const interceptRate = Math.min(0.50, ((defender.ninjas||0) * 0.001 * defNinjaLvl));
+    const interceptRate = Math.min(0.50, (defAvail.ninjas * 0.001 * defNinjaLvl));
     ninjaIntercepted  = Math.floor(rawKills * interceptRate);
     ninjaKills        = Math.max(0, rawKills - ninjaIntercepted);
   }
-  const defFightersAfterNinja = Math.max(0, (defender.fighters || 0) - ninjaKills);
+  const defFightersAfterNinja = Math.max(0, defAvail.fighters - ninjaKills);
 
   // ── Step 3: Ranger opening volley ─────────────────────────────────────────
   const rangerVolleyRate = (0.02 + Math.min(0.05, sent.rangers * 0.00005)) * atkRangerLvl * raceBonus(attacker, 'military');
@@ -1762,17 +1777,17 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   const defFighterPower = defFightersAfterVolley * defArmor * defTactics * defRaceMil * defFighterLvl;
   // Ranger fire from outposts/towers — rangers defend from walls, scaled by structures
   const outpostBonus    = (defender.bld_outposts || 0) * 0.1 + (defender.bld_guard_towers || 0) * 0.05;
-  const defRangerPower  = (defender.rangers || 0) * 0.8 * defTactics * raceBonus(defender,'military') * defRangerLvl * Math.max(1, outpostBonus);
+  const defRangerPower  = defAvail.rangers * 0.8 * defTactics * raceBonus(defender,'military') * defRangerLvl * Math.max(1, outpostBonus);
   // Mage barrier
-  const defMagePower    = (defender.mages||0) * 1.5 * ((defender.res_defense_magic||100)/100) * defRaceMag * defMageLvl;
+  const defMagePower    = defAvail.mages * 1.5 * ((defender.res_defense_magic||100)/100) * defRaceMag * defMageLvl;
   // War machine garrison — crewed by engineers at home
   const defEngLvl       = effectiveTroopLevel(defender, 'engineers');
   const defEngMult      = unitLevelMult(defender, 'engineers');
   const defCrewNeeded   = wmCrewRequired(defender.race, defEngLvl);
-  const defWmCrewable   = Math.min(defWmActive, Math.floor((defender.engineers||0) / defCrewNeeded));
+  const defWmCrewable   = Math.min(defWmActive, Math.floor(defAvail.engineers / defCrewNeeded));
   const defWmPower      = defWmCrewable * 500 * ((defender.res_war_machines||100)/100) * raceBonus(defender,'war_machines') * defEngMult;
   // Engineer garrison repair bonus
-  const defEngBonus     = Math.floor((defender.engineers||0) / 10) * 50 * defEngMult * raceBonus(defender, 'construction');
+  const defEngBonus     = Math.floor(defAvail.engineers / 10) * 50 * defEngMult * raceBonus(defender, 'construction');
   // Wall defense power (includes warmachines mounted on walls)
   const defWallPower    = wallDefensePower(defender);
   // Outpost ranger patrol power
@@ -1802,7 +1817,7 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   // ── Step 7: Casualties ────────────────────────────────────────────────────
   // Clerics reduce own-side losses
   const atkClericHeal = Math.min(0.35, (attacker.clerics||0) / Math.max(sent.fighters+sent.rangers, 1) * 0.08 * raceBonus(attacker,'magic'));
-  const defClericHeal = Math.min(0.35, (defender.clerics||0) / Math.max(defender.fighters||1, 1)       * 0.08 * raceBonus(defender,'magic'));
+  const defClericHeal = Math.min(0.35, defAvail.clerics / Math.max(defAvail.fighters||1, 1) * 0.08 * raceBonus(defender,'magic'));
 
   // Dark Elf stealth reduces attacker losses
   const atkStealthBonus = raceBonus(attacker, 'stealth') > 1 ? 0.85 : 1.0;

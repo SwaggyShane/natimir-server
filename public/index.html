@@ -97,8 +97,7 @@
     box-sizing: border-box;
   }
   #kd-top {
-    position: sticky;
-    top: 56px;
+    position: relative; /* unstick on mobile */
     z-index: 100;
     margin-top: -12px;
     background: var(--bg);
@@ -118,13 +117,11 @@
       border-bottom: 1px solid var(--border);
       padding-bottom: 12px; 
       margin-bottom: 12px;
-      position: sticky;
-      top: 56px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
   }
   @media (min-width: 700px) {
     #kd-top {
+      position: sticky;
       top: 56px;
       margin-top: -24px;
       margin-left: -24px;
@@ -143,24 +140,70 @@
   body.panel-stats .main,
   body.panel-settings .main { padding-top: 0 !important; }
   
+  /* Fix for Full-Screen Chat Layout */
+  /* On mobile, strict 100dvh prevents unbounded expansion of the chat containers */
+  body.panel-globalchat, body.panel-messages {
+    height: 100dvh;
+    height: 100vh;
+    overflow: hidden;
+  }
+  body.panel-globalchat .app, body.panel-messages .app {
+    height: 100dvh;
+    height: 100vh;
+    overflow: hidden;
+    padding-top: 56px !important;
+  }
   body.panel-globalchat .main,
   body.panel-messages .main { 
     display: flex;
     flex-direction: column;
-    padding: 0 !important;
+    padding: 0 0 60px 0 !important; /* give space for mobile bottom nav */
+    height: 100%;
+    overflow: hidden;
+  }
+  @media (min-width: 769px) { /* On desktop, we use grid instead */
+    body.panel-globalchat, body.panel-messages { overflow: visible; height: auto; }
+    body.panel-globalchat .app, body.panel-messages .app { height: 100vh; overflow: hidden; padding-top: 0 !important; }
+    body.panel-globalchat .main, body.panel-messages .main { padding: 12px 24px !important; }
+  }
+
+  #globalchat.panel,
+  #messages.panel {
+    display: none !important;
   }
   #globalchat.panel.active,
   #messages.panel.active {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    margin: 0 !important;
+  }
+  /* Remove default card padding and margins for the containers so they neatly fill the screen */
+  .chat-container-card {
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-height: 0;
-    margin: 0;
-    height: calc(100vh - 56px); /* Desktop fallback */
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden;
+    border-radius: 0;
+    border: none;
+    background: var(--bg2);
+  }
+  @media (min-width: 769px) {
+    .chat-container-card {
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      border-radius: 12px;
+      margin: 12px auto !important;
+    }
   }
   @media (max-width: 768px) {
-    #globalchat.panel.active,
-    #messages.panel.active {
-      height: calc(100dvh - 56px - 60px); /* 56px topbar, ~60px bottomnav */
+    .chat-container-card {
+      border: none;
+      /* On mobile we want the list to scroll, flex:1 takes care of it */
     }
   }
 
@@ -431,7 +474,7 @@
 
   /* ── Chat Sidebar responsiveness ── */
   @media (max-width: 768px) {
-    .globalchat-container { flex-direction: column; }
+    .chat-container-card { flex-direction: column; }
     .chat-online-sidebar { 
       width: 100% !important; 
       height: auto; 
@@ -444,7 +487,7 @@
     .chat-online-sidebar .on-item { flex-direction: row; display: inline-flex; width: auto; margin-right: 12px; }
     .chat-online-sidebar #chat-online-list { display: flex; flex-direction: row; flex-wrap: wrap; }
     
-    .msg-layout { grid-template-columns: 1fr !important; grid-template-rows: 200px minmax(200px, 1fr) !important; height: auto !important; flex: 1; min-height: 0; }
+    .msg-layout { grid-template-columns: 1fr !important; grid-template-rows: 200px minmax(200px, 1fr) !important; height: 100% !important; flex: 1; min-height: 0; gap: 8px !important; }
   }
 
   input[type="number"] {
@@ -467,9 +510,6 @@
     border-bottom: 1px solid var(--border);
   }
   .news-turn-header .turn-label { color: var(--purple); }
-  @media (max-width: 550px) {
-    .globalchat-container { height: calc(100vh - 140px) !important; }
-  }
   .news-hl { color: var(--text); font-weight: 500; }
   .news-attack { color: var(--red); font-weight: 500; }
   .news-good { color: var(--green); font-weight: 500; }
@@ -2955,7 +2995,7 @@
 <!-- ═══════════════════════════════════════════ ALLIANCES PANEL ══ -->
 <!-- GLOBAL CHAT -->
 <div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box; width: 100%;">
-  <div class="globalchat-container card" style="display:flex;flex:1;min-height:300px;padding:0;overflow:hidden">
+  <div class="chat-container-card">
 
     <!-- Messages area -->
     <div style="flex:1;display:flex;flex-direction:column;min-width:0">
