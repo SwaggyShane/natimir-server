@@ -483,29 +483,17 @@ module.exports = function(db, io) {
 
   router.post('/sounds/upload', upload.single('soundFile'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    res.json({ ok:true, filename: req.file.originalname });
-  });
-
-  router.post('/sounds/delete', (req, res) => {
-    if (!req.body.filename) return res.status(400).json({ error: 'Filename required' });
-    const targetPath = path.join(soundsPath, req.body.filename);
-    if (fs.existsSync(targetPath)) {
-      fs.unlinkSync(targetPath);
+    let finalName = req.file.originalname;
+    if (req.body.actionName && req.body.actionName !== 'custom') {
+      const ext = path.extname(req.file.originalname);
+      finalName = req.body.actionName + ext;
+      const oldPath = path.join(soundsPath, req.file.originalname);
+      const newPath = path.join(soundsPath, finalName);
+      if (fs.existsSync(oldPath)) {
+        fs.renameSync(oldPath, newPath);
+      }
     }
-    res.json({ ok:true });
-  });
-
-  router.get('/sounds', (req, res) => {
-    fs.readdir(soundsPath, (err, files) => {
-      if (err) return res.status(500).json({ error: 'Failed to read sounds directory' });
-      const sounds = files.filter(f => f.endsWith('.mp3') || f.endsWith('.wav'));
-      res.json({ ok:true, sounds });
-    });
-  });
-
-  router.post('/sounds/upload', upload.single('soundFile'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    res.json({ ok:true, filename: req.file.originalname });
+    res.json({ ok:true, filename: finalName });
   });
 
   router.post('/sounds/delete', (req, res) => {
