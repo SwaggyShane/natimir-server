@@ -336,52 +336,18 @@ textarea{width:100%;resize:vertical;min-height:60px}
 
 <!-- TAB: Sounds -->
 <div id="atab-sounds" class="atab" style="display:none">
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2 style="margin:0;color:var(--gold)">🎵 Game Audio Management</h2>
-    </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Upload .mp3 or .wav files for specific game actions. The game client will automatically play appropriate sounds if the filename matches an action (e.g., 'attack.mp3', 'build.wav').</div>
-    
-    <div style="display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:end;margin-bottom:24px;padding:16px;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
-      <div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Target Action Name / Filename</div>
-        <select id="sound-action-select" style="font-size:13px;padding:6px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:4px;width:100%">
-          <option value="custom">-- Custom Name (Use filename) --</option>
-          <option value="attack">attack</option>
-          <option value="defend">defend</option>
-          <option value="build">build (completed)</option>
-          <option value="train">train</option>
-          <option value="cast_spell">cast_spell</option>
-          <option value="msg_sent">msg_sent</option>
-          <option value="msg_recv">msg_recv</option>
-          <option value="spy">spy</option>
-          <option value="steal">steal</option>
-          <option value="take_turn">take_turn</option>
-          <option value="level_up">level_up</option>
-          <option value="explore">explore</option>
-          <option value="research">research</option>
-          <option value="trade">trade</option>
-          <option value="hire_mercenaries">hire_mercenaries</option>
-          <option value="dungeon">dungeon</option>
-          <option value="bounty">bounty</option>
-          <option value="assassinate_send">Assassinate (Sending)</option>
-          <option value="assassinate_recv">Assassinated (Receiving)</option>
-          <option value="error">error</option>
-          <option value="success">success</option>
-        </select>
-      </div>
-      <div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Audio File</div>
-        <input type="file" id="sound-upload-file" accept=".mp3,.wav" style="font-size:13px;color:var(--text);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px">
-      </div>
-      <button class="btn btn-gold" onclick="uploadSound()" style="padding:6px 16px;height:32px">Upload & Map</button>
-    </div>
-    
-    <h3 style="margin-top:24px;border-bottom:1px solid var(--border);padding-bottom:8px">Currently Loaded Sounds</h3>
-    <div id="sounds-list" style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
-      <!-- loaded via JS -->
-    </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h1 style="margin:0;font-size:20px">🎵 Audio Management</h1>
+    <div style="color:var(--text3);font-size:12px">Upload MP3 files for each game action. Click a row to test.</div>
   </div>
+
+  <div id="sounds-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+    <!-- Populated via loadSounds() -->
+  </div>
+
+  <!-- Hidden form components for row-based uploads -->
+  <input type="file" id="sound-upload-row-file" accept=".mp3,.wav" style="display:none" onchange="performRowUpload()">
+  <input type="hidden" id="sound-upload-row-action">
 </div><!-- end atab-sounds -->
 
 <!-- TAB: Lore & Trips -->
@@ -1054,121 +1020,141 @@ function showAdminTab(id, btn) {
 
 async function loadSounds() {
   var res = await api('GET', '/api/admin/sounds');
-  var list = document.getElementById('sounds-list');
+  var grid = document.getElementById('sounds-grid');
   if (!res || !res.sounds) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text3)">Error loading sounds.</div>';
+    grid.innerHTML = '<div style="font-size:12px;color:var(--text3)">Error loading sounds.</div>';
     return;
   }
   
   var existingSounds = res.sounds;
-  var GAME_EVENTS = [
-    { id: 'attack', label: 'Attack launched' },
-    { id: 'defend', label: 'Under attack' },
-    { id: 'build', label: 'Building finished' },
-    { id: 'train', label: 'Train troops' },
-    { id: 'cast_spell', label: 'Cast a spell' },
-    { id: 'msg_sent', label: 'Message sent' },
-    { id: 'msg_recv', label: 'Message received' },
-    { id: 'spy', label: 'Spy mission' },
-    { id: 'steal', label: 'Steal mission' },
-    { id: 'take_turn', label: 'Take turn' },
-    { id: 'level_up', label: 'Level up' },
-    { id: 'explore', label: 'Explore / Map' },
-    { id: 'research', label: 'Research completed' },
-    { id: 'trade', label: 'Trade action' },
-    { id: 'hire_mercenaries', label: 'Hire mercenaries' },
-    { id: 'dungeon', label: 'Dungeon entered' },
-    { id: 'bounty', label: 'Bounty action' },
-    { id: 'assassinate_send', label: 'Assassinate (Outgoing)' },
-    { id: 'assassinate_recv', label: 'Assassinated (Incoming)' },
-    { id: 'error', label: 'Error / Warning' },
-    { id: 'success', label: 'Success action' }
+  var CATEGORIES = [
+    {
+      name: 'Combat', icon: '⚔️', items: [
+        { id: 'attack_victory', label: 'Attack — Victory' },
+        { id: 'attack_repelled', label: 'Attack — Repelled' },
+        { id: 'attacked_fart', label: 'Being Attacked (fart)' },
+        { id: 'warmachine_fire', label: 'War Machine Fire' },
+        { id: 'ninja_strike', label: 'Ninja Pre-Strike' }
+      ]
+    },
+    {
+      name: 'Covert', icon: '🕵️', items: [
+        { id: 'spy_success', label: 'Spy — Success' },
+        { id: 'spy_caught', label: 'Spy — Caught' },
+        { id: 'loot_success', label: 'Loot — Success' },
+        { id: 'loot_caught', label: 'Loot — Caught' },
+        { id: 'assassinate_success', label: 'Assassinate — Success' },
+        { id: 'sabotage_success', label: 'Sabotage — Success' },
+        { id: 'map_stolen', label: 'Location Map Stolen' }
+      ]
+    },
+    {
+      name: 'Exploration', icon: '🧭', items: [
+        { id: 'expedition_return', label: 'Expedition Returns' },
+        { id: 'expedition_depart', label: 'Expedition Departs' },
+        { id: 'kingdom_discovered', label: 'Kingdom Discovered' },
+        { id: 'rare_prize', label: 'Ultra-Rare Prize' },
+        { id: 'throne_nazdreg', label: '👑 Throne of Nazdreg' }
+      ]
+    },
+    {
+      name: 'Kingdom Events', icon: '🏰', items: [
+        { id: 'level_up', label: 'Kingdom Level Up' },
+        { id: 'racial_gift', label: 'Racial Gift Unlocked' },
+        { id: 'citadel', label: 'Citadel Achieved' },
+        { id: 'seasonal_event', label: 'Seasonal Event Fires' },
+        { id: 'prestige', label: 'Prestige / Rebirth' },
+        { id: 'food_shortage', label: 'Food Shortage Warning' }
+      ]
+    },
+    {
+      name: 'Magic', icon: '✨', items: [
+        { id: 'spell_cast', label: 'Spell Cast' },
+        { id: 'spell_recv', label: 'Spell Received' },
+        { id: 'scroll_crafted', label: 'Scroll Crafted' },
+        { id: 'mana_low', label: 'Mana Low Warning' }
+      ]
+    },
+    {
+      name: 'Interface', icon: '🖥️', items: [
+        { id: 'take_turn', label: 'Take Turn' },
+        { id: 'hire_units', label: 'Hire Units' },
+        { id: 'build_complete', label: 'Building Complete' },
+        { id: 'upgrade_purchased', label: 'Upgrade Purchased' },
+        { id: 'notify', label: 'Generic Notification' },
+        { id: 'error', label: 'Error / Warning' }
+      ]
+    }
   ];
   
   var html = '';
-  var mappedSounds = [];
-
-  GAME_EVENTS.forEach(function(ev) {
-    var matchedFile = null;
-    for (var i = 0; i < existingSounds.length; i++) {
-       var sname = existingSounds[i].split('.')[0];
-       if (sname === ev.id) {
-         matchedFile = existingSounds[i];
-         mappedSounds.push(matchedFile);
-         break;
-       }
-    }
+  CATEGORIES.forEach(function(cat) {
+    html += '<div class="card" style="padding:12px; margin-bottom:0">';
+    html += '<h3 style="margin:0 0 12px; font-size:13px; color:var(--gold)">' + cat.icon + ' ' + cat.name + '</h3>';
+    html += '<div style="display:flex; flex-direction:column; gap:4px">';
     
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;">';
-    html += '<div>';
-    html += '<div style="font-size:13px;font-weight:bold;color:var(--gold);margin-bottom:4px;">' + ev.label + ' (' + ev.id + ')</div>';
-    
-    if (matchedFile) {
-       html += '<div style="font-size:12px;color:var(--green)">Loaded: ' + matchedFile + '</div>';
-       html += '</div>';
-       html += '<div style="display:flex;gap:6px">';
-       html += '<button class="btn btn-purple" style="padding:4px 8px;font-size:11px" onclick="playSound(\'' + matchedFile + '\')">▶ Play</button>';
-       html += '<a class="btn" style="padding:4px 8px;font-size:11px;background:var(--bg2);color:var(--text);border:1px solid var(--border);text-decoration:none;" href="/sounds/' + matchedFile + '" download="' + matchedFile + '">⬇ Download</a>';
-       html += '<button class="btn btn-red" style="padding:4px 8px;font-size:11px" onclick="deleteSound(\'' + matchedFile + '\')">✖ Delete</button>';
-       html += '</div>';
-    } else {
-       html += '<div style="font-size:12px;color:var(--text3)">No audio file configured.</div>';
-       html += '</div>';
-    }
-    html += '</div>';
-  });
-  
-  // Custom / Unmapped sounds
-  var unmapped = existingSounds.filter(function(f) { return mappedSounds.indexOf(f) === -1; });
-  if (unmapped.length > 0) {
-    html += '<div style="grid-column: 1 / -1; margin-top:16px;">';
-    html += '<h3 style="border-bottom:1px solid var(--border);padding-bottom:8px;color:var(--text2);">Other Sounds</h3>';
-    html += '</div>';
-    unmapped.forEach(function(f) {
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;">';
-      html += '<div style="font-size:13px;color:var(--text);">' + f + '</div>';
-      html += '<div style="display:flex;gap:6px">';
-      html += '<button class="btn btn-purple" style="padding:4px 8px;font-size:11px" onclick="playSound(\'' + f + '\')">▶ Play</button>';
-      html += '<a class="btn" style="padding:4px 8px;font-size:11px;background:var(--bg2);color:var(--text);border:1px solid var(--border);text-decoration:none;" href="/sounds/' + f + '" download="' + f + '">⬇ Download</a>';
-      html += '<button class="btn btn-red" style="padding:4px 8px;font-size:11px" onclick="deleteSound(\'' + f + '\')">✖ Delete</button>';
+    cat.items.forEach(function(item) {
+      var matchedFile = null;
+      for (var i = 0; i < existingSounds.length; i++) {
+        if (existingSounds[i].split('.')[0] === item.id) {
+          matchedFile = existingSounds[i];
+          break;
+        }
+      }
+      
+      html += '<div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05)">';
+      html += '<div style="flex:1">';
+      html += '<div style="font-size:12px; color:var(--text)">' + item.label + '</div>';
+      html += '<div style="font-size:10px; color:var(--text3)">' + (matchedFile ? '— ' + matchedFile : '— no sound assigned') + '</div>';
+      html += '</div>';
+      
+      html += '<div style="display:flex; gap:4px; align-items:center">';
+      if (matchedFile) {
+        html += '<button class="btn" style="padding:4px 6px; font-size:10px" onclick="playSound(\'' + matchedFile + '\')" title="Play">▶</button>';
+      } else {
+        html += '<button class="btn" style="padding:4px 6px; font-size:10px; opacity:0.3; cursor:default">▶</button>';
+      }
+      
+      html += '<button class="btn btn-gold" style="padding:3px 8px; font-size:10px; height:22px" onclick="triggerSoundUpload(\'' + item.id + '\')">Upload</button>';
+      
+      if (matchedFile) {
+        html += '<button class="btn btn-red" style="padding:4px 6px; font-size:10px" onclick="deleteSound(\'' + matchedFile + '\')" title="Delete">✕</button>';
+      } else {
+        html += '<button class="btn btn-red" style="padding:4px 6px; font-size:10px; opacity:0.3; cursor:default">✕</button>';
+      }
       html += '</div>';
       html += '</div>';
     });
-  }
+    
+    html += '</div></div>';
+  });
   
-  if (html === '') {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text3);grid-column:1/-1;">No sounds uploaded.</div>';
-  } else {
-    list.innerHTML = html;
-  }
+  grid.innerHTML = html;
 }
 
-function playSound(filename) {
-  var audio = new Audio('/sounds/' + filename);
-  audio.play();
+function triggerSoundUpload(actionId) {
+  document.getElementById('sound-upload-row-action').value = actionId;
+  document.getElementById('sound-upload-row-file').click();
 }
 
-async function uploadSound() {
-  var fileInput = document.getElementById('sound-upload-file');
-  var actionSelect = document.getElementById('sound-action-select');
-  if (!fileInput.files || fileInput.files.length === 0) return toast('Select a file first', 'error');
+async function performRowUpload() {
+  var fileInput = document.getElementById('sound-upload-row-file');
+  var actionId = document.getElementById('sound-upload-row-action').value;
+  if (!fileInput.files || fileInput.files.length === 0) return;
   var file = fileInput.files[0];
   
   var formData = new FormData();
   formData.append('soundFile', file);
-  if (actionSelect) {
-    formData.append('actionName', actionSelect.value);
-  }
+  formData.append('actionName', actionId);
   
   try {
     var raw = await fetch('/api/admin/sounds/upload', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
       body: formData
     });
     var res = await raw.json();
     if (res.error) return toast(res.error, 'error');
-    toast('Sound uploaded!', 'success');
+    toast('Sound mapped to ' + actionId, 'success');
     fileInput.value = '';
     loadSounds();
   } catch(e) {
