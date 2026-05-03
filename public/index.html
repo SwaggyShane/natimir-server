@@ -35,8 +35,8 @@
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -58,15 +58,14 @@
   .app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
     background: var(--bg);
     width: 100%;
     max-width: 100%;
     margin: 0;
     padding: 0;
-    padding-top: 56px;
-    overflow: hidden;
-    box-sizing: border-box;
+    padding-top: 56px; /* Match topbar height */
+    overflow-x: hidden;
   }
   .topbar {
     display: flex;
@@ -90,13 +89,10 @@
   .sidebar { display: none; }
   .main { 
     padding: 12px 10px 100px; 
-    flex: 1;
-    min-height: 0;
+    flex: 1; 
     min-width: 0; 
     width: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden; 
     position: relative; 
     box-sizing: border-box;
   }
@@ -136,11 +132,40 @@
       padding-bottom: 10px;
     }
   }
-
+  body.panel-news .main,
+  body.panel-rankings .main,
+  body.panel-exploration .main,
+  body.panel-worldmap .main,
+  body.panel-alliances .main,
+  body.panel-stats .main,
+  body.panel-settings .main { padding-top: 0 !important; }
   
   /* Fix for Full-Screen Chat Layout */
   /* On mobile, strict 100dvh prevents unbounded expansion of the chat containers */
-  /* Chat panel height fixed to visible area */
+  body.panel-globalchat, body.panel-messages {
+    height: 100dvh;
+    height: 100vh;
+    overflow: hidden;
+  }
+  body.panel-globalchat .app, body.panel-messages .app {
+    height: 100dvh;
+    height: 100vh;
+    overflow: hidden;
+    padding-top: 56px !important;
+  }
+  body.panel-globalchat .main,
+  body.panel-messages .main { 
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 60px 0 !important; /* give space for mobile bottom nav */
+    height: 100%;
+    overflow: hidden;
+  }
+  @media (min-width: 769px) { /* On desktop, we use grid instead */
+    body.panel-globalchat, body.panel-messages { overflow: visible; height: auto; }
+    body.panel-globalchat .app, body.panel-messages .app { height: 100vh; overflow: hidden; padding-top: 0 !important; }
+    body.panel-globalchat .main, body.panel-messages .main { padding: 12px 24px !important; }
+  }
 
   #globalchat.panel,
   #messages.panel {
@@ -153,8 +178,6 @@
     flex: 1;
     min-height: 0;
     margin: 0 !important;
-    height: calc(100dvh - 56px - 70px);
-    overflow: hidden;
   }
   /* Remove default card padding and margins for the containers so they neatly fill the screen */
   .chat-container-card {
@@ -185,18 +208,17 @@
   }
 
 
+  body.panel-defense #kd-top { display: none !important; }
+
   /* Ensure content doesn't jump when top header is hidden or shown */
-  .panel { width: 100%; display: none; }
-  .panel.active { display: block !important; margin-top: 0 !important; }
+  .panel { width: 100%; flex: 1; display: none; }
+  .panel.active { display: block; }
 
   body.panel-warfare .main,
   body.panel-studies .main,
   body.panel-training .main,
   body.panel-defense .main,
   body.panel-hire .main { padding-top: 12px; }
-
-  /* Hide resource metrics strip on ally panel */
-  body.panel-alliances .metrics { display: none !important; }
 
 
 
@@ -313,7 +335,7 @@
 
   /* ── Panel ── */
   .panel { display: none; }
-  .panel.active { display: block !important; margin-top: 0 !important; padding-top: 0 !important; position: static !important; }
+  .panel.active { display: block; }
   .panel-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
 
   /* ── Kingdom header ── */
@@ -547,7 +569,8 @@
   @media (min-width: 650px) { .r-grid-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 
   .r-grid-sidebar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
-  @media (min-width: 900px) { .r-grid-sidebar { grid-template-columns: minmax(0, 1fr) 300px; } }
+  @media (min-width: 1100px) { .r-grid-sidebar { grid-template-columns: minmax(0, 1fr) 300px; } }
+  @media (min-width: 900px) and (max-width: 1099px) { .r-grid-sidebar { grid-template-columns: minmax(0, 1fr) 260px; } }
 
   /* ── Hire rows responsiveness ── */
   .hire-row { 
@@ -601,11 +624,11 @@
       max-width: none; 
       overflow-x: visible; 
       position: static;
-      padding-top: 0;
+      padding-top: 0; /* Remove mobile padding-top in grid mode */
     }
     .topbar { grid-column: 1 / -1; padding: 0 20px; height: 56px; position: sticky; top: 0; width: auto !important; }
     .sidebar { display: flex; flex-direction: column; gap: 4px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 12px; overflow-y: auto; }
-    .main { padding: 24px; min-width: 0; overflow-y: auto; }
+    .main { padding: 24px; min-width: 0; }
     .bottom-nav { display: none; }
     /* Logo desktop override */
     .logo { 
@@ -2971,7 +2994,7 @@
 
 <!-- ═══════════════════════════════════════════ ALLIANCES PANEL ══ -->
 <!-- GLOBAL CHAT -->
-<div id="globalchat" class="panel" style="max-width: 900px; margin: 0 auto; box-sizing: border-box; width: 100%;">
+<div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box; width: 100%;">
   <div class="chat-container-card">
 
     <!-- Messages area -->
@@ -4347,7 +4370,12 @@ var isAllianceLeader = false;
 
 async function loadAlliancePanel() {
   var data = await apiCall('GET', '/api/alliance/my');
-  if (data.error) return;
+  if (data.error) {
+    document.getElementById('ally-none').style.display = 'block';
+    document.getElementById('ally-active').style.display = 'none';
+    document.getElementById('ally-search-list').innerHTML = '<div style="color:var(--red)">' + escHtml(data.error) + '</div>';
+    return;
+  }
   myAllianceData = data;
 
   if (!data.alliance) {
@@ -4564,26 +4592,22 @@ function playInsult() {
 }
 
 function openDirectMessage(otherId, otherName) {
-  switchTab('messages', null);
+  switchTab('messages');
   openConversation(otherId, otherName);
 }
 
 function openBountyAction(targetId, targetName) {
-  switchTab('bounties', null);
+  switchTab('bounties');
   selectBountyTarget(targetId, targetName);
   var amtInput = document.getElementById('bounty-amount');
   if (amtInput) amtInput.focus();
 }
 
 function switchTab(id, btn) {
-  var mainEl = document.querySelector('.main');
-  if (mainEl) mainEl.scrollTop = 0;
+  window.scrollTo(0, 0);
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
-    // Chat panels are display-controlled by CSS class — don't force inline style
-    if (p.id !== 'globalchat' && p.id !== 'messages') {
-      p.style.display = 'none';
-    }
+    p.style.display = 'none';
   });
   document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
   
@@ -4593,18 +4617,14 @@ function switchTab(id, btn) {
 
   var panel = document.getElementById(id);
   panel.classList.add('active');
-  // Chat panels are controlled by CSS class only — inline display would fight !important rules
-  if (id !== 'globalchat' && id !== 'messages') {
-    panel.style.display = 'block';
-  }
-  if (btn) btn.classList.add('active');
+  panel.style.display = 'block';
+  btn.classList.add('active');
 
   // Handle kd-top visibility and context
   var kdTop = document.getElementById('kd-top');
   if (kdTop) {
-    var showKdTop = ['status','hire','heroes','studies','economy','build','training','exploration','warfare'].includes(id);
-    kdTop.style.display = showKdTop ? 'block' : 'none';
-    if (showKdTop) {
+    if (['status','hire','heroes','studies','economy','build','training','exploration','warfare'].includes(id)) {
+      kdTop.style.display = 'block';
       // Contextual visibility
       var metrics = ['metric-gold', 'metric-mana', 'metric-land', 'metric-pop', 'metric-morale', 'metric-defense', 'metric-food'];
       metrics.forEach(function(m) { 
@@ -4629,6 +4649,8 @@ function switchTab(id, btn) {
            var gel = document.getElementById('metric-gold'); if(gel) gel.style.display = 'flex';
         }
       }
+    } else {
+      kdTop.style.display = 'none';
     }
   }
 
@@ -4689,6 +4711,10 @@ function switchTab(id, btn) {
   if (id === 'alliances') {
     loadAlliancePanel();
   }
+  // Show/hide kingdom header and resource strip
+  var hideHeader = ['warfare','news','rankings','exploration','studies','training','alliances','hire','globalchat','defence'];
+  hideHeader.forEach(function(p){ document.body.classList.remove('panel-'+p); });
+  if (hideHeader.includes(id)) document.body.classList.add('panel-'+id);
 
   if (id === 'warfare') {
     loadWarfarePanel();
@@ -5216,8 +5242,9 @@ function updateTurnsDisplay() {
 function switchTabMobile(id, btn) {
   switchTab(id, btn);
   document.querySelectorAll('.bnav-item').forEach(function(b){ b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  try { if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch(e) {}
+  btn.classList.add('active');
+  // Scroll the active button into view in the nav
+  try { btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch(e) {}
 }
 
 // ── Server connector ──────────────────────────────────────────────────────────

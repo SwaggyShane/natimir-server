@@ -576,6 +576,10 @@ async function start() {
     const membership = await db.get('SELECT * FROM alliance_members WHERE kingdom_id = ?', [kingdom.id]);
     if (!membership) return res.json({ alliance: null });
     const alliance = await db.get('SELECT * FROM alliances WHERE id = ?', [membership.alliance_id]);
+    if (!alliance) {
+      await db.run('DELETE FROM alliance_members WHERE kingdom_id = ?', [kingdom.id]);
+      return res.json({ alliance: null });
+    }
     const members = await db.all(`
       SELECT k.id, k.name, k.race, k.land, k.fighters, k.level, am.pledge
       FROM kingdoms k JOIN alliance_members am ON k.id = am.kingdom_id
