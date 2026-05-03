@@ -136,30 +136,7 @@
   
   /* Fix for Full-Screen Chat Layout */
   /* On mobile, strict 100dvh prevents unbounded expansion of the chat containers */
-  body.panel-globalchat, body.panel-messages {
-    height: 100dvh;
-    height: 100vh;
-    overflow: hidden;
-  }
-  body.panel-globalchat .app, body.panel-messages .app {
-    height: 100dvh;
-    height: 100vh;
-    overflow: hidden;
-    padding-top: 56px !important;
-  }
-  body.panel-globalchat .main,
-  body.panel-messages .main { 
-    display: flex;
-    flex-direction: column;
-    padding: 0 0 60px 0 !important; /* give space for mobile bottom nav */
-    height: 100%;
-    overflow: hidden;
-  }
-  @media (min-width: 769px) { /* On desktop, we use grid instead */
-    body.panel-globalchat, body.panel-messages { overflow: visible; height: auto; }
-    body.panel-globalchat .app, body.panel-messages .app { height: 100vh; overflow: hidden; padding-top: 0 !important; }
-    body.panel-globalchat .main, body.panel-messages .main { padding: 12px 24px !important; }
-  }
+  /* Chat panel height fixed to visible area */
 
   #globalchat.panel,
   #messages.panel {
@@ -172,6 +149,8 @@
     flex: 1;
     min-height: 0;
     margin: 0 !important;
+    height: calc(100dvh - 56px - 70px);
+    overflow: hidden;
   }
   /* Remove default card padding and margins for the containers so they neatly fill the screen */
   .chat-container-card {
@@ -4706,10 +4685,6 @@ function switchTab(id, btn) {
   if (id === 'alliances') {
     loadAlliancePanel();
   }
-  // Show/hide kingdom header and resource strip
-  var hideHeader = ['warfare','news','rankings','exploration','studies','training','alliances','hire','globalchat','defence'];
-  hideHeader.forEach(function(p){ document.body.classList.remove('panel-'+p); });
-  if (hideHeader.includes(id)) document.body.classList.add('panel-'+id);
 
   if (id === 'warfare') {
     loadWarfarePanel();
