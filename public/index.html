@@ -86,15 +86,6 @@
     width: 100%;
     box-sizing: border-box;
   }
-  @media (max-width: 768px) {
-    #kd-top { 
-      background: var(--bg);
-      border-bottom: 2px solid var(--border2);
-      padding-bottom: 12px; 
-      margin-bottom: 12px;
-      position: relative; /* Not sticky, as requested */
-    }
-  }
   .sidebar { display: none; }
   .main { 
     padding: 12px 10px 100px; 
@@ -119,6 +110,17 @@
     padding-left: 10px;
     padding-right: 10px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  }
+  @media (max-width: 768px) {
+    #kd-top { 
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px; 
+      margin-bottom: 12px;
+      position: relative; /* Not sticky, as requested */
+      top: unset;
+      box-shadow: none;
+    }
   }
   @media (min-width: 700px) {
     #kd-top {
