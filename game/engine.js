@@ -7,7 +7,7 @@ const config = require('./config');
 const {
   RACE_BONUSES, REGION_DATA, UNIT_COST, MAX_RESEARCH, HOUSING_CAP_BY_RACE,
   TROOP_RACE_BONUS, WALL_STRENGTH_MULT, TOWER_DETECT_MULT, OUTPOST_RANGER_MULT,
-  WALL_UPGRADES, TOWER_DEF_UPGRADES, OUTPOST_UPGRADES, CITADEL_REQ,
+  WALL_UPGRADES, TOWER_DEF_UPGRADES, OUTPOST_UPGRADES, DEFENSE_TIERS,
   SEASON_ORDER, SEASON_DURATION, SEASON_FARM_MULT, SEASON_ICONS,
   LOCATE_RACE_MULT, FARM_YIELD_MULT, FARM_WORKERS_PER, FOOD_CONSUMPTION_MULT,
   MARKET_INCOME_MULT, TRADE_RATE_MULT, COMMODITY_VALUES, COMMODITY_RACE_DISCOUNT,
@@ -273,12 +273,15 @@ function defenseRating(k) {
   const outpost = k.bld_outposts      || 0;
   const wm      = k.war_machines      || 0;
   const defUpgrades = safeJsonParse(k.defense_upgrades, {}, 'defenseRating:defense_upgrades');
-  if (defUpgrades.citadel) return '🏰 Citadel';
+  if (defUpgrades.citadel)   return '👑 Citadel';
+  if (defUpgrades.keep)      return '🏰 Keep';
+  if (defUpgrades.fortified) return '🛡️ Fortified';
+  
   if (walls === 0)                               return '🔴 Undefended';
   if (walls < 10 && towers === 0)               return '🟠 Lightly Defended';
   if (walls >= 10 && (towers > 0 || outpost > 0)) {
-    if (wm > 0 && towers > 0 && outpost > 0)   return '🟢 Fortified';
-    return '🟡 Defended';
+    if (wm > 0 && towers > 0 && outpost > 0)   return '🟢 Defended';
+    return '🟡 Lightly Defended';
   }
   return '🟠 Lightly Defended';
 }
@@ -327,22 +330,55 @@ function outpostRangerPower(k) {
   return Math.floor((outposts * 30 + rangersOnPatrol * 10 * rangerLvlMult * militaryMult) * mult * stationMult);
 }
 
-// Check and award Citadel status
-function checkCitadel(k, events) {
+// Check and award defense tiers
+function checkDefenseTiers(k, events) {
   const updates = {};
-  const defUpgrades = safeJsonParse(k.defense_upgrades, {}, 'checkCitadel:defense_upgrades');
-  const req = CITADEL_REQ;
-  const meetsReqs = (k.bld_walls||0) >= req.walls && (k.bld_guard_towers||0) >= req.guard_towers &&
-                    (k.bld_outposts||0) >= req.outposts && (k.bld_castles||0) >= req.castles;
+  const defUpgrades = safeJsonParse(k.defense_upgrades, {}, 'checkDefenseTiers:defense_upgrades');
+  const tiers = DEFENSE_TIERS;
+  
+  const w = k.bld_walls || 0;
+  const t = k.bld_guard_towers || 0;
+  const o = k.bld_outposts || 0;
+  const c = k.bld_castles || 0;
 
-  if (meetsReqs && !defUpgrades.citadel) {
+  const meetsFortified = w >= tiers.fortified.walls && t >= tiers.fortified.guard_towers && o >= tiers.fortified.outposts && c >= tiers.fortified.castles;
+  const meetsKeep = w >= tiers.keep.walls && t >= tiers.keep.guard_towers && o >= tiers.keep.outposts && c >= tiers.keep.castles;
+  const meetsCitadel = w >= tiers.citadel.walls && t >= tiers.citadel.guard_towers && o >= tiers.citadel.outposts && c >= tiers.citadel.castles;
+
+  let changed = false;
+
+  if (meetsFortified && !defUpgrades.fortified) {
+    defUpgrades.fortified = true;
+    changed = true;
+    events.push({ type:'system', message:`🛡️ Fortified! Your defenses are solidifying. +5% permanent defense power, -5% land loss on defeat.` });
+  } else if (!meetsFortified && defUpgrades.fortified) {
+    defUpgrades.fortified = false;
+    changed = true;
+    events.push({ type:'system', message:`⚠️ Lost Fortified status! Your defenses have degraded.` });
+  }
+
+  if (meetsKeep && !defUpgrades.keep) {
+    defUpgrades.keep = true;
+    changed = true;
+    events.push({ type:'system', message:`🏰 Keep established! Your fortress is becoming formidable. +10% permanent defense power, -10% land loss on defeat.` });
+  } else if (!meetsKeep && defUpgrades.keep) {
+    defUpgrades.keep = false;
+    changed = true;
+    events.push({ type:'system', message:`⚠️ Lost Keep status! Your fortress has been compromised.` });
+  }
+
+  if (meetsCitadel && !defUpgrades.citadel) {
     defUpgrades.citadel = true;
-    updates.defense_upgrades = JSON.stringify(defUpgrades);
-    events.push({ type:'system', message:`🏰 Castle Citadel achieved! Your fortress stands among the greatest in Narmir. +15% permanent defense bonus, warmachines on walls deal ×2 damage.` });
-  } else if (!meetsReqs && defUpgrades.citadel) {
+    changed = true;
+    events.push({ type:'system', message:`👑 Castle Citadel achieved! Your fortress stands among the greatest in Narmir. +15% permanent defense power, -15% land loss on defeat, warmachines on walls deal ×2 damage.` });
+  } else if (!meetsCitadel && defUpgrades.citadel) {
     defUpgrades.citadel = false;
-    updates.defense_upgrades = JSON.stringify(defUpgrades);
+    changed = true;
     events.push({ type:'system', message:`🏚️ Castle Citadel lost! Your fortress no longer meets the requirements for the Citadel bonus.` });
+  }
+
+  if (changed) {
+    updates.defense_upgrades = JSON.stringify(defUpgrades);
   }
   return updates;
 }
@@ -908,9 +944,9 @@ function processTurn(k) {
     events.push({ type: 'system', message: `🚢 Trade Routes generated ${tradeIncome.toLocaleString()} gold.` });
   }
 
-  // ── 8d. Defence — citadel check ───────────────────────────────────────────────
-  const citadelUpdates = checkCitadel({ ...k, ...updates }, events);
-  Object.assign(updates, citadelUpdates);
+  // ── 8d. Defence — calculate defense tiers ───────────────────────────────────────────────
+  const tierUpdates = checkDefenseTiers({ ...k, ...updates }, events);
+  Object.assign(updates, tierUpdates);
 
   // ── 8c. Mage tower research — research from mages in towers ──────────────────
   const towerUpdates = processMageTower({ ...k, ...updates }, events);
@@ -1722,14 +1758,18 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   const defTowerPower   = towerDetectionPower(defender);
   // Structure defense (castles)
   const defStructures   = Math.floor((defender.bld_castles||0) / 500) * 5000;
-  // Citadel bonus
-  const defCitadelMult = safeJsonParse(defender.defense_upgrades, {}, 'resolveMilitaryAttack:defense_upgrades').citadel ? 1.15 : 1.0;
+  // Defense tier bonuses
+  const defUpgrades = safeJsonParse(defender.defense_upgrades, {}, 'resolveMilitaryAttack:defense_upgrades');
+  let defTierMult = 1.0;
+  if (defUpgrades.fortified) defTierMult += 0.05;
+  if (defUpgrades.keep)      defTierMult += 0.10;
+  if (defUpgrades.citadel)   defTierMult += 0.15;
 
   // Hero power — defender
   let defHeroPower = 0;
   defenderHeroes.forEach(h => { defHeroPower += getHeroPower(h); });
 
-  const defPower = (defFighterPower + defRangerPower + defMagePower + defWmPower + defEngBonus + defWallPower + defOutpostPower + defTowerPower + defStructures + defHeroPower) * defMoraleMult * defCitadelMult;
+  const defPower = (defFighterPower + defRangerPower + defMagePower + defWmPower + defEngBonus + defWallPower + defOutpostPower + defTowerPower + defStructures + defHeroPower) * defMoraleMult * defTierMult;
 
   // ── Step 6: Battle resolution ─────────────────────────────────────────────
   const variance = 0.8 + Math.random() * 0.4;
@@ -1760,7 +1800,23 @@ function resolveMilitaryAttack(attacker, defender, sentUnits, attackerHeroes = [
   const defWmLost = win ? Math.floor(defWmActive * (0.03 + Math.random()*0.07)) : 0;
 
   // Land transfer
-  const landTransferred = win ? Math.floor(defender.land * 0.10) : 0;
+  let landLossPct = 0.10;
+  if (defUpgrades.fortified) landLossPct -= 0.005; // 0.095 (5% reduction of 0.10)
+  if (defUpgrades.keep)      landLossPct -= 0.01;  // 0.085
+  if (defUpgrades.citadel)   landLossPct -= 0.015; // 0.07 (30% total reduction)
+  
+  // Actually, requested straight "-10% land loss on defeat" means multiplier, or flat %?
+  // 10% land loss * (1 - 0.05) for fortified? Let's do:
+  let defLandLossMult = 1.0;
+  if (defUpgrades.fortified) defLandLossMult -= 0.05;
+  if (defUpgrades.keep)      defLandLossMult -= 0.10;
+  if (defUpgrades.citadel)   defLandLossMult -= 0.15;
+  
+  // Also Reinforced Walls do -10%
+  const wallUpgrades = safeJsonParse(defender.wall_upgrades, {}, 'resolveMilitaryAttack:wall_upgrades');
+  if (wallUpgrades.reinforced) defLandLossMult -= 0.10;
+
+  const landTransferred = win ? Math.floor(defender.land * 0.10 * Math.max(0.1, defLandLossMult)) : 0;
 
   // Warmachine damage — walls take damage on win, no walls = building damage
   const warmachineUpdates = applyWarmachineDamage(attacker, defender, win);
@@ -3133,9 +3189,9 @@ module.exports = {
   SEASON_ORDER, SEASON_DURATION, SEASON_FARM_MULT, SEASON_ICONS,
   LOCATE_RACE_MULT, calcDiscoveryChance, processLocationMapsWip,
   WALL_UPGRADES, TOWER_DEF_UPGRADES, OUTPOST_UPGRADES,
-  WALL_STRENGTH_MULT, TOWER_DETECT_MULT, OUTPOST_RANGER_MULT, CITADEL_REQ,
+  WALL_STRENGTH_MULT, TOWER_DETECT_MULT, OUTPOST_RANGER_MULT, DEFENSE_TIERS,
   defenseRating, wallDefensePower, towerDetectionPower, outpostRangerPower,
-  checkCitadel, applyWarmachineDamage,
+  checkDefenseTiers, applyWarmachineDamage,
   TOWER_UPGRADES, SCHOOL_UPGRADES, SHRINE_UPGRADES, LIBRARY_UPGRADES,
   FARM_UPGRADES, MARKET_UPGRADES, TAVERN_UPGRADES, MERC_TIERS, COMMODITY_VALUES,
   FARM_YIELD_MULT, FOOD_CONSUMPTION_MULT, MARKET_INCOME_MULT, TRADE_RATE_MULT,

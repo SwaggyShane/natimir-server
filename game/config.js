@@ -58,7 +58,11 @@ const config = {
     field_hq:      { name:'Field Headquarters', cost:60000,  desc:'Expedition rangers return with +10% gold bonus',    requires:'forward_camp'    },
   },
 
-  CITADEL_REQ: { walls:50, guard_towers:20, outposts:20, castles:1 },
+  DEFENSE_TIERS: {
+    fortified: { walls: 100, guard_towers: 10, outposts: 10, castles: 0 },
+    keep:      { walls: 500, guard_towers: 50, outposts: 50, castles: 0 },
+    citadel:   { walls: 1000, guard_towers: 500, outposts: 500, castles: 1 }
+  },
 
   SEASON_ORDER: ['spring','summer','fall','winter'],
   SEASON_DURATION: { spring:3, summer:5, fall:2, winter:3 },
