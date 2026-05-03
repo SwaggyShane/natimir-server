@@ -214,10 +214,22 @@
   }
 
 
+  /* Hide kd-top via CSS for all panels that don't need it */
+  body.panel-rankings #kd-top,
+  body.panel-alliances #kd-top,
+  body.panel-worldmap #kd-top,
+  body.panel-news #kd-top,
+  body.panel-bounties #kd-top,
+  body.panel-messages #kd-top,
+  body.panel-globalchat #kd-top,
+  body.panel-options #kd-top,
+  body.panel-stats #kd-top,
+  body.panel-settings #kd-top,
+  body.panel-changelog #kd-top,
   body.panel-defense #kd-top { display: none !important; }
 
   /* Ensure content doesn't jump when top header is hidden or shown */
-  .panel { width: 100%; flex: 1; display: none; }
+  .panel { width: 100%; display: none; }
   .panel.active { display: block; }
 
   body.panel-warfare .main,
@@ -4592,12 +4604,12 @@ function playInsult() {
 }
 
 function openDirectMessage(otherId, otherName) {
-  switchTab('messages');
+  switchTab('messages', null);
   openConversation(otherId, otherName);
 }
 
 function openBountyAction(targetId, targetName) {
-  switchTab('bounties');
+  switchTab('bounties', null);
   selectBountyTarget(targetId, targetName);
   var amtInput = document.getElementById('bounty-amount');
   if (amtInput) amtInput.focus();
@@ -4629,7 +4641,7 @@ function switchTab(id, btn) {
   if (id !== 'globalchat' && id !== 'messages') {
     panel.style.display = 'block';
   }
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
 
   // Handle kd-top visibility and context
   var kdTop = document.getElementById('kd-top');
@@ -5253,9 +5265,8 @@ function updateTurnsDisplay() {
 function switchTabMobile(id, btn) {
   switchTab(id, btn);
   document.querySelectorAll('.bnav-item').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  // Scroll the active button into view in the nav
-  try { btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch(e) {}
+  if (btn) btn.classList.add('active');
+  try { if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch(e) {}
 }
 
 // ── Server connector ──────────────────────────────────────────────────────────
