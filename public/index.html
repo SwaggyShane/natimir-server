@@ -2728,6 +2728,7 @@
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-purple" onclick="distributeTrainingEvenly()" style="white-space:nowrap">Distribute evenly</button>
+        <button class="btn btn-red" onclick="releaseAllTraining()" style="white-space:nowrap">Release all</button>
         <button class="btn btn-gold" onclick="saveTrainingAllocation()" style="white-space:nowrap">Save allocation</button>
       </div>
     </div>
@@ -8270,7 +8271,7 @@ function updateTrainingDisplay() {
   });
   
   var fields = state.bld_training || 0;
-  var capacity = fields * 50;
+  var capacity = fields * 100;
   var el = document.getElementById('tr-capacity-used');
   if (el) {
     el.textContent = total;
@@ -8345,7 +8346,7 @@ function setTrainingInputsFromState() {
 }
 
 function setTrainingMax(unit) {
-  var capacity = (state.bld_training || 0) * 50;
+  var capacity = (state.bld_training || 0) * 100;
   var allocated = getAllocatedTraining();
   var current = parseInt(document.getElementById('ta-' + unit)?.value) || 0;
   var available = capacity - allocated + current;
@@ -8355,7 +8356,7 @@ function setTrainingMax(unit) {
 }
 
 function distributeTrainingEvenly() {
-  var capacity = (state.bld_training || 0) * 50;
+  var capacity = (state.bld_training || 0) * 100;
   var count = TROOP_TYPES.length;
   var each = Math.floor(capacity / count);
   TROOP_TYPES.forEach(function(u) {
@@ -8363,6 +8364,15 @@ function distributeTrainingEvenly() {
     if (el) el.value = Math.min(each, state[u] || 0);
   });
   updateTrainingDisplay();
+}
+
+function releaseAllTraining() {
+  TROOP_TYPES.forEach(function(u) {
+    var el = document.getElementById('ta-' + u);
+    if (el) el.value = 0;
+  });
+  updateTrainingDisplay();
+  saveTrainingAllocation();
 }
 
 function renderMageTowerPanel() {

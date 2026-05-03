@@ -106,7 +106,7 @@ function manaPerTurn(k) {
   }[k.race] || 3;
   const towerMana   = (k.bld_mage_towers || 0) * 5;
   const capacity      = (k.bld_mage_towers || 0) * 20;
-  const effectiveMages = Math.min(k.mages || 0, capacity);
+  const effectiveMages = Math.min(getAvailableUnits(k, 'mages'), capacity);
   const mageMana       = Math.floor(effectiveMages / 5);
 
   // Tower upgrades
@@ -154,15 +154,22 @@ function popGrowth(k) {
   return Math.floor((base + entertainment) * raceGrowthMult * growthMult);
 }
 
-function researchIncrement(k, discipline, researchersAssigned) {
-  const schoolBonus    = 1 + (Math.floor(k.bld_schools / 5) * 0.02);
+function researchIncrement(k, discipline, researchersAssigned, currentLevel) {
+  const schoolBonus    = 1 + (Math.floor((k.bld_schools || 0) / 5) * 0.02);
   const raceMulti      = discipline === 'spellbook' ? raceBonus(k, 'magic') : raceBonus(k, 'research');
   const resLevelMult   = unitLevelMult(k, 'researchers');
   const effective = Math.floor(researchersAssigned * schoolBonus * raceMulti * resLevelMult);
-  if (effective >= 2000) return 5;
-  if (effective >= 1200) return 3;
-  if (effective >= 600)  return 2;
-  if (effective >= 200)  return 1;
+  
+  let factor = 1.0;
+  if (currentLevel > 100) {
+    // Exponentially harder: +10% cost every 10 points above 100
+    factor = Math.pow(1.10, (currentLevel - 100) / 10);
+  }
+
+  if (effective >= Math.floor(2000 * factor)) return 5;
+  if (effective >= Math.floor(1200 * factor)) return 3;
+  if (effective >= Math.floor(600 * factor))  return 2;
+  if (effective >= Math.floor(200 * factor))  return 1;
   return 0;
 }
 
@@ -262,6 +269,15 @@ function diluteTroopXp(k, unit, hired) {
 function awardUnitXp(k, unit, xpAmount) {
   if (!xpAmount || xpAmount <= 0 || !(k[unit] > 0)) return null;
   return awardTroopXp(k, unit, xpAmount).troop_levels;
+}
+
+// ── Unit Availability ──────────────────────────────────────────────────────────
+function getAvailableUnits(k, unit) {
+  const total = k[unit] || 0;
+  if (!k.training_allocation) return total;
+  const trainingAlloc = safeJsonParse(k.training_allocation, {}, 'getAvailableUnits:training_allocation');
+  const training = Math.max(0, parseInt(trainingAlloc[unit]) || 0);
+  return Math.max(0, total - training);
 }
 
 // ── Defense system ────────────────────────────────────────────────────────────
@@ -674,6 +690,12 @@ function processTurn(k) {
   updates.mana = k.mana + manaGain;
   events.push({ type: 'system', message: `✨ Mana: +${manaGain.toLocaleString()} restored. Total: ${updates.mana.toLocaleString()}.` });
 
+  // Mages gain XP when producing mana
+  if ((k.mages || 0) > 0 && manaGain > 0) {
+    const resMages = awardUnitXp({ ...k, ...updates }, 'mages', manaGain);
+    if (resMages) updates.troop_levels = resMages;
+  }
+
   // ── 3. Population growth ─────────────────────────────────────────────────────
   const growth = popGrowth(k);
   updates.population = Math.max(0, k.population + growth);
@@ -967,7 +989,7 @@ function processTurn(k) {
 
     const TROOP_TYPES = ['fighters','rangers','clerics','mages','thieves','ninjas'];
     const trainingFields   = k.bld_training || 0;
-    const trainingCapacity = trainingFields * 50;
+    const trainingCapacity = trainingFields * 100;
     let advancedTroops = [];
 
     TROOP_TYPES.forEach(function(unit) {
@@ -1020,7 +1042,7 @@ function processTurn(k) {
   }
   // Human: level 5+ clerics restore 1 morale per turn
   const humanBonus = racialUnitBonus({ ...k, troop_levels: updates.troop_levels || k.troop_levels }, 'clerics');
-  if (humanBonus.auraHeal && (k.clerics || 0) > 0) {
+  if (humanBonus.auraHeal && getAvailableUnits(k, 'clerics') > 0) {
     const natCap = naturalMoraleCap(k);
     updates.morale = Math.min(natCap, (updates.morale || k.morale || 100) + 1);
     events.push({ type: 'system', message: `✨ Human clerics radiate healing aura — +1 morale.` });
@@ -1238,8 +1260,9 @@ function studyDiscipline(k, discipline, researchersAssigned) {
   if (!col) return { error: 'Unknown discipline' };
   if (researchersAssigned > k.researchers) return { error: 'Not enough researchers' };
 
-  const increment = researchIncrement(k, discipline, researchersAssigned);
-  if (increment === 0) return { error: 'Need more researchers for any progress (min ~200)' };
+  const currentLevel = k[col] || 100;
+  const increment = researchIncrement(k, discipline, researchersAssigned, currentLevel);
+  if (increment === 0) return { error: 'Need more researchers for any progress' };
 
   const cap = discipline === 'spellbook' ? Infinity : MAX_RESEARCH;
   const newVal = Math.min(cap, k[col] + increment);
@@ -2769,7 +2792,7 @@ function processMageTower(k, events) {
   }
 
   const capacity = towers * 20;
-  const effectiveMages = Math.min(k.mages || 0, capacity);
+  const effectiveMages = Math.min(getAvailableUnits(k, 'mages'), capacity);
   const mageLvlMult = unitLevelMult(k, 'mages');
   const raceMagic = raceBonus(k, 'magic');
 
@@ -2850,7 +2873,7 @@ function processShrine(k, events) {
   try { shrineUpgrades = JSON.parse(k.shrine_upgrades || '{}'); } catch {}
 
   const capacity        = shrines * 15;
-  const effectiveClerics = Math.min(k.clerics || 0, capacity);
+  const effectiveClerics = Math.min(getAvailableUnits(k, 'clerics'), capacity);
 
   const groveMult  = shrineUpgrades.sacred_grove ? 1.15 : 1.0;
   const moraleGain = Math.max(1, Math.floor((effectiveClerics / 10) * groveMult));
@@ -2859,6 +2882,15 @@ function processShrine(k, events) {
   if (effectiveClerics > 0 && currentMorale < natCap) {
     updates.morale = Math.min(natCap, currentMorale + moraleGain);
     events.push({ type: 'system', message: `⛩️ Shrine: ${effectiveClerics.toLocaleString()} clerics praying — morale +${moraleGain}.` });
+  }
+
+  // Cleric XP for praying
+  if (effectiveClerics > 0) {
+    const clericXp = Math.max(1, Math.floor(effectiveClerics / 5)) + moraleGain;
+    const resClerics = awardUnitXp({ ...k, ...updates }, 'clerics', clericXp);
+    if (resClerics) {
+      updates.troop_levels = resClerics;
+    }
   }
 
   // Divine Sanctuary — auto-stabilise morale at 50% once per 20 turns
@@ -3182,6 +3214,7 @@ async function resolveRegions(db, io) {
 }
 
 module.exports = {
+  getAvailableUnits,
   resolveRegions,
   goldPerTurn, manaPerTurn, foodBalance, farmProduction, foodConsumption,
   marketIncomeFull, tavernEntertainmentBonus, commodityPrice,

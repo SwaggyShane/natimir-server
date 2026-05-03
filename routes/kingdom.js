@@ -308,9 +308,21 @@ module.exports = function(db) {
   router.post('/training-allocation', requireAuth, async (req, res) => {
     const { allocation } = req.body;
     if (!allocation || typeof allocation !== 'object') return res.status(400).json({ error: 'allocation required' });
-    const k = await db.get('SELECT id FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
+    const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-    await db.run('UPDATE kingdoms SET training_allocation = ? WHERE id = ?', [JSON.stringify(allocation), k.id]);
+
+    let total = 0;
+    const capacity = (k.bld_training || 0) * 100;
+    const clean_alloc = {};
+    for (const [unit, amount] of Object.entries(allocation)) {
+      const amt = Math.max(0, parseInt(amount) || 0);
+      if (amt > (k[unit] || 0)) return res.status(400).json({ error: `Not enough ${unit}` });
+      total += amt;
+      if (amt > 0) clean_alloc[unit] = amt;
+    }
+    if (total > capacity) return res.status(400).json({ error: `Exceeds training capacity (${capacity})` });
+
+    await db.run('UPDATE kingdoms SET training_allocation = ? WHERE id = ?', [JSON.stringify(clean_alloc), k.id]);
     res.json({ ok: true });
   });
   router.post('/build-allocation', requireAuth, async (req, res) => {
@@ -400,7 +412,7 @@ module.exports = function(db) {
 
     const r = Number(rangers) || 0;
     if (r <= 0) return res.status(400).json({ error: 'Send at least some rangers' });
-    if (r > k.rangers) return res.status(400).json({ error: 'Not enough rangers' });
+    if (r > engine.getAvailableUnits(k, 'rangers')) return res.status(400).json({ error: 'Not enough available rangers (some may be in training)' });
 
     try {
       const { updates, events } = await runTurn(db, k);
@@ -559,6 +571,14 @@ module.exports = function(db) {
     const target = await db.get('SELECT * FROM kingdoms WHERE id = ?', [targetId]);
     if (!target) return res.status(404).json({ error: 'Target kingdom not found' });
     if (target.id === k.id) return res.status(400).json({ error: 'Cannot attack yourself' });
+
+    if (sentUnits.fighters > engine.getAvailableUnits(k, 'fighters')) return res.status(400).json({ error: 'Not enough available fighters (some may be in training)' });
+    if (sentUnits.rangers > engine.getAvailableUnits(k, 'rangers')) return res.status(400).json({ error: 'Not enough available rangers (some may be in training)' });
+    if (sentUnits.mages > engine.getAvailableUnits(k, 'mages')) return res.status(400).json({ error: 'Not enough available mages (some may be in training)' });
+    if (sentUnits.warMachines > engine.getAvailableUnits(k, 'war_machines')) return res.status(400).json({ error: 'Not enough available war machines' });
+    if (sentUnits.ninjas > engine.getAvailableUnits(k, 'ninjas')) return res.status(400).json({ error: 'Not enough available ninjas (some may be in training)' });
+    if (sentUnits.thieves > engine.getAvailableUnits(k, 'thieves')) return res.status(400).json({ error: 'Not enough available thieves (some may be in training)' });
+
     if ((k.turn || 0) < 400) return res.status(400).json({ error: `You are under newbie protection until Turn 400. You cannot attack yet.` });
     if ((target.turn || 0) < 400) return res.status(400).json({ error: `${target.name} is under newbie protection until Turn 400` });
     
@@ -830,7 +850,7 @@ module.exports = function(db) {
 
     if (op === 'spy') {
       const unitsSent = Math.max(1, parseInt(units) || 0);
-      if (unitsSent > k.thieves) return res.status(400).json({ error: 'Not enough thieves' });
+      if (unitsSent > engine.getAvailableUnits(k, 'thieves')) return res.status(400).json({ error: 'Not enough available thieves' });
       result = engine.covertSpy(k, target, unitsSent);
       if (result.error) return res.status(400).json({ error: result.error });
       await applyCovert(k, result.spyUpdates || {});
@@ -851,7 +871,7 @@ module.exports = function(db) {
 
     } else if (op === 'loot') {
       const thievesSent = Math.max(1, parseInt(units) || 0);
-      if (thievesSent > k.thieves) return res.status(400).json({ error: 'Not enough thieves' });
+      if (thievesSent > engine.getAvailableUnits(k, 'thieves')) return res.status(400).json({ error: 'Not enough available thieves' });
       const loot = lootType === 'wm' ? 'war_machines' : lootType;
       result = engine.covertLoot(k, target, loot, thievesSent);
       if (result.error) return res.status(400).json({ error: result.error });
@@ -870,7 +890,7 @@ module.exports = function(db) {
 
     } else if (op === 'assassinate') {
       const ninjasSent = Math.max(1, parseInt(units) || 0);
-      if (ninjasSent > k.ninjas) return res.status(400).json({ error: 'Not enough ninjas' });
+      if (ninjasSent > engine.getAvailableUnits(k, 'ninjas')) return res.status(400).json({ error: 'Not enough available ninjas' });
       const validTargets = ['fighters','rangers','clerics','mages','thieves','ninjas','researchers','engineers','scribes'];
       if (!validTargets.includes(unitType)) return res.status(400).json({ error: 'Invalid target unit type' });
       result = engine.covertAssassinate(k, target, ninjasSent, unitType);
@@ -890,7 +910,7 @@ module.exports = function(db) {
 
     } else if (op === 'sabotage') {
       const ninjasSent = Math.max(1, parseInt(units) || 0);
-      if (ninjasSent > k.ninjas) return res.status(400).json({ error: 'Not enough ninjas' });
+      if (ninjasSent > engine.getAvailableUnits(k, 'ninjas')) return res.status(400).json({ error: 'Not enough available ninjas' });
       const BLD_MAP = { farms:'bld_farms', smithies:'bld_smithies', mage_towers:'bld_mage_towers', barracks:'bld_barracks', libraries:'bld_libraries' };
       const col = BLD_MAP[bldType];
       if (!col) return res.status(400).json({ error: 'Invalid building type' });
@@ -1015,8 +1035,8 @@ module.exports = function(db) {
     const f = Math.max(0, parseInt(fighters) || 0);
     if (r < 1) return res.status(400).json({ error: 'Send at least 1 ranger' });
     if (type === 'dungeon' && f < 1) return res.status(400).json({ error: 'Dungeon raids require fighters' });
-    if (r > k.rangers) return res.status(400).json({ error: 'Not enough rangers' });
-    if (f > k.fighters) return res.status(400).json({ error: 'Not enough fighters' });
+    if (r > engine.getAvailableUnits(k, 'rangers')) return res.status(400).json({ error: 'Not enough available rangers (some may be in training)' });
+    if (f > engine.getAvailableUnits(k, 'fighters')) return res.status(400).json({ error: 'Not enough available fighters (some may be in training)' });
     const existing = await db.get('SELECT id FROM expeditions WHERE kingdom_id = ? AND type = ?', [k.id, type]);
     if (existing) return res.status(400).json({ error: `A ${type} expedition is already underway` });
 
