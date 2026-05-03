@@ -132,19 +132,7 @@
       padding-bottom: 10px;
     }
   }
-  body.panel-news .main,
-  body.panel-rankings .main,
-  body.panel-exploration .main,
-  body.panel-worldmap .main,
-  body.panel-alliances .main,
-  body.panel-stats .main,
-  body.panel-settings .main { padding-top: 8px !important; }
-  
-  /* These panels need their first card visible immediately */
-  #alliances, #rankings, #worldmap, #news, #bounties, #options {
-    padding-top: 0;
-    margin-top: 0;
-  }
+
   
   /* Fix for Full-Screen Chat Layout */
   /* On mobile, strict 100dvh prevents unbounded expansion of the chat containers */
@@ -213,20 +201,6 @@
     }
   }
 
-
-  /* Hide kd-top via CSS for all panels that don't need it */
-  body.panel-rankings #kd-top,
-  body.panel-alliances #kd-top,
-  body.panel-worldmap #kd-top,
-  body.panel-news #kd-top,
-  body.panel-bounties #kd-top,
-  body.panel-messages #kd-top,
-  body.panel-globalchat #kd-top,
-  body.panel-options #kd-top,
-  body.panel-stats #kd-top,
-  body.panel-settings #kd-top,
-  body.panel-changelog #kd-top,
-  body.panel-defense #kd-top { display: none !important; }
 
   /* Ensure content doesn't jump when top header is hidden or shown */
   .panel { width: 100%; display: none; }
@@ -4672,8 +4646,6 @@ function switchTab(id, btn) {
            var gel = document.getElementById('metric-gold'); if(gel) gel.style.display = 'flex';
         }
       }
-    } else {
-      kdTop.style.display = 'none';
     }
   }
 
