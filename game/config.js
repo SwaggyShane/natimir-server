@@ -73,7 +73,7 @@ const config = {
   MARKET_INCOME_MULT:    { human:1.00, dwarf:1.25, high_elf:1.10, orc:0.85, dark_elf:1.05, dire_wolf:0.75 },
   TRADE_RATE_MULT:       { human:1.00, dwarf:1.15, high_elf:1.20, orc:0.80, dark_elf:1.30, dire_wolf:0.70 },
 
-  COMMODITY_VALUES: { food:2, weapons:6, armor:8, mana:4, maps:50, scrolls:200, blueprints:150 },
+  COMMODITY_VALUES: { food:2, weapons:6, armor:8, mana:4, maps:50, scrolls:200, blueprints:150, war_machines: 500, land: 2000 },
   COMMODITY_RACE_DISCOUNT: {
     dwarf:    { weapons:0.85, armor:0.85 },
     high_elf: { scrolls:0.80, mana:0.85 },

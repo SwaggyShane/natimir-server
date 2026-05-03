@@ -1240,13 +1240,13 @@ module.exports = function(db) {
     const cost = Math.ceil(qty * priceRow.current_price);
     if ((k.gold || 0) < cost) return res.status(400).json({ error: `Need ${cost.toLocaleString()} GC` });
 
-    // Update kingdom and market demand
-    await db.run(`UPDATE kingdoms SET gold = gold - ?, ${resource} = ${resource} + ? WHERE id = ?`, [cost, qty, k.id]);
+    const dbCol = resource === 'weapons' ? 'weapons_stockpile' : resource === 'armor' ? 'armor_stockpile' : resource;
+    await db.run(`UPDATE kingdoms SET gold = gold - ?, ${dbCol} = ${dbCol} + ? WHERE id = ?`, [cost, qty, k.id]);
     
     // Impact market: increased demand raises price slightly
     await db.run('UPDATE market_prices SET current_price = current_price * (1 + ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?', [0.0001 * qty, resource]);
 
-    res.json({ ok: true, bought: qty, cost, updates: { gold: (k.gold || 0) - cost, [resource]: (k[resource] || 0) + qty } });
+    res.json({ ok: true, bought: qty, cost, updates: { gold: (k.gold || 0) - cost, [dbCol]: (k[dbCol] || 0) + qty } });
   });
 
   router.post('/market/sell', requireAuth, async (req, res) => {
@@ -1256,18 +1256,19 @@ module.exports = function(db) {
 
     const k = await db.get('SELECT * FROM kingdoms WHERE player_id = ?', [req.player.playerId]);
     if (!k) return res.status(404).json({ error: 'Kingdom not found' });
-    if ((k[resource] || 0) < qty) return res.status(400).json({ error: 'Not enough resource' });
+    const dbCol = resource === 'weapons' ? 'weapons_stockpile' : resource === 'armor' ? 'armor_stockpile' : resource;
+    if ((k[dbCol] || 0) < qty) return res.status(400).json({ error: 'Not enough resource' });
 
     const priceRow = await db.get('SELECT * FROM market_prices WHERE id = ?', [resource]);
     if (!priceRow) return res.status(400).json({ error: 'Invalid resource' });
 
     const gain = Math.floor(qty * priceRow.current_price * 0.7); // 30% spread
-    await db.run(`UPDATE kingdoms SET gold = gold + ?, ${resource} = ${resource} - ? WHERE id = ?`, [gain, qty, k.id]);
+    await db.run(`UPDATE kingdoms SET gold = gold + ?, ${dbCol} = ${dbCol} - ? WHERE id = ?`, [gain, qty, k.id]);
     
     // Impact market: increased supply lowers price slightly
     await db.run('UPDATE market_prices SET current_price = current_price * (1 - ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?', [0.0001 * qty, resource]);
 
-    res.json({ ok: true, sold: qty, gain, updates: { gold: (k.gold || 0) + gain, [resource]: (k[resource] || 0) - qty } });
+    res.json({ ok: true, sold: qty, gain, updates: { gold: (k.gold || 0) + gain, [dbCol]: (k[dbCol] || 0) - qty } });
   });
 
   // ── Research focus ────────────────────────────────────────────────────────────

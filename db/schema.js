@@ -482,7 +482,10 @@ async function initDb() {
   const defaultPrices = [
     ['food',    0.5, 0.5],
     ['mana',    2.0, 2.0],
-    ['hammers', 50.0, 50.0]
+    ['weapons', 5.0, 5.0],
+    ['armor',   10.0, 10.0],
+    ['war_machines', 500.0, 500.0],
+    ['land',    2000.0, 2000.0]
   ];
   for (const [id, current, base] of defaultPrices) {
     await _db.run('INSERT OR IGNORE INTO market_prices (id, current_price, base_price) VALUES (?, ?, ?)', [id, current, base]);
@@ -522,7 +525,10 @@ async function initDb() {
   const freshDefaultPrices = [
     ['food',    0.5, 0.5],
     ['mana',    2.0, 2.0],
-    ['hammers', 50.0, 50.0]
+    ['weapons', 5.0, 5.0],
+    ['armor',   10.0, 10.0],
+    ['war_machines', 500.0, 500.0],
+    ['land',    2000.0, 2000.0]
   ];
   for (const [id, current, base] of freshDefaultPrices) {
     await _db.run('INSERT OR IGNORE INTO market_prices (id, current_price, base_price) VALUES (?, ?, ?)', [id, current, base]);

@@ -331,13 +331,18 @@ function outpostRangerPower(k) {
 function checkCitadel(k, events) {
   const updates = {};
   const defUpgrades = safeJsonParse(k.defense_upgrades, {}, 'checkCitadel:defense_upgrades');
-  if (defUpgrades.citadel) return updates; // already unlocked
   const req = CITADEL_REQ;
-  if ((k.bld_walls||0) >= req.walls && (k.bld_guard_towers||0) >= req.guard_towers &&
-      (k.bld_outposts||0) >= req.outposts && (k.bld_castles||0) >= req.castles) {
+  const meetsReqs = (k.bld_walls||0) >= req.walls && (k.bld_guard_towers||0) >= req.guard_towers &&
+                    (k.bld_outposts||0) >= req.outposts && (k.bld_castles||0) >= req.castles;
+
+  if (meetsReqs && !defUpgrades.citadel) {
     defUpgrades.citadel = true;
     updates.defense_upgrades = JSON.stringify(defUpgrades);
     events.push({ type:'system', message:`🏰 Castle Citadel achieved! Your fortress stands among the greatest in Narmir. +15% permanent defense bonus, warmachines on walls deal ×2 damage.` });
+  } else if (!meetsReqs && defUpgrades.citadel) {
+    defUpgrades.citadel = false;
+    updates.defense_upgrades = JSON.stringify(defUpgrades);
+    events.push({ type:'system', message:`🏚️ Castle Citadel lost! Your fortress no longer meets the requirements for the Citadel bonus.` });
   }
   return updates;
 }
@@ -1352,6 +1357,7 @@ function processBuildQueue(k, events) {
   if (activeBuildings.size === 0) return updates;
 
   const completedItems = [];
+  let totalEngineersWorked = 0;
 
   for (const building of activeBuildings) {
     const engAssigned = allocation[building] || 0;
@@ -1381,7 +1387,8 @@ function processBuildQueue(k, events) {
       toolMult = toolMult * (1 + scaffoldingBonus(building));
     }
 
-    const workDone = Math.floor(engAssigned * toolMult);
+    let workDone = Math.floor(engAssigned * toolMult);
+    if (engAssigned > 0 && workDone <= 0) workDone = 1; // Prevent complete stalling for low bonuses
     if (workDone <= 0) continue;
 
     // ── Gold gate — buildings cost gold per unit of progress ─────────────────
@@ -1406,6 +1413,10 @@ function processBuildQueue(k, events) {
     if (goldNeeded > 0) {
       const goldToPay = Math.ceil(actualWork * goldPerPiece);
       updates.gold = goldAvail - goldToPay;
+    }
+
+    if (actualWork > 0) {
+      totalEngineersWorked += engAssigned > 0 ? engAssigned : 1; 
     }
 
     const prevProgress  = progress[building] || 0;
@@ -1469,13 +1480,14 @@ function processBuildQueue(k, events) {
 
   // ── Hammer degradation ──
   const hammerCount = k[hl] || 0;
-  if (hammerCount > 0 && activeBuildings.size > 0) {
-    const used = (k.hammer_turns_used || 0) + hammerCount; // each hammer used this turn
-    const breaks = Math.floor(used / 20); // 1 hammer breaks every 20 turns of use
+  if (hammerCount > 0 && activeBuildings.size > 0 && totalEngineersWorked > 0) {
+    const hammersUsedThisTurn = Math.min(hammerCount, totalEngineersWorked);
+    const used = (k.hammer_turns_used || 0) + hammersUsedThisTurn; 
+    const breaks = Math.floor(used / 40); // 1 hammer breaks every 40 turns of use
     if (breaks > 0) {
       const newCount = Math.max(0, hammerCount - breaks);
       updates[hl] = newCount;
-      updates.hammer_turns_used = used - (breaks * 20);
+      updates.hammer_turns_used = used - (breaks * 40);
       updates._hammerBreakMsg = `${breaks} hammer${breaks > 1 ? 's' : ''} wore out and broke.`;
     } else {
       updates.hammer_turns_used = used;
