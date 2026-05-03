@@ -358,6 +358,12 @@ textarea{width:100%;resize:vertical;min-height:60px}
           <option value="steal">steal</option>
           <option value="take_turn">take_turn</option>
           <option value="level_up">level_up</option>
+          <option value="explore">explore</option>
+          <option value="research">research</option>
+          <option value="trade">trade</option>
+          <option value="hire_mercenaries">hire_mercenaries</option>
+          <option value="dungeon">dungeon</option>
+          <option value="bounty">bounty</option>
           <option value="error">error</option>
           <option value="success">success</option>
         </select>
@@ -370,7 +376,7 @@ textarea{width:100%;resize:vertical;min-height:60px}
     </div>
     
     <h3 style="margin-top:24px;border-bottom:1px solid var(--border);padding-bottom:8px">Currently Loaded Sounds</h3>
-    <div id="sounds-list" style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div id="sounds-list" style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
       <!-- loaded via JS -->
     </div>
   </div>
@@ -1047,21 +1053,90 @@ function showAdminTab(id, btn) {
 async function loadSounds() {
   var res = await api('GET', '/api/admin/sounds');
   var list = document.getElementById('sounds-list');
-  if (!res || !res.sounds || res.sounds.length === 0) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text3)">No sounds uploaded.</div>';
+  if (!res || !res.sounds) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3)">Error loading sounds.</div>';
     return;
   }
+  
+  var existingSounds = res.sounds;
+  var GAME_EVENTS = [
+    { id: 'attack', label: 'Attack launched' },
+    { id: 'defend', label: 'Under attack' },
+    { id: 'build', label: 'Construct building' },
+    { id: 'train', label: 'Train troops' },
+    { id: 'cast_spell', label: 'Cast a spell' },
+    { id: 'msg_sent', label: 'Message sent' },
+    { id: 'msg_recv', label: 'Message received' },
+    { id: 'spy', label: 'Spy mission' },
+    { id: 'steal', label: 'Steal mission' },
+    { id: 'take_turn', label: 'Take turn' },
+    { id: 'level_up', label: 'Level up' },
+    { id: 'explore', label: 'Explore / Map' },
+    { id: 'research', label: 'Research completed' },
+    { id: 'trade', label: 'Trade action' },
+    { id: 'hire_mercenaries', label: 'Hire mercenaries' },
+    { id: 'dungeon', label: 'Dungeon entered' },
+    { id: 'bounty', label: 'Bounty action' },
+    { id: 'error', label: 'Error / Warning' },
+    { id: 'success', label: 'Success action' }
+  ];
+  
   var html = '';
-  res.sounds.forEach(function(s) {
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;">' +
-      '<div style="font-size:13px;color:var(--text)">' + s + '</div>' +
-      '<div style="display:flex;gap:8px">' +
-        '<button class="btn btn-purple" style="padding:4px 8px;font-size:11px" onclick="playSound(\'' + s + '\')">Play</button>' +
-        '<button class="btn btn-red" style="padding:4px 8px;font-size:11px" onclick="deleteSound(\'' + s + '\')">Delete</button>' +
-      '</div>' +
-    '</div>';
+  var mappedSounds = [];
+
+  GAME_EVENTS.forEach(function(ev) {
+    var matchedFile = null;
+    for (var i = 0; i < existingSounds.length; i++) {
+       var sname = existingSounds[i].split('.')[0];
+       if (sname === ev.id) {
+         matchedFile = existingSounds[i];
+         mappedSounds.push(matchedFile);
+         break;
+       }
+    }
+    
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;">';
+    html += '<div>';
+    html += '<div style="font-size:13px;font-weight:bold;color:var(--gold);margin-bottom:4px;">' + ev.label + ' (' + ev.id + ')</div>';
+    
+    if (matchedFile) {
+       html += '<div style="font-size:12px;color:var(--green)">Loaded: ' + matchedFile + '</div>';
+       html += '</div>';
+       html += '<div style="display:flex;gap:6px">';
+       html += '<button class="btn btn-purple" style="padding:4px 8px;font-size:11px" onclick="playSound(\'' + matchedFile + '\')">▶ Play</button>';
+       html += '<a class="btn" style="padding:4px 8px;font-size:11px;background:var(--bg2);color:var(--text);border:1px solid var(--border);text-decoration:none;" href="/sounds/' + matchedFile + '" download="' + matchedFile + '">⬇ Download</a>';
+       html += '<button class="btn btn-red" style="padding:4px 8px;font-size:11px" onclick="deleteSound(\'' + matchedFile + '\')">✖ Delete</button>';
+       html += '</div>';
+    } else {
+       html += '<div style="font-size:12px;color:var(--text3)">No audio file configured.</div>';
+       html += '</div>';
+    }
+    html += '</div>';
   });
-  list.innerHTML = html;
+  
+  // Custom / Unmapped sounds
+  var unmapped = existingSounds.filter(function(f) { return mappedSounds.indexOf(f) === -1; });
+  if (unmapped.length > 0) {
+    html += '<div style="grid-column: 1 / -1; margin-top:16px;">';
+    html += '<h3 style="border-bottom:1px solid var(--border);padding-bottom:8px;color:var(--text2);">Other Sounds</h3>';
+    html += '</div>';
+    unmapped.forEach(function(f) {
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;">';
+      html += '<div style="font-size:13px;color:var(--text);">' + f + '</div>';
+      html += '<div style="display:flex;gap:6px">';
+      html += '<button class="btn btn-purple" style="padding:4px 8px;font-size:11px" onclick="playSound(\'' + f + '\')">▶ Play</button>';
+      html += '<a class="btn" style="padding:4px 8px;font-size:11px;background:var(--bg2);color:var(--text);border:1px solid var(--border);text-decoration:none;" href="/sounds/' + f + '" download="' + f + '">⬇ Download</a>';
+      html += '<button class="btn btn-red" style="padding:4px 8px;font-size:11px" onclick="deleteSound(\'' + f + '\')">✖ Delete</button>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+  
+  if (html === '') {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);grid-column:1/-1;">No sounds uploaded.</div>';
+  } else {
+    list.innerHTML = html;
+  }
 }
 
 function playSound(filename) {
