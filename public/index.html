@@ -138,9 +138,23 @@
   body.panel-exploration .main,
   body.panel-worldmap .main,
   body.panel-alliances .main,
-  body.panel-globalchat .main,
   body.panel-stats .main,
   body.panel-settings .main { padding-top: 0 !important; }
+  
+  body.panel-globalchat .main,
+  body.panel-messages .main { 
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 80px !important; /* bottom nav clearance */
+  }
+  #globalchat.panel.active,
+  #messages.panel.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
 
   body.panel-defense #kd-top { display: none !important; }
 
@@ -411,7 +425,9 @@
     .globalchat-container { flex-direction: column; }
     .chat-online-sidebar { 
       width: 100% !important; 
-      height: 120px; 
+      height: auto; 
+      max-height: 120px;
+      flex-shrink: 0;
       border-left: none !important; 
       border-top: 1px solid var(--border); 
       order: -1; /* Make it appear at the top */
@@ -419,7 +435,7 @@
     .chat-online-sidebar .on-item { flex-direction: row; display: inline-flex; width: auto; margin-right: 12px; }
     .chat-online-sidebar #chat-online-list { display: flex; flex-direction: row; flex-wrap: wrap; }
     
-    .msg-layout { grid-template-columns: 1fr !important; grid-template-rows: 200px minmax(300px, 1fr) !important; height: calc(100vh - 180px) !important; }
+    .msg-layout { grid-template-columns: 1fr !important; grid-template-rows: 200px minmax(200px, 1fr) !important; height: auto !important; flex: 1; min-height: 0; }
   }
 
   input[type="number"] {
@@ -1953,7 +1969,7 @@
 
     <!-- MESSAGES -->
     <div id="messages" class="panel">
-      <div class="msg-layout" style="display:grid;grid-template-columns:300px 1fr;gap:16px;height:calc(100vh - 120px)">
+      <div class="msg-layout" style="display:grid;grid-template-columns:300px 1fr;gap:16px;flex:1;min-height:0;">
         <!-- Conversations List -->
         <div class="card" style="margin-bottom:0;display:flex;flex-direction:column">
           <div class="card-title">Inbox</div>
@@ -2929,8 +2945,8 @@
 
 <!-- ═══════════════════════════════════════════ ALLIANCES PANEL ══ -->
 <!-- GLOBAL CHAT -->
-<div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box;">
-  <div class="globalchat-container card" style="display:flex;height:calc(100vh - 180px);min-height:300px;padding:0;overflow:hidden">
+<div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box; width: 100%;">
+  <div class="globalchat-container card" style="display:flex;min-height:300px;padding:0;overflow:hidden">
 
     <!-- Messages area -->
     <div style="flex:1;display:flex;flex-direction:column;min-width:0">
