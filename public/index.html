@@ -183,7 +183,7 @@
 
   /* Ensure content doesn't jump when top header is hidden or shown */
   .panel { width: 100%; display: none; }
-  .panel.active { display: block; }
+  .panel.active { display: block !important; margin-top: 0 !important; }
 
   body.panel-warfare .main,
   body.panel-studies .main,
@@ -306,7 +306,7 @@
 
   /* ── Panel ── */
   .panel { display: none; }
-  .panel.active { display: block; }
+  .panel.active { display: block !important; margin-top: 0 !important; padding-top: 0 !important; position: static !important; }
   .panel-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
 
   /* ── Kingdom header ── */
@@ -4569,12 +4569,9 @@ function openBountyAction(targetId, targetName) {
 }
 
 function switchTab(id, btn) {
-  // Scroll to top — defer until after layout so content is in position
-  requestAnimationFrame(function() {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-    var main = document.querySelector('.main');
-    if (main) main.scrollTop = 0;
-  });
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
     // Chat panels are display-controlled by CSS class — don't force inline style
