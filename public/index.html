@@ -35,8 +35,8 @@
     margin: 0;
     padding: 0;
     width: 100%;
-    min-height: 100vh;
-    overflow-x: hidden;
+    height: 100vh;
+    overflow: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -58,14 +58,15 @@
   .app {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
     background: var(--bg);
     width: 100%;
     max-width: 100%;
     margin: 0;
     padding: 0;
-    padding-top: 56px; /* Match topbar height */
-    overflow-x: hidden;
+    padding-top: 56px;
+    overflow: hidden;
+    box-sizing: border-box;
   }
   .topbar {
     display: flex;
@@ -89,10 +90,13 @@
   .sidebar { display: none; }
   .main { 
     padding: 12px 10px 100px; 
-    flex: 1; 
+    flex: 1;
+    min-height: 0;
     min-width: 0; 
     width: 100%;
     overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     position: relative; 
     box-sizing: border-box;
   }
@@ -597,11 +601,11 @@
       max-width: none; 
       overflow-x: visible; 
       position: static;
-      padding-top: 0; /* Remove mobile padding-top in grid mode */
+      padding-top: 0;
     }
     .topbar { grid-column: 1 / -1; padding: 0 20px; height: 56px; position: sticky; top: 0; width: auto !important; }
     .sidebar { display: flex; flex-direction: column; gap: 4px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 12px; overflow-y: auto; }
-    .main { padding: 24px; min-width: 0; }
+    .main { padding: 24px; min-width: 0; overflow-y: auto; }
     .bottom-nav { display: none; }
     /* Logo desktop override */
     .logo { 
@@ -4572,9 +4576,8 @@ function openBountyAction(targetId, targetName) {
 }
 
 function switchTab(id, btn) {
-  window.scrollTo(0, 0);
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
+  var mainEl = document.querySelector('.main');
+  if (mainEl) mainEl.scrollTop = 0;
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
     // Chat panels are display-controlled by CSS class — don't force inline style
