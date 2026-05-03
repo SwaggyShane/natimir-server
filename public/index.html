@@ -92,12 +92,9 @@
     flex: 1; 
     min-width: 0; 
     width: 100%;
-    height: calc(100vh - 56px);
     overflow-x: hidden;
-    overflow-y: auto;
     position: relative; 
     box-sizing: border-box;
-    -webkit-overflow-scrolling: touch;
   }
   #kd-top {
     position: relative; /* unstick on mobile */
@@ -4575,12 +4572,9 @@ function openBountyAction(targetId, targetName) {
 }
 
 function switchTab(id, btn) {
-  // Scroll to top — target window AND the main element
   window.scrollTo(0, 0);
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
-  var mainEl = document.querySelector('.main');
-  if (mainEl) mainEl.scrollTop = 0;
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
     // Chat panels are display-controlled by CSS class — don't force inline style
