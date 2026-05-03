@@ -194,11 +194,8 @@
   body.panel-defense .main,
   body.panel-hire .main { padding-top: 12px; }
 
-  /* DEBUG - remove after diagnosis */
-  #kd-top { border: 3px solid red !important; }
-  #alliances.panel.active { border: 3px solid blue !important; }
-  #alliances.panel.active > * { border: 2px solid green !important; }
-  .main { border: 3px solid orange !important; }
+  /* Hide resource metrics strip on ally panel */
+  body.panel-alliances .metrics { display: none !important; }
 
 
 
@@ -4608,8 +4605,9 @@ function switchTab(id, btn) {
   // Handle kd-top visibility and context
   var kdTop = document.getElementById('kd-top');
   if (kdTop) {
-    if (['status','hire','heroes','studies','economy','build','training','exploration','warfare'].includes(id)) {
-      kdTop.style.display = 'block';
+    var showKdTop = ['status','hire','heroes','studies','economy','build','training','exploration','warfare'].includes(id);
+    kdTop.style.display = showKdTop ? 'block' : 'none';
+    if (showKdTop) {
       // Contextual visibility
       var metrics = ['metric-gold', 'metric-mana', 'metric-land', 'metric-pop', 'metric-morale', 'metric-defense', 'metric-food'];
       metrics.forEach(function(m) { 
