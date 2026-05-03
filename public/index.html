@@ -136,7 +136,6 @@
   body.panel-rankings .main,
   body.panel-exploration .main,
   body.panel-worldmap .main,
-  body.panel-alliances .main,
   body.panel-stats .main,
   body.panel-settings .main { padding-top: 0 !important; }
   
@@ -218,6 +217,7 @@
   body.panel-studies .main,
   body.panel-training .main,
   body.panel-defense .main,
+  body.panel-alliances .main,
   body.panel-hire .main { padding-top: 12px; }
 
 
@@ -4417,7 +4417,7 @@ function renderAllyList(members) {
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap">'
       + '<span style="font-size:18px">' + raceIcon + '</span>'
       + '<span style="flex:1;min-width:120px;color:' + (isMe?'var(--purple)':'var(--text)') + ';font-weight:' + (isMe?'700':'400') + '">'
-      + m.name + (isMe?' (you)':'') + '<div style="font-size:11px;color:var(--text3)">' + (m.race||'').replace('_',' ') + ' · Lv ' + (m.level||1) + '</div></span>'
+      + escHtml(m.name) + (isMe?' (you)':'') + '<div style="font-size:11px;color:var(--text3)">' + escHtml((m.race||'').replace('_',' ')) + ' · Lv ' + (m.level||1) + '</div></span>'
       + '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end">'
         + '<span style="color:var(--gold);font-weight:600;white-space:nowrap">' + fmt(m.land) + ' ac</span>'
         + '<span style="color:var(--text3);font-size:12px;white-space:nowrap">' + fmt(m.fighters||0) + ' ⚔️</span>'
@@ -4432,7 +4432,7 @@ function populateDismissList(members) {
   if (!sel) return;
   sel.innerHTML = members
     .filter(function(m){ return m.id !== state.kingdomId; })
-    .map(function(m){ return '<option value="' + m.id + '">' + m.name + '</option>'; })
+    .map(function(m){ return '<option value="' + m.id + '">' + escHtml(m.name) + '</option>'; })
     .join('') || '<option>— no other members —</option>';
 }
 
@@ -4623,7 +4623,7 @@ function switchTab(id, btn) {
   // Handle kd-top visibility and context
   var kdTop = document.getElementById('kd-top');
   if (kdTop) {
-    if (['status','hire','heroes','studies','economy','build','training','exploration','warfare'].includes(id)) {
+    if (['status','hire','heroes','studies','economy','build','training','exploration','warfare','alliances'].includes(id)) {
       kdTop.style.display = 'block';
       // Contextual visibility
       var metrics = ['metric-gold', 'metric-mana', 'metric-land', 'metric-pop', 'metric-morale', 'metric-defense', 'metric-food'];
@@ -4640,7 +4640,7 @@ function switchTab(id, btn) {
         ['metric-mana','metric-pop','metric-morale','metric-defense','metric-food'].forEach(function(m){
           var el = document.getElementById(m); if(el) el.style.display = 'none';
         });
-      } else if (id === 'studies' || id === 'training' || id === 'exploration' || id === 'warfare') {
+      } else if (id === 'studies' || id === 'training' || id === 'exploration' || id === 'warfare' || id === 'alliances') {
         if (id !== 'status' && id !== 'economy') {
            metrics.forEach(function(m){
              var el = document.getElementById(m); if(el) el.style.display = 'none';
