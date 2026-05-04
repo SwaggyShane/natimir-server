@@ -35,8 +35,8 @@
     margin: 0;
     padding: 0;
     width: 100%;
-    min-height: 100vh;
-    overflow-x: hidden;
+    height: 100vh;
+    overflow: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -58,14 +58,15 @@
   .app {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
     background: var(--bg);
     width: 100%;
     max-width: 100%;
     margin: 0;
     padding: 0;
-    padding-top: 56px; /* Match topbar height */
-    overflow-x: hidden;
+    padding-top: 56px;
+    overflow: hidden;
+    box-sizing: border-box;
   }
   .topbar {
     display: flex;
@@ -88,11 +89,14 @@
   }
   .sidebar { display: none; }
   .main { 
-    padding: 12px 10px 100px; 
-    flex: 1; 
+    padding: 12px 10px 80px; 
+    flex: 1;
+    min-height: 0;
     min-width: 0; 
     width: 100%;
-    overflow-x: hidden; 
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     position: relative; 
     box-sizing: border-box;
   }
@@ -211,8 +215,7 @@
   body.panel-defense #kd-top { display: none !important; }
 
   /* Ensure content doesn't jump when top header is hidden or shown */
-  .panel { width: 100%; flex: 1; display: none; }
-  .panel.active { display: block; }
+  .panel { width: 100%; display: none; }
 
   body.panel-warfare .main,
   body.panel-studies .main,
@@ -333,9 +336,21 @@
   .nav-item.active .icon { opacity: 1; color: var(--purple); }
   .nav-badge { margin-left: auto; background: var(--red); color: #fff; border-radius: 8px; font-size: 10px; font-weight: 700; padding: 2px 6px; }
 
-  /* ── Panel ── */
-  .panel { display: none; }
-  .panel.active { display: block; }
+  /* ── Universal panel layout ── */
+  /* Every panel gets the same top spacing whether kd-top is visible or not */
+  .panel.active {
+    display: block !important;
+    padding-top: 0;
+    margin-top: 0;
+  }
+  /* Panels that hide kd-top get a small top pad to breathe */
+  body.panel-alliances .panel.active,
+  body.panel-rankings .panel.active,
+  body.panel-worldmap .panel.active,
+  body.panel-globalchat .panel.active,
+  body.panel-messages .panel.active,
+  body.panel-bounties .panel.active,
+  body.panel-news .panel.active { padding-top: 8px; }
   .panel-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
 
   /* ── Kingdom header ── */
@@ -614,21 +629,22 @@
      DESKTOP (≥ 700px)
   ════════════════════════════════════ */
   @media (min-width: 700px) {
-    html, body { height: auto; overflow-x: visible; width: 100%; }
+    html, body { height: auto; overflow: auto; width: 100%; }
     .app { 
       display: grid; 
       grid-template-columns: 220px 1fr; 
       grid-template-rows: 56px 1fr; 
-      min-height: 100vh; 
+      min-height: 100vh;
+      height: auto;
+      overflow: visible;
       width: 100%; 
       max-width: none; 
-      overflow-x: visible; 
       position: static;
-      padding-top: 0; /* Remove mobile padding-top in grid mode */
+      padding-top: 0;
     }
     .topbar { grid-column: 1 / -1; padding: 0 20px; height: 56px; position: sticky; top: 0; width: auto !important; }
     .sidebar { display: flex; flex-direction: column; gap: 4px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 12px; overflow-y: auto; }
-    .main { padding: 24px; min-width: 0; }
+    .main { padding: 24px; min-width: 0; overflow-y: auto; min-height: 0; }
     .bottom-nav { display: none; }
     /* Logo desktop override */
     .logo { 
@@ -1181,7 +1197,7 @@
     <!-- STUDIES PANEL -->
     <div id="studies" class="panel" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <div class="card-title">🏛️ Studies</div>
+        <div class="card-title" style="margin-bottom:0">🏛️ Studies</div>
         <button class="btn" onclick="loadStudies()">↻ Refresh</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border2);padding-bottom:0">
@@ -1389,7 +1405,7 @@
     <!-- ═══════════════════════════════════════════ HEROES PANEL ══ -->
     <div id="heroes" class="panel" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <div class="card-title">👑 Heroes</div>
+        <div class="card-title" style="margin-bottom:0">👑 Heroes</div>
         <button class="btn" onclick="loadHeroes()">↻ Refresh</button>
       </div>
 
@@ -2994,7 +3010,7 @@
 
 <!-- ═══════════════════════════════════════════ ALLIANCES PANEL ══ -->
 <!-- GLOBAL CHAT -->
-<div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box; width: 100%;">
+<div id="globalchat" class="panel" style="display:none">
   <div class="chat-container-card">
 
     <!-- Messages area -->
@@ -3024,7 +3040,7 @@
   </div>
 </div>
 
-<div id="alliances" class="panel" style="display:none; margin-top: -12px;">
+<div id="alliances" class="panel" style="display:none">
 
   <!-- Not in alliance -->
   <div id="ally-none" style="display:none">
@@ -4605,7 +4621,8 @@ function openBountyAction(targetId, targetName) {
 }
 
 function switchTab(id, btn) {
-  window.scrollTo(0, 0);
+  var mainEl = document.querySelector('.main');
+  if (mainEl) mainEl.scrollTop = 0;
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
     p.style.display = 'none';
