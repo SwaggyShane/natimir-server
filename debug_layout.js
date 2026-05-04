@@ -27,18 +27,32 @@ const puppeteer = require('puppeteer');
        const el = document.getElementById(id) || document.querySelector(id);
        if (!el) return null;
        const rect = el.getBoundingClientRect();
-       return { id: el.id || el.className, top: rect.top, bottom: rect.bottom, height: rect.height, display: window.getComputedStyle(el).display };
+       const style = window.getComputedStyle(el);
+       return { 
+         id: el.id || el.className, 
+         top: rect.top, 
+         bottom: rect.bottom, 
+         height: rect.height, 
+         display: style.display,
+         flex: style.flex,
+         marginTop: style.marginTop,
+         paddingTop: style.paddingTop,
+         marginBottom: style.marginBottom,
+         justifyContent: style.justifyContent
+       };
     }
     
     return {
       main: getRect('.main'),
+      app: getRect('.app'),
       kdTop: getRect('#kd-top'),
+      kdHeader: getRect('.kingdom-header'),
       metrics: getRect('.metrics'),
       metricGold: getRect('#metric-gold'),
       alliances: getRect('#alliances'),
       allyNone: getRect('#ally-none'),
       allyActive: getRect('#ally-active'),
-      rGridSidebar: getRect('.r-grid-sidebar'),
+      rGridSidebar: getRect('#ally-active .r-grid-sidebar'),
     };
   });
   

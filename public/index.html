@@ -35,8 +35,8 @@
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -58,15 +58,14 @@
   .app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
     background: var(--bg);
     width: 100%;
     max-width: 100%;
     margin: 0;
     padding: 0;
-    padding-top: 56px;
-    overflow: hidden;
-    box-sizing: border-box;
+    padding-top: 56px; /* Match topbar height */
+    overflow-x: hidden;
   }
   .topbar {
     display: flex;
@@ -89,14 +88,11 @@
   }
   .sidebar { display: none; }
   .main { 
-    padding: 12px 10px 80px; 
-    flex: 1;
-    min-height: 0;
+    padding: 12px 10px 100px; 
+    flex: 1; 
     min-width: 0; 
     width: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden; 
     position: relative; 
     box-sizing: border-box;
   }
@@ -136,10 +132,38 @@
       padding-bottom: 10px;
     }
   }
+  body.panel-news .main,
+  body.panel-rankings .main,
+  body.panel-exploration .main,
+  body.panel-worldmap .main,
+  body.panel-stats .main,
+  body.panel-settings .main { padding-top: 0 !important; }
   
   /* Fix for Full-Screen Chat Layout */
   /* On mobile, strict 100dvh prevents unbounded expansion of the chat containers */
+  body.panel-globalchat, body.panel-messages {
+    height: 100dvh;
+    height: 100vh;
+    overflow: hidden;
+  }
+  body.panel-globalchat .app, body.panel-messages .app {
+    height: 100dvh;
+    height: 100vh;
+    overflow: hidden;
+    padding-top: 56px !important;
+  }
+  body.panel-globalchat .main,
+  body.panel-messages .main { 
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 60px 0 !important; /* give space for mobile bottom nav */
+    height: 100%;
+    overflow: hidden;
+  }
   @media (min-width: 769px) { /* On desktop, we use grid instead */
+    body.panel-globalchat, body.panel-messages { overflow: visible; height: auto; }
+    body.panel-globalchat .app, body.panel-messages .app { height: 100vh; overflow: hidden; padding-top: 0 !important; }
+    body.panel-globalchat .main, body.panel-messages .main { padding: 12px 24px !important; }
   }
 
   #globalchat.panel,
@@ -182,11 +206,19 @@
     }
   }
 
+
+  body.panel-defense #kd-top { display: none !important; }
+
   /* Ensure content doesn't jump when top header is hidden or shown */
-  .panel { width: 100%; display: none; }
+  .panel { width: 100%; flex: 1; display: none; }
   .panel.active { display: block; }
 
-
+  body.panel-warfare .main,
+  body.panel-studies .main,
+  body.panel-training .main,
+  body.panel-defense .main,
+  body.panel-alliances .main,
+  body.panel-hire .main { padding-top: 12px; }
 
 
 
@@ -301,7 +333,9 @@
   .nav-item.active .icon { opacity: 1; color: var(--purple); }
   .nav-badge { margin-left: auto; background: var(--red); color: #fff; border-radius: 8px; font-size: 10px; font-weight: 700; padding: 2px 6px; }
 
-
+  /* ── Panel ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
   .panel-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
 
   /* ── Kingdom header ── */
@@ -580,22 +614,21 @@
      DESKTOP (≥ 700px)
   ════════════════════════════════════ */
   @media (min-width: 700px) {
-    html, body { height: auto; overflow: auto; width: 100%; }
+    html, body { height: auto; overflow-x: visible; width: 100%; }
     .app { 
       display: grid; 
       grid-template-columns: 220px 1fr; 
       grid-template-rows: 56px 1fr; 
-      min-height: 100vh;
-      height: auto;
-      overflow: visible;
+      min-height: 100vh; 
       width: 100%; 
       max-width: none; 
+      overflow-x: visible; 
       position: static;
-      padding-top: 0;
+      padding-top: 0; /* Remove mobile padding-top in grid mode */
     }
     .topbar { grid-column: 1 / -1; padding: 0 20px; height: 56px; position: sticky; top: 0; width: auto !important; }
     .sidebar { display: flex; flex-direction: column; gap: 4px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 12px; overflow-y: auto; }
-    .main { padding: 24px; min-width: 0; overflow-y: auto; min-height: 0; }
+    .main { padding: 24px; min-width: 0; }
     .bottom-nav { display: none; }
     /* Logo desktop override */
     .logo { 
@@ -649,14 +682,6 @@
   /* Mobile overflow padding fix */
 </style>
 <script src="/socket.io/socket.io.js"></script>
-<script>
-  // Fallback if server-side socket.io fails to load
-  if (typeof io === 'undefined') {
-    var s = document.createElement('script');
-    s.src = 'https://cdn.socket.io/4.7.4/socket.io.min.js';
-    document.head.appendChild(s);
-  }
-</script>
 </head>
 <body>
 
@@ -862,7 +887,7 @@
         <button class="btn btn-purple" style="width: 100%; padding: 12px; margin-top: 20px" onclick="switchTab('status')">Return to Kingdom</button>
       </div>
     </div>
-    <div id="status" class="panel active" style="display:block">
+    <div id="status" class="panel active">
         <div class="card" id="status-tax-card" style="margin-top:0; margin-bottom:16px; display:none">
         <div class="card-title">Tax rate</div>
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
@@ -1006,7 +1031,7 @@
     </div>
 
     <!-- HIRE -->
-    <div id="hire" class="panel" style="display:none">
+    <div id="hire" class="panel">
       <div class="card">
         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center">
           <span>Hire units</span>
@@ -1155,11 +1180,9 @@
     <!-- RESEARCH -->
     <!-- STUDIES PANEL -->
     <div id="studies" class="panel" style="display:none">
-      <div class="card" style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div class="card-title" style="margin-bottom:0">🏛️ Studies</div>
-          <button class="btn" onclick="loadStudies()">↻ Refresh</button>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title">🏛️ Studies</div>
+        <button class="btn" onclick="loadStudies()">↻ Refresh</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border2);padding-bottom:0">
         <button class="admin-tab active" onclick="showStudiesTab('tower',this)">🗼 Tower</button>
@@ -1365,11 +1388,9 @@
 
     <!-- ═══════════════════════════════════════════ HEROES PANEL ══ -->
     <div id="heroes" class="panel" style="display:none">
-      <div class="card" style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div class="card-title" style="margin-bottom:0">👑 Heroes</div>
-          <button class="btn" onclick="loadHeroes()">↻ Refresh</button>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title">👑 Heroes</div>
+        <button class="btn" onclick="loadHeroes()">↻ Refresh</button>
       </div>
 
       <div class="r-grid-sidebar">
@@ -1424,11 +1445,9 @@
     <!-- BUILD -->
     <!-- ECONOMY PANEL -->
     <div id="economy" class="panel" style="display:none">
-  <div class="card" style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <div class="card-title" style="margin-bottom:0">💰 Economy</div>
-      <button class="btn" onclick="loadEconomy()">↻ Refresh</button>
-    </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div class="card-title">💰 Economy</div>
+    <button class="btn" onclick="loadEconomy()">↻ Refresh</button>
   </div>
 
   <div class="card" id="status-tax-card" style="margin-top:0; margin-bottom:16px;">
@@ -1584,11 +1603,9 @@
 
     <!-- MARKET PANEL -->
     <div id="market" class="panel" style="display:none">
-      <div class="card" style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div class="card-title" style="margin-bottom:0">⚖️ Commodity Market</div>
-          <button class="btn" onclick="loadMarket()">↻ Refresh Prices</button>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title">⚖️ Commodity Market</div>
+        <button class="btn" onclick="loadMarket()">↻ Refresh Prices</button>
       </div>
 
       <div class="card" style="margin-top:0; margin-bottom:16px; background:rgba(244,166,35,0.1); border:1px solid rgba(244,166,35,0.2)">
@@ -1605,7 +1622,7 @@
       </div>
     </div>
 
-    <div id="build" class="panel" style="display:none">
+    <div id="build" class="panel">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div>
@@ -1903,7 +1920,7 @@
     </div>
 
     <!-- OPTIONS (hidden panel) -->
-    <div id="options" class="panel" style="display:none">
+    <div id="options" class="panel">
       <div class="two-col">
         <div class="card">
           <div class="card-title">Kingdom identity</div>
@@ -1942,7 +1959,7 @@
     </div>
 
     <!-- NEWS -->
-    <div id="news" class="panel" style="display:none">
+    <div id="news" class="panel">
       <div class="card" style="max-width:800px; margin: 0 auto">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div class="card-title" style="margin-bottom:0">📰 Kingdom news — Turn <span id="news-turn-num">0</span></div>
@@ -1965,7 +1982,7 @@
     </div>
 
     <!-- BOUNTIES -->
-    <div id="bounties" class="panel" style="display:none">
+    <div id="bounties" class="panel">
       <div class="card">
         <div class="card-title">🪙 Bounty Board</div>
         <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px">
@@ -2000,8 +2017,8 @@
     </div>
 
     <!-- MESSAGES -->
-    <div id="messages" class="panel" style="display:none">
-      <div class="msg-layout" style="display:flex;flex-direction:column;gap:16px;">
+    <div id="messages" class="panel">
+      <div class="msg-layout" style="display:grid;grid-template-columns:300px 1fr;gap:16px;flex:1;min-height:0;">
         <!-- Conversations List -->
         <div class="card" style="margin-bottom:0;display:flex;flex-direction:column">
           <div class="card-title">Inbox</div>
@@ -2088,14 +2105,12 @@
 <!-- ═══════════════════════════════════════════ ATTACK PANEL ══ -->
 <!-- DEFENCE PANEL -->
 <div id="defense" class="panel" style="display:none">
-  <div class="card" style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div>
         <div class="card-title" style="margin-bottom:2px">🛡️ Defense <span id="citadel-badge-title" class="badge badge-gold" style="display:none;margin-left:8px">🏰 Citadel</span></div>
         <div style="font-size:13px;color:var(--text3);margin-top:2px">Rating: <span id="def-rating" style="font-weight:700">—</span></div>
       </div>
-      <button class="btn" onclick="loadDefense()">↻ Refresh</button>
-    </div>
+    <button class="btn" onclick="loadDefense()">↻ Refresh</button>
   </div>
 
   <!-- Defense Tiers progress -->
@@ -2979,7 +2994,7 @@
 
 <!-- ═══════════════════════════════════════════ ALLIANCES PANEL ══ -->
 <!-- GLOBAL CHAT -->
-<div id="globalchat" class="panel" style="display:none">
+<div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box; width: 100%;">
   <div class="chat-container-card">
 
     <!-- Messages area -->
@@ -3013,84 +3028,103 @@
 
   <!-- Not in alliance -->
   <div id="ally-none" style="display:none">
-    <div class="r-grid-2" style="max-width:700px;margin:0 auto">
-      <div class="card">
-        <div class="card-title">Found an alliance</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Create a new alliance and become its leader. Up to 6 members.</div>
-        <input type="text" id="new-ally-name" placeholder="Alliance name..." style="width:100%;margin-bottom:10px;text-align:left;padding:7px 10px" maxlength="40">
-        <button class="btn btn-gold" style="width:100%" onclick="foundAlliance()">Found alliance</button>
-      </div>
-      <div class="card">
-        <div class="card-title">Open alliances</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:10px">Ask a leader to invite you, or find alliances accepting members.</div>
-        <div id="ally-search-list" style="max-height:180px;overflow-y:auto;font-size:13px;color:var(--text3)">No alliances found.</div>
-        <button class="btn" style="width:100%;margin-top:10px" onclick="loadAllianceSearch()">&#8635; Refresh</button>
-      </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">Found an alliance</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Create a new alliance and become its leader. Up to 6 members.</div>
+      <input type="text" id="new-ally-name" placeholder="Alliance name..." style="width:100%;margin-bottom:10px;text-align:left;padding:7px 10px" maxlength="40">
+      <button class="btn btn-gold" style="width:100%" onclick="foundAlliance()">Found alliance</button>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">Open alliances</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px">Ask a leader to invite you, or find alliances accepting members.</div>
+      <div id="ally-search-list" style="max-height:180px;overflow-y:auto;font-size:13px;color:var(--text3)">No alliances found.</div>
+      <button class="btn" style="width:100%;margin-top:10px" onclick="loadAllianceSearch()">&#8635; Refresh</button>
     </div>
   </div>
 
   <!-- In alliance -->
-  <div id="ally-active" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box;">
-    <div class="r-grid-sidebar">
+  <div id="ally-active" style="display:none">
+    
+    <!-- Alliance Summary Card (Like War Log) -->
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:700;color:var(--text)">🛡️ Alliance Summary</span>
+        <button class="btn" style="font-size:11px;padding:4px 10px" onclick="loadAllianceInfo()">↻ Refresh</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title" style="margin-bottom:2px;font-size:16px">&#9876; <span id="ally-name">—</span></div>
+          <div style="font-size:12px;color:var(--text3)"><span id="ally-member-count">0</span> members &middot; <span id="ally-combined-land" style="color:var(--gold)">0</span> acres</div>
+        </div>
+        <button class="btn btn-red" style="font-size:11px;padding:4px 12px" onclick="leaveAlliance()">Leave alliance</button>
+      </div>
+    </div>
 
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <div>
-              <div class="card-title" style="margin-bottom:2px">&#9876; <span id="ally-name">—</span></div>
-              <div style="font-size:12px;color:var(--text3)"><span id="ally-member-count">0</span> members &middot; Combined land: <span id="ally-combined-land" style="color:var(--gold)">0</span> acres</div>
-            </div>
-            <button class="btn btn-red" onclick="leaveAlliance()">Leave alliance</button>
-          </div>
+    <!-- Tabs (Like Warfare Tabs) -->
+    <div style="display:flex;gap:4px;border-bottom:2px solid var(--border2);margin-bottom:16px;padding-bottom:0">
+      <button class="admin-tab active" onclick="showAllyTab('ally-members',this)">👥 Members</button>
+      <button class="admin-tab" onclick="showAllyTab('ally-board',this)">💬 Chat</button>
+      <button class="admin-tab" onclick="showAllyTab('ally-pledge',this)">🛡️ Pledge</button>
+      <button class="admin-tab" id="ally-manage-tab" style="display:none" onclick="showAllyTab('ally-manage',this)">⚙️ Manage</button>
+    </div>
+
+    <!-- MEMBERS TAB -->
+    <div id="ally-tab-members" class="ally-tab-content">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Alliance Members</div>
+        <div id="ally-list"></div>
+      </div>
+    </div>
+
+    <!-- CHAT TAB -->
+    <div id="ally-tab-board" class="ally-tab-content" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Alliance message board</div>
+        <div id="alliance-chat" style="height:280px;overflow-y:auto;overflow-x:hidden;margin-bottom:10px;font-size:13px;display:flex;flex-direction:column;gap:4px;padding-right:4px;word-break:break-word">
+          <div style="text-align:center;color:var(--text3);padding:20px 0">Loading messages...</div>
         </div>
-        <div class="card">
-          <div class="card-title">Members</div>
-          <div id="ally-list"></div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="ally-msg" placeholder="Message your alliance..." style="flex:1;width:auto" maxlength="300" onkeydown="if(event.key==='Enter')sendAllyMsg()">
+          <button class="btn btn-purple" onclick="sendAllyMsg()">Send</button>
         </div>
-        <div class="card">
-          <div class="card-title">Alliance message board</div>
-          <div id="alliance-chat" style="height:220px;overflow-y:auto;overflow-x:hidden;margin-bottom:10px;font-size:13px;display:flex;flex-direction:column;gap:4px;padding-right:4px;word-break:break-word">
-            <div style="text-align:center;color:var(--text3);padding:20px 0">Loading messages...</div>
-          </div>
+      </div>
+    </div>
+
+    <!-- PLEDGE TAB -->
+    <div id="ally-tab-pledge" class="ally-tab-content" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Defense Pledge</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7">When an ally is attacked, this % of your troops auto-deploy to their defence.</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <input type="range" id="pledge-slider" min="0" max="10" step="1" value="3" oninput="updatePledge(this.value)" style="flex:1">
+          <span id="pledge-val" style="color:var(--gold);font-weight:700;min-width:32px">3%</span>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px" id="pledge-desc">At 3%: your fighters deploy to defend allies when attacked.</div>
+        <button class="btn btn-purple" style="width:100%" onclick="savePledge()">Save pledge</button>
+      </div>
+    </div>
+
+    <!-- MANAGE TAB -->
+    <div id="ally-tab-manage" class="ally-tab-content" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Manage Members</div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Invite by kingdom name</div>
           <div style="display:flex;gap:8px">
-            <input type="text" id="ally-msg" placeholder="Message your alliance..." style="flex:1;width:auto" maxlength="300" onkeydown="if(event.key==='Enter')sendAllyMsg()">
-            <button class="btn btn-purple" onclick="sendAllyMsg()">Send</button>
+            <input type="text" id="invite-name" placeholder="Kingdom name..." style="flex:1;width:auto">
+            <button class="btn btn-purple" onclick="inviteAlly()">Invite</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Dismiss member</div>
+          <div style="display:flex;gap:8px">
+            <select id="dismiss-sel" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:8px 12px;font-size:13px">
+              <option>— no members —</option>
+            </select>
+            <button class="btn btn-red" onclick="dismissAlly()">Dismiss</button>
           </div>
         </div>
       </div>
-
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card">
-          <div class="card-title">Pledge level</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7">When an ally is attacked, this % of your troops auto-deploy to their defence.</div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <input type="range" id="pledge-slider" min="0" max="10" step="1" value="3" oninput="updatePledge(this.value)" style="flex:1">
-            <span id="pledge-val" style="color:var(--gold);font-weight:700;min-width:32px">3%</span>
-          </div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:12px" id="pledge-desc">At 3%: your fighters deploy to defend allies when attacked.</div>
-          <button class="btn btn-purple" style="width:100%" onclick="savePledge()">Save pledge</button>
-        </div>
-        <div class="card" id="ally-invite-card" style="display:none">
-          <div class="card-title">Manage members</div>
-          <div style="margin-bottom:12px">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Invite by kingdom name</div>
-            <div style="display:flex;gap:8px">
-              <input type="text" id="invite-name" placeholder="Kingdom name..." style="flex:1;width:auto">
-              <button class="btn btn-purple" onclick="inviteAlly()">Invite</button>
-            </div>
-          </div>
-          <div>
-            <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Dismiss member</div>
-            <div style="display:flex;gap:8px">
-              <select id="dismiss-sel" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px 8px;font-size:12px">
-                <option>— no members —</option>
-              </select>
-              <button class="btn btn-red" onclick="dismissAlly()">Dismiss</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -3113,14 +3147,12 @@
 <!-- RANKINGS -->
 <!-- WORLD MAP -->
 <div id="worldmap" class="panel" style="display:none">
-  <div class="card" style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <div>
-        <div class="card-title" style="margin-bottom:2px">🗺️ World of Narmir</div>
-        <div style="font-size:12px;color:var(--text3)">Six ancient regions, each shaped by the race that claims it.</div>
-      </div>
-      <button class="btn" onclick="loadWorldMap()">↻ Refresh</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div class="card-title" style="margin-bottom:2px">🗺️ World of Narmir</div>
+      <div style="font-size:12px;color:var(--text3)">Six ancient regions, each shaped by the race that claims it.</div>
     </div>
+    <button class="btn" onclick="loadWorldMap()">↻ Refresh</button>
   </div>
   <div class="r-grid-sidebar">
     <!-- Map SVG -->
@@ -3221,8 +3253,6 @@
 
 <script>
 /* ── Core state (defined first so all functions below can access it) ── */
-if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-
 var state = {
   loaded: false,
   gold: 10000, pop: 50000, land: 500, morale: 100, tax: 42, turn: 0, mana: 5000, food: 0,
@@ -4088,20 +4118,8 @@ var socket = null;
 var globalChatMessages = [];
 var allianceChatMessages = [];
 
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'instant' });
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-  var mainEl = document.querySelector('.main');
-  if (mainEl) mainEl.scrollTop = 0;
-}
-
 function initSocket() {
   if (socket) return;
-  if (typeof io === 'undefined') {
-    console.warn('[socket] socket.io not loaded — chat unavailable');
-    return;
-  }
   socket = io({ auth: { token: localStorage.getItem('narmir_token') || '' } });
 
   socket.on('connect', function() { loadGlobalChatHistory(); });
@@ -4389,7 +4407,6 @@ async function loadAlliancePanel() {
 
   document.getElementById('ally-none').style.display = 'none';
   document.getElementById('ally-active').style.display = 'block';
-  scrollToTop(); setTimeout(scrollToTop, 100);
 
   isAllianceLeader = data.isLeader;
   document.getElementById('ally-name').textContent = data.alliance.name;
@@ -4403,8 +4420,8 @@ async function loadAlliancePanel() {
   updatePledge(data.myPledge || 3);
 
   // Leader controls
-  var invCard = document.getElementById('ally-invite-card');
-  if (invCard) invCard.style.display = isAllianceLeader ? 'block' : 'none';
+  var manageTab = document.getElementById('ally-manage-tab');
+  if (manageTab) manageTab.style.display = isAllianceLeader ? 'block' : 'none';
 
   renderAllyList(data.members);
   populateDismissList(data.members);
@@ -4451,6 +4468,25 @@ async function loadAllianceChatHistory(allianceId) {
   msgs.forEach(function(m) {
     appendChatMessage('alliance-chat', { room:'alliance', from:m.kingdom_name, race:m.race, message:m.message, ts:new Date(m.created_at).getTime() });
   });
+}
+
+function showAllyTab(tabId, btn) {
+  document.querySelectorAll('.ally-tab-content').forEach(function(p){ p.style.display = 'none'; });
+  var tid = tabId.replace('ally-', 'ally-tab-');
+  var target = document.getElementById(tid);
+  if (target) target.style.display = 'block';
+  
+  if (btn) {
+    var parent = btn.parentElement;
+    parent.querySelectorAll('.admin-tab').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+}
+
+async function loadAllianceInfo() {
+  if (!state.alliance_id) return;
+  // This just refreshes the current view data
+  loadAlliancePanel();
 }
 
 async function loadAllianceSearch() {
@@ -4607,9 +4643,7 @@ function openBountyAction(targetId, targetName) {
 }
 
 function switchTab(id, btn) {
-  scrollToTop();
-  setTimeout(scrollToTop, 50);
-  setTimeout(scrollToTop, 200);
+  window.scrollTo(0, 0);
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
     p.style.display = 'none';
@@ -4623,11 +4657,43 @@ function switchTab(id, btn) {
   var panel = document.getElementById(id);
   panel.classList.add('active');
   panel.style.display = 'block';
-  if (btn) btn.classList.add('active');
+  btn.classList.add('active');
 
-  // kd-top always visible with all metrics on every panel
+  // Handle kd-top visibility and context
+  var kdTop = document.getElementById('kd-top');
+  if (kdTop) {
+    if (['status','hire','heroes','studies','economy','build','training','exploration','warfare','alliances'].includes(id)) {
+      kdTop.style.display = 'block';
+      // Contextual visibility
+      var metrics = ['metric-gold', 'metric-mana', 'metric-land', 'metric-pop', 'metric-morale', 'metric-defense', 'metric-food'];
+      metrics.forEach(function(m) { 
+        var el = document.getElementById(m);
+        if (el) el.style.display = 'flex';
+      });
 
-    if (id === 'news') {
+      if (id === 'hire') {
+        ['metric-mana','metric-land','metric-morale','metric-defense','metric-food'].forEach(function(m){
+          var el = document.getElementById(m); if(el) el.style.display = 'none';
+        });
+      } else if (id === 'build') {
+        ['metric-mana','metric-pop','metric-morale','metric-defense','metric-food'].forEach(function(m){
+          var el = document.getElementById(m); if(el) el.style.display = 'none';
+        });
+      } else if (id === 'studies' || id === 'training' || id === 'exploration' || id === 'warfare' || id === 'alliances') {
+        if (id !== 'status' && id !== 'economy') {
+           metrics.forEach(function(m){
+             var el = document.getElementById(m); if(el) el.style.display = 'none';
+           });
+           // Always show gold for context
+           var gel = document.getElementById('metric-gold'); if(gel) gel.style.display = 'flex';
+        }
+      }
+    } else {
+      kdTop.style.display = 'none';
+    }
+  }
+
+  if (id === 'news') {
     ['news-badge','bnav-news-badge'].forEach(function(bid) {
       var b = document.getElementById(bid);
       if (b) { b.style.display = 'none'; b.textContent = ''; }
@@ -4684,9 +4750,10 @@ function switchTab(id, btn) {
   if (id === 'alliances') {
     loadAlliancePanel();
   }
-  // Set body class for current panel
-  document.body.className = document.body.className.replace(/\bpanel-\S+/g, '');
-  document.body.classList.add('panel-' + id);
+  // Show/hide kingdom header and resource strip
+  var hideHeader = ['warfare','news','rankings','exploration','studies','training','alliances','hire','globalchat','defence'];
+  hideHeader.forEach(function(p){ document.body.classList.remove('panel-'+p); });
+  if (hideHeader.includes(id)) document.body.classList.add('panel-'+id);
 
   if (id === 'warfare') {
     loadWarfarePanel();
@@ -6241,7 +6308,6 @@ async function loadRankings(forceRefresh) {
   renderTargets(targets, 'covert-target-list', 'selectCovertTarget');
   renderSpellTargets(targets);
   renderRankingsPanel(rankings);
-  scrollToTop(); setTimeout(scrollToTop, 100);
 }
 
 function filterRankings(q) {
@@ -7882,7 +7948,6 @@ async function loadWorldMap() {
   worldMapData = data;
   renderWorldMap(data);
   renderRegionLegend();
-  scrollToTop(); setTimeout(scrollToTop, 100);
 }
 
 function renderRegionLegend() {
