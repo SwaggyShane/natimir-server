@@ -35,8 +35,8 @@
     margin: 0;
     padding: 0;
     width: 100%;
-    min-height: 100vh;
-    overflow-x: hidden;
+    height: 100vh;
+    overflow: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -58,14 +58,15 @@
   .app {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
     background: var(--bg);
     width: 100%;
     max-width: 100%;
     margin: 0;
     padding: 0;
     padding-top: 56px;
-    overflow-x: hidden;
+    overflow: hidden;
+    box-sizing: border-box;
   }
   .topbar {
     display: flex;
@@ -88,11 +89,14 @@
   }
   .sidebar { display: none; }
   .main { 
-    padding: 12px 10px 100px; 
+    padding: 12px 10px 80px; 
     flex: 1;
+    min-height: 0;
     min-width: 0; 
     width: 100%;
     overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     position: relative; 
     box-sizing: border-box;
   }
@@ -132,39 +136,10 @@
       padding-bottom: 10px;
     }
   }
-  body.panel-news .main,
-  body.panel-rankings .main,
-  body.panel-exploration .main,
-  body.panel-worldmap .main,
-  body.panel-stats .main,
-  body.panel-alliances .main,
-  body.panel-settings .main { padding-top: 0 !important; }
   
   /* Fix for Full-Screen Chat Layout */
   /* On mobile, strict 100dvh prevents unbounded expansion of the chat containers */
-  body.panel-globalchat, body.panel-messages {
-    height: 100dvh;
-    height: 100vh;
-    overflow: hidden;
-  }
-  body.panel-globalchat .app, body.panel-messages .app {
-    height: 100dvh;
-    height: 100vh;
-    overflow: hidden;
-    padding-top: 56px !important;
-  }
-  body.panel-globalchat .main,
-  body.panel-messages .main { 
-    display: flex;
-    flex-direction: column;
-    padding: 0 0 60px 0 !important; /* give space for mobile bottom nav */
-    height: 100%;
-    overflow: hidden;
-  }
   @media (min-width: 769px) { /* On desktop, we use grid instead */
-    body.panel-globalchat, body.panel-messages { overflow: visible; height: auto; }
-    body.panel-globalchat .app, body.panel-messages .app { height: 100vh; overflow: hidden; padding-top: 0 !important; }
-    body.panel-globalchat .main, body.panel-messages .main { padding: 12px 24px !important; }
   }
 
   #globalchat.panel,
@@ -207,17 +182,11 @@
     }
   }
 
-
-  body.panel-defense #kd-top { display: none !important; }
-
   /* Ensure content doesn't jump when top header is hidden or shown */
   .panel { width: 100%; display: none; }
+  .panel.active { display: block; }
 
-  body.panel-warfare .main,
-  body.panel-studies .main,
-  body.panel-training .main,
-  body.panel-defense .main,
-  body.panel-hire .main { padding-top: 12px; }
+
 
 
 
@@ -332,21 +301,7 @@
   .nav-item.active .icon { opacity: 1; color: var(--purple); }
   .nav-badge { margin-left: auto; background: var(--red); color: #fff; border-radius: 8px; font-size: 10px; font-weight: 700; padding: 2px 6px; }
 
-  /* ── Universal panel layout ── */
-  /* Every panel gets the same top spacing whether kd-top is visible or not */
-  .panel.active {
-    display: block !important;
-    padding-top: 0;
-    margin-top: 0;
-  }
-  /* Panels that hide kd-top get a small top pad to breathe */
-  body.panel-alliances .panel.active,
-  body.panel-rankings .panel.active,
-  body.panel-worldmap .panel.active,
-  body.panel-globalchat .panel.active,
-  body.panel-messages .panel.active,
-  body.panel-bounties .panel.active,
-  body.panel-news .panel.active { padding-top: 8px; }
+
   .panel-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
 
   /* ── Kingdom header ── */
@@ -625,13 +580,14 @@
      DESKTOP (≥ 700px)
   ════════════════════════════════════ */
   @media (min-width: 700px) {
-    html, body { height: auto; overflow-x: visible; width: 100%; }
+    html, body { height: auto; overflow: auto; width: 100%; }
     .app { 
       display: grid; 
       grid-template-columns: 220px 1fr; 
       grid-template-rows: 56px 1fr; 
       min-height: 100vh;
-      overflow-x: visible; 
+      height: auto;
+      overflow: visible;
       width: 100%; 
       max-width: none; 
       position: static;
@@ -639,7 +595,7 @@
     }
     .topbar { grid-column: 1 / -1; padding: 0 20px; height: 56px; position: sticky; top: 0; width: auto !important; }
     .sidebar { display: flex; flex-direction: column; gap: 4px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 12px; overflow-y: auto; }
-    .main { padding: 24px; min-width: 0; }
+    .main { padding: 24px; min-width: 0; overflow-y: auto; min-height: 0; }
     .bottom-nav { display: none; }
     /* Logo desktop override */
     .logo { 
@@ -4386,6 +4342,7 @@ async function loadAlliancePanel() {
     document.getElementById('ally-none').style.display = 'block';
     document.getElementById('ally-active').style.display = 'none';
     document.getElementById('ally-search-list').innerHTML = '<div style="color:var(--red)">' + escHtml(data.error) + '</div>';
+    var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
     return;
   }
   myAllianceData = data;
@@ -4394,11 +4351,13 @@ async function loadAlliancePanel() {
     document.getElementById('ally-none').style.display = 'block';
     document.getElementById('ally-active').style.display = 'none';
     loadAllianceSearch();
+    var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
     return;
   }
 
   document.getElementById('ally-none').style.display = 'none';
   document.getElementById('ally-active').style.display = 'block';
+  var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
 
   isAllianceLeader = data.isLeader;
   document.getElementById('ally-name').textContent = data.alliance.name;
@@ -4616,11 +4575,8 @@ function openBountyAction(targetId, targetName) {
 }
 
 function switchTab(id, btn) {
-  requestAnimationFrame(function() {
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  });
+  var mainEl = document.querySelector('.main');
+  if (mainEl) mainEl.scrollTop = 0;
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
     p.style.display = 'none';
@@ -4636,41 +4592,9 @@ function switchTab(id, btn) {
   panel.style.display = 'block';
   if (btn) btn.classList.add('active');
 
-  // Handle kd-top visibility and context
-  var kdTop = document.getElementById('kd-top');
-  if (kdTop) {
-    if (['status','hire','heroes','studies','economy','build','training','exploration','warfare','alliances'].includes(id)) {
-      kdTop.style.display = 'block';
-      // Contextual visibility
-      var metrics = ['metric-gold', 'metric-mana', 'metric-land', 'metric-pop', 'metric-morale', 'metric-defense', 'metric-food'];
-      metrics.forEach(function(m) { 
-        var el = document.getElementById(m);
-        if (el) el.style.display = 'flex';
-      });
+  // kd-top always visible with all metrics on every panel
 
-      if (id === 'hire') {
-        ['metric-mana','metric-land','metric-morale','metric-defense','metric-food'].forEach(function(m){
-          var el = document.getElementById(m); if(el) el.style.display = 'none';
-        });
-      } else if (id === 'build') {
-        ['metric-mana','metric-pop','metric-morale','metric-defense','metric-food'].forEach(function(m){
-          var el = document.getElementById(m); if(el) el.style.display = 'none';
-        });
-      } else if (id === 'studies' || id === 'training' || id === 'exploration' || id === 'warfare' || id === 'alliances') {
-        if (id !== 'status' && id !== 'economy') {
-           metrics.forEach(function(m){
-             var el = document.getElementById(m); if(el) el.style.display = 'none';
-           });
-           // Always show gold for context
-           var gel = document.getElementById('metric-gold'); if(gel) gel.style.display = 'flex';
-        }
-      }
-    } else {
-      kdTop.style.display = 'none';
-    }
-  }
-
-  if (id === 'news') {
+    if (id === 'news') {
     ['news-badge','bnav-news-badge'].forEach(function(bid) {
       var b = document.getElementById(bid);
       if (b) { b.style.display = 'none'; b.textContent = ''; }
@@ -6097,6 +6021,7 @@ async function loadWorldMap() {
 
     mapHtml += '</svg>';
     container.innerHTML = mapHtml;
+    var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
   } catch (err) {
     container.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px 0">Failed to load world map.</div>';
     console.error(err);
@@ -6285,6 +6210,7 @@ async function loadRankings(forceRefresh) {
   renderTargets(targets, 'covert-target-list', 'selectCovertTarget');
   renderSpellTargets(targets);
   renderRankingsPanel(rankings);
+  var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
 }
 
 function filterRankings(q) {
