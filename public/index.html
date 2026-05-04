@@ -152,18 +152,27 @@
     overflow: hidden;
     padding-top: 56px !important;
   }
+/* Center large panels on desktop but allow them to use space */
+  #globalchat.panel,
+  #messages.panel,
+  #alliances.panel {
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
   body.panel-globalchat .main,
   body.panel-messages .main { 
     display: flex;
     flex-direction: column;
-    padding: 0 0 60px 0 !important; /* give space for mobile bottom nav */
+    padding: 12px 10px 100px !important; /* same as default mobile */
     height: 100%;
     overflow: hidden;
   }
   @media (min-width: 769px) { /* On desktop, we use grid instead */
-    body.panel-globalchat, body.panel-messages { overflow: visible; height: auto; }
+    body.panel-globalchat, body.panel-messages { overflow: hidden; height: 100vh; }
     body.panel-globalchat .app, body.panel-messages .app { height: 100vh; overflow: hidden; padding-top: 0 !important; }
-    body.panel-globalchat .main, body.panel-messages .main { padding: 12px 24px !important; }
+    body.panel-globalchat .main, body.panel-messages .main { padding: 24px !important; height: calc(100vh - 56px); display: flex; flex-direction: column; }
   }
 
   #globalchat.panel,
@@ -175,6 +184,7 @@
     display: flex !important;
     flex-direction: column;
     flex: 1;
+    height: 100%;
     min-height: 0;
     margin: 0 !important;
   }
@@ -456,38 +466,49 @@
     align-self: flex-end;
   }
 
-  /* Bounties & Messages */
-  .target-row {
-    padding: 10px 12px;
-    border-radius: 8px;
-    cursor: pointer;
+  /* Chat and Messages specific layout refinements */
+  .chat-layout {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.2s;
-    border: 1px solid transparent;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    background: var(--bg);
   }
-  .target-row:hover { background: var(--bg4); border-color: var(--border2); }
-  .target-row.active { background: rgba(124, 106, 245, 0.1); border-color: var(--purple); }
-  .target-row .t-name { font-weight: 600; color: var(--text); }
-  .target-row .t-rank { font-size: 11px; color: var(--purple); font-weight: 700; }
-
-  /* ── Chat Sidebar responsiveness ── */
+  .chat-messages-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+    background: var(--bg2);
+  }
+  .chat-online-sidebar {
+    width: 240px;
+    border-left: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
   @media (max-width: 768px) {
-    .chat-container-card { flex-direction: column; }
+    .chat-layout { flex-direction: column; }
     .chat-online-sidebar { 
       width: 100% !important; 
       height: auto; 
       max-height: 120px;
-      flex-shrink: 0;
-      border-left: none !important; 
-      border-top: 1px solid var(--border); 
-      order: -1; /* Make it appear at the top */
+      border-left: none; 
+      border-bottom: 1px solid var(--border);
+      overflow-y: auto;
     }
-    .chat-online-sidebar .on-item { flex-direction: row; display: inline-flex; width: auto; margin-right: 12px; }
-    .chat-online-sidebar #chat-online-list { display: flex; flex-direction: row; flex-wrap: wrap; }
-    
-    .msg-layout { grid-template-columns: 1fr !important; grid-template-rows: 200px minmax(200px, 1fr) !important; height: 100% !important; flex: 1; min-height: 0; gap: 8px !important; }
+  }
+
+  /* ── Sidebar refinements ── */
+  .nav-item.active { border-right: 3px solid var(--purple); background: rgba(99, 102, 241, 0.05); }
+
+  /* ── Body panel specific classes ── */
+  body.panel-globalchat .main, body.panel-messages .main { padding: 0 !important; }
+  @media (min-width: 769px) {
+    body.panel-globalchat .main, body.panel-messages .main { padding: 24px !important; }
   }
 
   input[type="number"] {
@@ -2018,28 +2039,30 @@
 
     <!-- MESSAGES -->
     <div id="messages" class="panel">
-      <div class="msg-layout" style="display:grid;grid-template-columns:300px 1fr;gap:16px;flex:1;min-height:0;">
+      <div class="chat-container-card chat-layout">
         <!-- Conversations List -->
-        <div class="card" style="margin-bottom:0;display:flex;flex-direction:column">
-          <div class="card-title">Inbox</div>
+        <div class="chat-online-sidebar" style="border-left:none; border-right:1px solid var(--border)">
+          <div style="padding:16px;border-bottom:1px solid var(--border);background:var(--bg3)">
+            <div style="font-size:13px;font-weight:700;color:var(--text2)">Inbox</div>
+          </div>
           <div id="conv-list" style="flex:1;overflow-y:auto">
-            <div style="color:var(--text3);font-size:13px;padding:8px 0">No messages yet.</div>
+            <div style="color:var(--text3);font-size:13px;padding:16px;text-align:center">No messages yet.</div>
           </div>
         </div>
 
         <!-- Active Conversation -->
-        <div class="card" style="margin-bottom:0;display:flex;flex-direction:column;padding:0">
-          <div id="active-conv-header" style="padding:16px 20px;border-bottom:1px solid var(--border2);background:var(--bg3);border-top-left-radius:24px;border-top-right-radius:24px">
+        <div class="chat-messages-area">
+          <div id="active-conv-header" style="padding:16px 20px;border-bottom:1px solid var(--border2);background:var(--bg3)">
             <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Message</div>
             <div id="active-conv-name" style="font-size:16px;font-weight:700;color:var(--text)">Select a conversation</div>
           </div>
           <div id="active-conv-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px">
             <div style="text-align:center;color:var(--text3);margin-top:40px">
               <div style="font-size:40px;margin-bottom:10px">✉️</div>
-              Select a kingdom member to message from the rankings or their profile.
+              Select a kingdom member from the rankings to message them.
             </div>
           </div>
-          <div id="msg-input-wrap" style="padding:16px;border-top:1px solid var(--border);display:none">
+          <div id="msg-input-wrap" style="padding:16px;border-top:1px solid var(--border);display:none;background:var(--bg2)">
             <div style="display:flex;gap:10px">
               <input type="text" id="msg-input" placeholder="Type a message..." style="flex:1" onkeypress="if(event.key==='Enter') sendDirectMessage()">
               <button class="btn btn-purple" onclick="sendDirectMessage()">Send</button>
@@ -2994,11 +3017,11 @@
 
 <!-- ═══════════════════════════════════════════ ALLIANCES PANEL ══ -->
 <!-- GLOBAL CHAT -->
-<div id="globalchat" class="panel" style="display:none; max-width: 900px; margin: 0 auto; box-sizing: border-box; width: 100%;">
-  <div class="chat-container-card">
+<div id="globalchat" class="panel" style="display:none;">
+  <div class="chat-container-card chat-layout">
 
     <!-- Messages area -->
-    <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div class="chat-messages-area">
       <div id="global-chat-messages" style="flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:1px;padding:14px 16px;word-break:break-word;align-items:flex-start">
         <div style="text-align:center;color:var(--text3);font-size:13px;padding:40px 0">Connecting to chat...</div>
       </div>
@@ -3012,11 +3035,12 @@
     </div>
 
     <!-- Online users sidebar -->
-    <div class="chat-online-sidebar" style="width:160px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg2);display:flex;flex-direction:column;min-width:0">
-      <div style="padding:8px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap">
-        Online <span id="chat-online-count" style="color:var(--green)">0</span>
+    <div class="chat-online-sidebar">
+      <div style="padding:16px;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)">Online</div>
+        <span id="chat-online-count" class="badge badge-green">0</span>
       </div>
-      <div id="chat-online-list" style="flex:1;overflow-y:auto;padding:4px 0">
+      <div id="chat-online-list" style="flex:1;overflow-y:auto;padding:8px 0">
         <div style="font-size:12px;color:var(--text3);padding:8px 10px">No one online</div>
       </div>
     </div>
@@ -3045,83 +3069,79 @@
   <!-- In alliance -->
   <div id="ally-active" style="display:none">
     
-    <!-- Alliance Summary Card (Like War Log) -->
-    <div class="card" style="margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span style="font-size:13px;font-weight:700;color:var(--text)">🛡️ Alliance Summary</span>
-        <button class="btn" style="font-size:11px;padding:4px 10px" onclick="loadAllianceInfo()">↻ Refresh</button>
+    <!-- Alliance Summary Card (Prominent Header) -->
+    <div class="card" style="margin-bottom:16px; border-left: 4px solid var(--purple);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1px">🛡️ Alliance Overview</span>
+        <button class="btn btn-gold" style="font-size:11px;padding:4px 12px" onclick="loadAllianceInfo()">↻ Refresh</button>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
         <div>
-          <div class="card-title" style="margin-bottom:2px;font-size:16px">&#9876; <span id="ally-name">—</span></div>
-          <div style="font-size:12px;color:var(--text3)"><span id="ally-member-count">0</span> members &middot; <span id="ally-combined-land" style="color:var(--gold)">0</span> acres</div>
-        </div>
-        <button class="btn btn-red" style="font-size:11px;padding:4px 12px" onclick="leaveAlliance()">Leave alliance</button>
-      </div>
-    </div>
-
-    <!-- Tabs (Like Warfare Tabs) -->
-    <div style="display:flex;gap:4px;border-bottom:2px solid var(--border2);margin-bottom:16px;padding-bottom:0">
-      <button class="admin-tab active" onclick="showAllyTab('ally-members',this)">👥 Members</button>
-      <button class="admin-tab" onclick="showAllyTab('ally-board',this)">💬 Chat</button>
-      <button class="admin-tab" onclick="showAllyTab('ally-pledge',this)">🛡️ Pledge</button>
-      <button class="admin-tab" id="ally-manage-tab" style="display:none" onclick="showAllyTab('ally-manage',this)">⚙️ Manage</button>
-    </div>
-
-    <!-- MEMBERS TAB -->
-    <div id="ally-tab-members" class="ally-tab-content">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-title">Alliance Members</div>
-        <div id="ally-list"></div>
-      </div>
-    </div>
-
-    <!-- CHAT TAB -->
-    <div id="ally-tab-board" class="ally-tab-content" style="display:none">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-title">Alliance message board</div>
-        <div id="alliance-chat" style="height:280px;overflow-y:auto;overflow-x:hidden;margin-bottom:10px;font-size:13px;display:flex;flex-direction:column;gap:4px;padding-right:4px;word-break:break-word">
-          <div style="text-align:center;color:var(--text3);padding:20px 0">Loading messages...</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="ally-msg" placeholder="Message your alliance..." style="flex:1;width:auto" maxlength="300" onkeydown="if(event.key==='Enter')sendAllyMsg()">
-          <button class="btn btn-purple" onclick="sendAllyMsg()">Send</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PLEDGE TAB -->
-    <div id="ally-tab-pledge" class="ally-tab-content" style="display:none">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-title">Defense Pledge</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7">When an ally is attacked, this % of your troops auto-deploy to their defence.</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <input type="range" id="pledge-slider" min="0" max="10" step="1" value="3" oninput="updatePledge(this.value)" style="flex:1">
-          <span id="pledge-val" style="color:var(--gold);font-weight:700;min-width:32px">3%</span>
-        </div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px" id="pledge-desc">At 3%: your fighters deploy to defend allies when attacked.</div>
-        <button class="btn btn-purple" style="width:100%" onclick="savePledge()">Save pledge</button>
-      </div>
-    </div>
-
-    <!-- MANAGE TAB -->
-    <div id="ally-tab-manage" class="ally-tab-content" style="display:none">
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-title">Manage Members</div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Invite by kingdom name</div>
-          <div style="display:flex;gap:8px">
-            <input type="text" id="invite-name" placeholder="Kingdom name..." style="flex:1;width:auto">
-            <button class="btn btn-purple" onclick="inviteAlly()">Invite</button>
+          <div style="font-size:22px; font-weight:800; color:var(--text); margin-bottom:4px" id="ally-name">—</div>
+          <div style="display:flex; gap:12px; font-size:13px; color:var(--text3)">
+             <span>👥 <strong style="color:var(--text2)" id="ally-member-count">0</strong> members</span>
+             <span>🗺️ <strong style="color:var(--gold)" id="ally-combined-land">0</strong> acres</span>
           </div>
         </div>
-        <div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Dismiss member</div>
-          <div style="display:flex;gap:8px">
-            <select id="dismiss-sel" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:8px 12px;font-size:13px">
-              <option>— no members —</option>
-            </select>
-            <button class="btn btn-red" onclick="dismissAlly()">Dismiss</button>
+        <button class="btn btn-red" style="font-size:12px" onclick="leaveAlliance()">Leave Alliance</button>
+      </div>
+    </div>
+
+    <!-- Tabs Content Container -->
+    <div class="card" style="padding:0; overflow:hidden">
+      <div style="display:flex; gap:0; border-bottom:1px solid var(--border); background:var(--bg3)">
+        <button class="admin-tab active" onclick="showAllyTab('ally-tab-members',this)" style="flex:1">Members</button>
+        <button class="admin-tab" onclick="showAllyTab('ally-tab-board',this)" style="flex:1">Chat</button>
+        <button class="admin-tab" onclick="showAllyTab('ally-tab-pledge',this)" style="flex:1">Pledge</button>
+        <button class="admin-tab" id="ally-manage-tab" style="display:none; flex:1" onclick="showAllyTab('ally-tab-manage',this)">Manage</button>
+      </div>
+
+      <div style="padding:16px">
+        <!-- MEMBERS TAB -->
+        <div id="ally-tab-members" class="ally-tab-content">
+          <div class="card-title" style="margin-bottom:16px">Alliance Members List</div>
+          <div id="ally-list"></div>
+        </div>
+
+          <!-- CHAT TAB -->
+          <div id="ally-tab-board" class="ally-tab-content" style="display:none">
+            <div class="card-title" style="margin-bottom:12px">Alliance Communication</div>
+            <div id="alliance-chat" style="height:350px; overflow-y:auto; overflow-x:hidden; padding:12px; background:var(--bg3); border-radius:12px; display:flex; flex-direction:column; gap:8px; border:1px solid var(--border)">
+              <div style="text-align:center;color:var(--text3);padding:20px 0">Loading messages...</div>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:8px">
+              <input type="text" id="ally-msg" placeholder="Message your alliance..." style="flex:1;width:auto" maxlength="300" onkeydown="if(event.key==='Enter')sendAllyMsg()">
+              <button class="btn btn-purple" onclick="sendAllyMsg()">Send</button>
+            </div>
+          </div>
+
+          <!-- PLEDGE TAB -->
+          <div id="ally-tab-pledge" class="ally-tab-content" style="display:none">
+            <div class="card-title" style="margin-bottom:10px">Defense Pledge Settings</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7">When an ally is attacked, this % of your troops auto-deploy to their defense.</div>
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px; background:var(--bg3); padding:16px; border-radius:12px; border:1px solid var(--border)">
+              <input type="range" id="pledge-slider" min="0" max="10" step="1" value="3" oninput="updatePledge(this.value)" style="flex:1">
+              <span id="pledge-val" style="color:var(--gold);font-size:20px;font-weight:800;min-width:50px;text-align:center">3%</span>
+            </div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:16px" id="pledge-desc">At 3%: your fighters deploy to defend allies when attacked.</div>
+            <button class="btn btn-purple" style="width:100%" onclick="savePledge()">Save Pledge Changes</button>
+          </div>
+
+          <!-- MANAGE TAB -->
+          <div id="ally-tab-manage" class="ally-tab-content" style="display:none">
+            <div class="card-title" style="margin-bottom:12px">Invite Members</div>
+            <div style="display:flex;gap:8px; margin-bottom:24px">
+              <input type="text" id="invite-name" placeholder="Kingdom name..." style="flex:1;width:auto">
+              <button class="btn btn-gold" onclick="inviteAlly()">Invite</button>
+            </div>
+
+            <div class="card-title" style="margin-bottom:12px">Dismiss Member</div>
+            <div style="display:flex;gap:8px">
+              <select id="dismiss-sel" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:8px 12px;font-size:13px">
+                <option>— no members —</option>
+              </select>
+              <button class="btn btn-red" onclick="dismissAlly()">Dismiss</button>
+            </div>
           </div>
         </div>
       </div>
