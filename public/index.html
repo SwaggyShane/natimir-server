@@ -4355,6 +4355,8 @@ async function loadAlliancePanel() {
 
   document.getElementById('ally-none').style.display = 'none';
   document.getElementById('ally-active').style.display = 'block';
+  window.scrollTo(0, 0); document.documentElement.scrollTop = 0;
+  var _m = document.querySelector('.main'); if (_m) _m.scrollTop = 0;
 
   isAllianceLeader = data.isLeader;
   document.getElementById('ally-name').textContent = data.alliance.name;
@@ -4572,7 +4574,13 @@ function openBountyAction(targetId, targetName) {
 }
 
 function switchTab(id, btn) {
-  requestAnimationFrame(function(){ window.scrollTo(0,0); });
+  requestAnimationFrame(function(){
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    var mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.scrollTop = 0;
+  });
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
     p.style.display = 'none';
@@ -6204,6 +6212,8 @@ async function loadRankings(forceRefresh) {
   renderTargets(targets, 'covert-target-list', 'selectCovertTarget');
   renderSpellTargets(targets);
   renderRankingsPanel(rankings);
+  window.scrollTo(0, 0); document.documentElement.scrollTop = 0;
+  var _m = document.querySelector('.main'); if (_m) _m.scrollTop = 0;
 }
 
 function filterRankings(q) {
@@ -7844,6 +7854,8 @@ async function loadWorldMap() {
   worldMapData = data;
   renderWorldMap(data);
   renderRegionLegend();
+  window.scrollTo(0, 0); document.documentElement.scrollTop = 0;
+  var _m = document.querySelector('.main'); if (_m) _m.scrollTop = 0;
 }
 
 function renderRegionLegend() {
