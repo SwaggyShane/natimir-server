@@ -649,6 +649,14 @@
   /* Mobile overflow padding fix */
 </style>
 <script src="/socket.io/socket.io.js"></script>
+<script>
+  // Fallback if server-side socket.io fails to load
+  if (typeof io === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.socket.io/4.7.4/socket.io.min.js';
+    document.head.appendChild(s);
+  }
+</script>
 </head>
 <body>
 
@@ -4068,6 +4076,10 @@ var allianceChatMessages = [];
 
 function initSocket() {
   if (socket) return;
+  if (typeof io === 'undefined') {
+    console.warn('[socket] socket.io not loaded — chat unavailable');
+    return;
+  }
   socket = io({ auth: { token: localStorage.getItem('narmir_token') || '' } });
 
   socket.on('connect', function() { loadGlobalChatHistory(); });
