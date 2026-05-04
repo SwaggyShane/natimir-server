@@ -4342,7 +4342,6 @@ async function loadAlliancePanel() {
     document.getElementById('ally-none').style.display = 'block';
     document.getElementById('ally-active').style.display = 'none';
     document.getElementById('ally-search-list').innerHTML = '<div style="color:var(--red)">' + escHtml(data.error) + '</div>';
-    var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
     return;
   }
   myAllianceData = data;
@@ -4351,13 +4350,11 @@ async function loadAlliancePanel() {
     document.getElementById('ally-none').style.display = 'block';
     document.getElementById('ally-active').style.display = 'none';
     loadAllianceSearch();
-    var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
     return;
   }
 
   document.getElementById('ally-none').style.display = 'none';
   document.getElementById('ally-active').style.display = 'block';
-  var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
 
   isAllianceLeader = data.isLeader;
   document.getElementById('ally-name').textContent = data.alliance.name;
@@ -4575,8 +4572,7 @@ function openBountyAction(targetId, targetName) {
 }
 
 function switchTab(id, btn) {
-  var mainEl = document.querySelector('.main');
-  if (mainEl) mainEl.scrollTop = 0;
+  requestAnimationFrame(function(){ window.scrollTo(0,0); });
   document.querySelectorAll('.panel').forEach(function(p){
     p.classList.remove('active');
     p.style.display = 'none';
@@ -4651,10 +4647,9 @@ function switchTab(id, btn) {
   if (id === 'alliances') {
     loadAlliancePanel();
   }
-  // Show/hide kingdom header and resource strip
-  var hideHeader = ['warfare','news','rankings','exploration','studies','training','alliances','hire','globalchat','defence'];
-  hideHeader.forEach(function(p){ document.body.classList.remove('panel-'+p); });
-  if (hideHeader.includes(id)) document.body.classList.add('panel-'+id);
+  // Set body class for current panel
+  document.body.className = document.body.className.replace(/\bpanel-\S+/g, '');
+  document.body.classList.add('panel-' + id);
 
   if (id === 'warfare') {
     loadWarfarePanel();
@@ -6021,7 +6016,6 @@ async function loadWorldMap() {
 
     mapHtml += '</svg>';
     container.innerHTML = mapHtml;
-    var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
   } catch (err) {
     container.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px 0">Failed to load world map.</div>';
     console.error(err);
@@ -6210,7 +6204,6 @@ async function loadRankings(forceRefresh) {
   renderTargets(targets, 'covert-target-list', 'selectCovertTarget');
   renderSpellTargets(targets);
   renderRankingsPanel(rankings);
-  var m = document.querySelector('.main'); if (m) m.scrollTop = 0;
 }
 
 function filterRankings(q) {
